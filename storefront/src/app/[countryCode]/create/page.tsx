@@ -7,11 +7,11 @@ import KandiVisualizer from '../../../components/kandi-visualizer';
 export default function CreatePage() {
   const [vibe, setVibe] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isAdding, setIsAdding] = useState(false); // New loading state for Cart
+  const [isAdding, setIsAdding] = useState(false); 
   const [data, setData] = useState<any>(null);
-  const [captureMode, setCaptureMode] = useState(false); // NEW STATE
+  const [captureMode, setCaptureMode] = useState(false);
 
-  // 1. The AI Generator (Mock or Real)
+  // 1. The AI Generator
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
@@ -32,10 +32,13 @@ export default function CreatePage() {
   // 2. The "Add to Stash" Logic
   const handleAddToStash = async () => {
     setIsAdding(true);
+    
     // 1. FREEZE! 
     setCaptureMode(true);
+
     // 2. Wait a moment for the 3D engine to snap to position
     await new Promise(resolve => setTimeout(resolve, 100));
+
     const variantId = process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
     const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
     const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
@@ -43,62 +46,64 @@ export default function CreatePage() {
     if (!variantId) {
       alert("Error: Custom Product ID not found.");
       setIsAdding(false);
+      setCaptureMode(false);
       return;
     }
 
     try {
-      // 3. Take the photo (Now it will be perfectly aligned)
+      // 3. 📸 TAKE THE SCREENSHOT (The Missing Piece!)
       const canvas = document.querySelector('#kandi-canvas canvas') as HTMLCanvasElement;
+      let imageUrl = "https://placehold.co/400"; 
+
+      if (canvas) {
+        // Get the raw image data string
+        imageUrl = canvas.toDataURL("image/png");
+        console.log("Screenshot captured!");
+      } else {
+        console.warn("Canvas not found for screenshot.");
+      }
+
+      // 4. Handle Cart Logic
       let cartId = Cookies.get("_medusa_cart_id");
       const headers = {
         "Content-Type": "application/json",
         "x-publishable-api-key": publishableKey || "",
       };
 
-      // -------------------------------------------------------
-      // 1. If no cart, we MUST find the correct Region first
-      // -------------------------------------------------------
       if (!cartId) {
-        console.log("Finding Region for US...");
+        console.log("Creating new cart...");
         
-        // A. Get all regions
+        // Get Regions to find US
         const regionRes = await fetch(`${backendUrl}/store/regions`, { headers });
         const regionData = await regionRes.json();
         
-        // B. Find the region that has "us" (United States)
-        // Note: We assume you are testing on /us/create. 
         const usRegion = regionData.regions.find((r: any) => 
           r.countries.some((c: any) => c.iso_2 === 'us')
         );
 
         if (!usRegion) {
-          alert("Error: No Region found for 'US'. Check Admin Settings.");
+          alert("Error: No Region found for 'US'.");
           setIsAdding(false);
+          setCaptureMode(false);
           return;
         }
 
-        console.log("Found Region:", usRegion.name, usRegion.id);
-
-        // C. Create the cart IN THAT REGION
+        // Create Cart
         const createRes = await fetch(`${backendUrl}/store/carts`, {
           method: "POST",
           headers,
-          body: JSON.stringify({ region_id: usRegion.id }) // <--- The Magic Fix
+          body: JSON.stringify({ region_id: usRegion.id }) 
         });
-        
-        if (!createRes.ok) throw new Error("Failed to create cart");
         
         const createData = await createRes.json();
         cartId = createData.cart.id;
 
-        // D. Save Cookie
         Cookies.set("_medusa_cart_id", cartId, { expires: 7 });
       }
 
-      // -------------------------------------------------------
-      // 2. Add the Item
-      // -------------------------------------------------------
+      // 5. Add Item with Metadata (Including the Image String!)
       console.log("Adding to cart ID:", cartId);
+      
       const addRes = await fetch(`${backendUrl}/store/carts/${cartId}/line-items`, {
         method: "POST",
         headers,
@@ -108,13 +113,13 @@ export default function CreatePage() {
           metadata: {
             kandi_name: data.kandiName,
             kandi_vibe: data.vibeStory,
-            pattern_data: data.pattern 
+            pattern_data: data.pattern,
+            image_url: imageUrl // <--- This sends the Base64 string to the backend
           }
         }),
       });
 
       if (addRes.ok) {
-        // Force a hard reload to ensure the Navbar picks up the cookie
         window.location.href = "/us/cart"; 
       } else {
         console.error(await addRes.json());
@@ -125,7 +130,6 @@ export default function CreatePage() {
       console.error("Cart Error:", e);
       alert("System Error adding to cart.");
     } finally {
-      // 4. UNFREEZE! Let them play again
       setCaptureMode(false);
       setIsAdding(false);
     }
@@ -162,7 +166,6 @@ export default function CreatePage() {
           </div>
           
           <div className="bg-gradient-to-b from-zinc-900 to-black rounded-3xl p-8 border border-zinc-800">
-            {/* Pass the state to the visualizer */}
             <KandiVisualizer pattern={data.pattern} captureMode={captureMode} />
           </div>
 
