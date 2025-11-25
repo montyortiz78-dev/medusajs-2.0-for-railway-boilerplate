@@ -11,7 +11,6 @@ export default async function handleNftMinting({
 
   const { id } = event.data
 
-  // 1. Retrieve the order
   const order = await orderService.retrieveOrder(id, {
     relations: ["items"],
   })
@@ -24,18 +23,20 @@ export default async function handleNftMinting({
     return
   }
 
-  // 2. Find the Kandi items
   for (const item of order.items) {
     if (item.metadata && item.metadata.pattern_data) {
       logger.info(`💎 Minting NFT for Item: ${item.id}`)
 
-      // 3. Prepare the NFT Metadata
+      // 1. CHECK FOR CUSTOM IMAGE
+      const customImage = item.metadata.image_url as string;
+      const fallbackImage = "https://www.shutterstock.com/image-vector/pixel-art-mystery-box-icon-600nw-2291007005.jpg";
+
       const nftPayload = {
-        recipient: `email:${order.email}:base`, // <--- Changed from 'polygon-amoy'
+        recipient: `email:${order.email}:base`, 
         metadata: {
           name: item.metadata.kandi_name as string,
           description: item.metadata.kandi_vibe as string,
-          image: "https://www.shutterstock.com/image-vector/pixel-art-mystery-box-icon-600nw-2291007005.jpg",
+          image: customImage || fallbackImage, // <--- THIS IS THE FIX
           attributes: [
             { trait_type: "Vibe", value: item.metadata.kandi_vibe },
             { trait_type: "Bead Count", value: (item.metadata.pattern_data as any[]).length },
@@ -44,7 +45,6 @@ export default async function handleNftMinting({
         }
       }
 
-      // 4. Call Crossmint API
       try {
         const response = await fetch(
           `https://www.crossmint.com/api/2022-06-09/collections/${collectionId}/nfts`,
@@ -62,6 +62,7 @@ export default async function handleNftMinting({
         
         if (response.ok) {
           logger.info(`✅ NFT Minted Successfully! ID: ${data.id}`)
+          logger.info(`🖼️ Image Used: ${customImage || "Fallback"}`)
         } else {
           logger.error(`❌ Mint Failed: ${JSON.stringify(data)}`)
         }
