@@ -22,6 +22,7 @@
     "webpack": "^5"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.0.0",
     "@headlessui/react": "^1.6.1",
     "@hookform/error-message": "^2.0.0",
     "@medusajs/js-sdk": "preview",
@@ -32,8 +33,10 @@
     "@paypal/react-paypal-js": "^7.8.1",
     "@stripe/react-stripe-js": "^1.7.2",
     "@stripe/stripe-js": "^1.29.0",
+    "ai": "^4.0.0",
     "algoliasearch": "^4.20.0",
     "axios": "^1.6.7",
+    "js-cookie": "^3.0.5",
     "lodash": "^4.17.21",
     "medusajs-launch-utils": "0.0.18",
     "next": "^14.0.0",
@@ -46,7 +49,8 @@
     "react-intersection-observer": "^9.3.4",
     "server-only": "^0.0.1",
     "tailwindcss-radix": "^2.8.0",
-    "webpack": "^5"
+    "webpack": "^5",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",
