@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
 
@@ -7,48 +7,43 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    // 1. Check if the Key exists in the environment
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      console.error("❌ ERROR: Google API Key is missing from Environment Variables!");
-      return Response.json({ error: "Server Config Error: Missing API Key" }, { status: 500 });
-    }
-
-    // 2. Get the user's vibe
     const { vibe } = await req.json();
-    console.log(`🤖 Generating Kandi for vibe: "${vibe}"...`);
+    console.log(`🤖 OpenAI generating Kandi for: "${vibe}"...`);
 
-    // 3. Call Google Gemini
     const result = await generateObject({
-      model: google('gemini-1.5-flash'),
+      model: openai('gpt-4o'),
+      // FORCE structured mode to ensure JSON
+      mode: 'json',
       schema: z.object({
-        kandiName: z.string().describe("A creative, rave-inspired name for this bracelet"),
-        vibeStory: z.string().describe("A 1-2 sentence backstory about the vibe of this piece"),
+        kandiName: z.string().describe("A creative name for this bracelet"),
+        vibeStory: z.string().describe("A short backstory about the vibe"),
         pattern: z.array(
           z.object({
             type: z.enum(["pony", "star", "heart", "skull", "flower"]),
             color: z.enum(["neon-pink", "neon-green", "electric-blue", "hot-orange", "bright-yellow", "purple", "black", "white", "glow-in-dark"]),
           })
-        ).min(10).max(25),
+        ).min(10).max(30).describe("An array of at least 10 bead objects representing the bracelet pattern."),
       }),
       prompt: `
-        You are a Kandi Kid from 1999. 
-        Create a bracelet design for this vibe: "${vibe}".
-        Be creative! Use a mix of colors and shapes.
+        You are a Kandi bracelet designer.
+        Create a unique bracelet design for the vibe: "${vibe}".
+        
+        CRITICAL JSON RULES:
+        1. The 'pattern' field MUST be an array of objects, NOT strings.
+        2. Each item in the array must look exactly like this: { "type": "pony", "color": "neon-pink" }
+        3. Do NOT use colors outside this list: neon-pink, neon-green, electric-blue, hot-orange, bright-yellow, purple, black, white, glow-in-dark.
+        4. Do NOT use types outside this list: pony, star, heart, skull, flower.
       `,
     });
 
-    console.log("✅ Generation Successful!");
+    console.log("✅ AI Success:", result.object.kandiName);
     return Response.json(result.object);
 
   } catch (error: any) {
-    // Log the EXACT error from Google so we can debug it
-    console.error("❌ AI GENERATION FAILED:", error);
-    
-    // Return the specific error message to the frontend
+    console.error("❌ AI Error:", error);
     return Response.json({ 
       error: "AI Generation Failed", 
-      details: error.message || "Unknown Error" 
+      details: error.message 
     }, { status: 500 });
   }
 }

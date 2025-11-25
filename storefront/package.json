@@ -22,7 +22,8 @@
     "webpack": "^5"
   },
   "dependencies": {
-    "@ai-sdk/google": "^1.0.0",
+    "@ai-sdk/google": "^2.0.43",
+    "@ai-sdk/openai": "^2.0.72",
     "@headlessui/react": "^1.6.1",
     "@hookform/error-message": "^2.0.0",
     "@medusajs/js-sdk": "preview",
@@ -36,7 +37,7 @@
     "@stripe/react-stripe-js": "^1.7.2",
     "@stripe/stripe-js": "^1.29.0",
     "@types/three": "^0.181.0",
-    "ai": "^4.0.0",
+    "ai": "^5.0.102",
     "algoliasearch": "^4.20.0",
     "axios": "^1.6.7",
     "js-cookie": "^3.0.5",
