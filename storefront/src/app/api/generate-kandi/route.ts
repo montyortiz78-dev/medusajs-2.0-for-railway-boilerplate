@@ -12,7 +12,6 @@ export async function POST(req: Request) {
 
     const result = await generateObject({
       model: openai('gpt-4o'),
-      // FORCE structured mode to ensure JSON
       mode: 'json',
       schema: z.object({
         kandiName: z.string().describe("A creative name for this bracelet"),
@@ -22,17 +21,19 @@ export async function POST(req: Request) {
             type: z.enum(["pony", "star", "heart", "skull", "flower"]),
             color: z.enum(["neon-pink", "neon-green", "electric-blue", "hot-orange", "bright-yellow", "purple", "black", "white", "glow-in-dark"]),
           })
-        ).min(10).max(30).describe("An array of at least 10 bead objects representing the bracelet pattern."),
+        )
+        // CRITICAL FIX: Lower the minimum to 5 so the app doesn't crash
+        // if the AI creates a short bracelet (e.g. 9 beads).
+        .min(5).max(35).describe("An array of beads representing the bracelet pattern."),
       }),
       prompt: `
         You are a Kandi bracelet designer.
         Create a unique bracelet design for the vibe: "${vibe}".
         
-        CRITICAL JSON RULES:
-        1. The 'pattern' field MUST be an array of objects, NOT strings.
-        2. Each item in the array must look exactly like this: { "type": "pony", "color": "neon-pink" }
-        3. Do NOT use colors outside this list: neon-pink, neon-green, electric-blue, hot-orange, bright-yellow, purple, black, white, glow-in-dark.
-        4. Do NOT use types outside this list: pony, star, heart, skull, flower.
+        CRITICAL INSTRUCTIONS:
+        1. You MUST generate a 'pattern' array with AT LEAST 20 beads.
+        2. Use a variety of colors from the allowed list.
+        3. Do NOT return an empty pattern.
       `,
     });
 
