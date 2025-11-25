@@ -1,52 +1,54 @@
+import { google } from '@ai-sdk/google';
+import { generateObject } from 'ai';
 import { z } from 'zod';
 
-export const maxDuration = 30;
-
-// Three "Fake" AI vibes to rotate through so it feels dynamic
-const MOCK_DESIGNS = [
-  {
-    kandiName: "Neon Glitch Goddess",
-    vibeStory: "A cyberpunk dreamscape inspired by 1999 server rooms and neon rain.",
-    pattern: [
-      { type: "pony", color: "neon-pink" }, { type: "pony", color: "black" },
-      { type: "star", color: "electric-blue" }, { type: "pony", color: "neon-green" },
-      { type: "pony", color: "black" }, { type: "pony", color: "neon-pink" },
-      { type: "heart", color: "white" }, { type: "pony", color: "electric-blue" },
-      { type: "pony", color: "neon-green" }, { type: "skull", color: "glow-in-dark" },
-      { type: "pony", color: "black" }, { type: "pony", color: "neon-pink" }
-    ]
-  },
-  {
-    kandiName: "Alien Slime Superstar",
-    vibeStory: "Radioactive vibes from Area 51. Glowing green meets deep purple space dust.",
-    pattern: [
-      { type: "pony", color: "neon-green" }, { type: "pony", color: "purple" },
-      { type: "skull", color: "neon-green" }, { type: "pony", color: "black" },
-      { type: "pony", color: "purple" }, { type: "pony", color: "neon-green" },
-      { type: "star", color: "glow-in-dark" }, { type: "pony", color: "purple" },
-      { type: "pony", color: "black" }, { type: "pony", color: "neon-green" }
-    ]
-  },
-  {
-    kandiName: "Sunset Boulevard",
-    vibeStory: "Cruising down the strip with hot orange sunsets and bright yellow palm trees.",
-    pattern: [
-      { type: "pony", color: "hot-orange" }, { type: "pony", color: "bright-yellow" },
-      { type: "flower", color: "white" }, { type: "pony", color: "hot-orange" },
-      { type: "pony", color: "bright-yellow" }, { type: "pony", color: "hot-orange" },
-      { type: "heart", color: "neon-pink" }, { type: "pony", color: "white" },
-      { type: "pony", color: "bright-yellow" }, { type: "pony", color: "hot-orange" }
-    ]
-  }
-];
+// Allow the AI up to 60 seconds to think
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  // 1. Fake a short delay (so the user thinks AI is thinking)
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  try {
+    // 1. Check if the Key exists in the environment
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!apiKey) {
+      console.error("❌ ERROR: Google API Key is missing from Environment Variables!");
+      return Response.json({ error: "Server Config Error: Missing API Key" }, { status: 500 });
+    }
 
-  // 2. Pick a random design from our list
-  const randomDesign = MOCK_DESIGNS[Math.floor(Math.random() * MOCK_DESIGNS.length)];
+    // 2. Get the user's vibe
+    const { vibe } = await req.json();
+    console.log(`🤖 Generating Kandi for vibe: "${vibe}"...`);
 
-  // 3. Send it back!
-  return Response.json(randomDesign);
+    // 3. Call Google Gemini
+    const result = await generateObject({
+      model: google('gemini-1.5-flash'),
+      schema: z.object({
+        kandiName: z.string().describe("A creative, rave-inspired name for this bracelet"),
+        vibeStory: z.string().describe("A 1-2 sentence backstory about the vibe of this piece"),
+        pattern: z.array(
+          z.object({
+            type: z.enum(["pony", "star", "heart", "skull", "flower"]),
+            color: z.enum(["neon-pink", "neon-green", "electric-blue", "hot-orange", "bright-yellow", "purple", "black", "white", "glow-in-dark"]),
+          })
+        ).min(10).max(25),
+      }),
+      prompt: `
+        You are a Kandi Kid from 1999. 
+        Create a bracelet design for this vibe: "${vibe}".
+        Be creative! Use a mix of colors and shapes.
+      `,
+    });
+
+    console.log("✅ Generation Successful!");
+    return Response.json(result.object);
+
+  } catch (error: any) {
+    // Log the EXACT error from Google so we can debug it
+    console.error("❌ AI GENERATION FAILED:", error);
+    
+    // Return the specific error message to the frontend
+    return Response.json({ 
+      error: "AI Generation Failed", 
+      details: error.message || "Unknown Error" 
+    }, { status: 500 });
+  }
 }
