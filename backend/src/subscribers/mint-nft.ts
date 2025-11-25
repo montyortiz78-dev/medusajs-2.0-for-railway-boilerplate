@@ -31,15 +31,14 @@ export default async function handleNftMinting({
 
       // 3. Prepare the NFT Metadata
       const nftPayload = {
-        recipient: `email:${order.email}:polygon`, // Create wallet for this email on Polygon
+        recipient: `email:${order.email}:base`, // <--- Changed from 'polygon-amoy'
         metadata: {
           name: item.metadata.kandi_name as string,
           description: item.metadata.kandi_vibe as string,
-          image: "https://www.shutterstock.com/image-vector/pixel-art-mystery-box-icon-600nw-2291007005.jpg", // Placeholder image
+          image: "https://www.shutterstock.com/image-vector/pixel-art-mystery-box-icon-600nw-2291007005.jpg",
           attributes: [
             { trait_type: "Vibe", value: item.metadata.kandi_vibe },
             { trait_type: "Bead Count", value: (item.metadata.pattern_data as any[]).length },
-            // Store the raw pattern data as a hidden attribute for the visualizer!
             { trait_type: "Pattern Data", value: JSON.stringify(item.metadata.pattern_data) } 
           ]
         }
