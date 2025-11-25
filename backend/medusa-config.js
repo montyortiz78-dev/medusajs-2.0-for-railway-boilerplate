@@ -2,7 +2,6 @@ import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
 import {
   ADMIN_CORS,
   AUTH_CORS,
-  BACKEND_URL,
   COOKIE_SECRET,
   DATABASE_URL,
   JWT_SECRET,
