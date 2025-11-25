@@ -1,19 +1,28 @@
 'use client';
 
-const COLOR_MAP: Record<string, string> = {
-  "neon-pink": "#FF00CC", "neon-green": "#39FF14", "electric-blue": "#00FFFF",
-  "hot-orange": "#FF5E00", "bright-yellow": "#FFFF00", "purple": "#9D00FF",
-  "black": "#1A1A1A", "white": "#F0F0F0", "glow-in-dark": "#E0FFD1"
-};
+import dynamic from 'next/dynamic';
+
+// Dynamically import the 3D component so it doesn't break server-side rendering
+// (Canvas only works in the browser)
+const KandiBracelet3D = dynamic(() => import('./kandi-bracelet-3d'), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] flex items-center justify-center text-zinc-500 animate-pulse">
+      Stringing beads...
+    </div>
+  )
+});
 
 export default function KandiVisualizer({ pattern }: { pattern: any[] }) {
-  if (!pattern) return null;
+  if (!pattern || pattern.length === 0) return null;
+
   return (
-    <div className="flex flex-wrap justify-center gap-1 p-8 bg-gray-900 rounded-xl">
-      {pattern.map((bead, i) => (
-        <div key={i} className="w-8 h-8 rounded-full border border-white/20 shadow-lg"
-             style={{ backgroundColor: COLOR_MAP[bead.color] }} title={bead.type} />
-      ))}
+    <div className="w-full overflow-hidden rounded-3xl bg-gradient-to-b from-gray-900 to-black border border-zinc-800 shadow-2xl">
+       {/* Pass pattern to the 3D Scene.
+         The 'key' prop forces a full re-render when pattern changes 
+         so the beads animate in again.
+       */}
+       <KandiBracelet3D key={JSON.stringify(pattern)} pattern={pattern} />
     </div>
   );
 }
