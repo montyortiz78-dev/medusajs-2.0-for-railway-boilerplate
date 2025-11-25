@@ -10,6 +10,7 @@ export default async function handleNftMinting({
   const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
   const { id } = event.data
 
+  // 1. Get the Order
   const order = await orderService.retrieveOrder(id, { relations: ["items"] })
 
   const apiKey = process.env.CROSSMINT_API_KEY
@@ -20,12 +21,12 @@ export default async function handleNftMinting({
     return
   }
 
+  // 2. Loop through items to find the custom one
   for (const item of order.items) {
     if (item.metadata && item.metadata.pattern_data) {
       logger.info(`💎 Minting NFT for Item: ${item.id}`)
       
-      // 1. Get the image data (It might be a URL or a Base64 string)
-      // The frontend is sending a Base64 Data URI, which Crossmint DOES support for uploads.
+      // 3. Get the image (Base64 or URL)
       const imagePayload = item.metadata.image_url as string; 
       
       const nftPayload = {
@@ -33,14 +34,14 @@ export default async function handleNftMinting({
         metadata: {
           name: item.metadata.kandi_name as string,
           description: item.metadata.kandi_vibe as string,
-          image: imagePayload, // Pass the Base64 string directly!
+          image: imagePayload, // Send the raw Base64 string here
           attributes: [
             { trait_type: "Vibe", value: item.metadata.kandi_vibe },
             { trait_type: "Bead Count", value: (item.metadata.pattern_data as any[]).length },
             { trait_type: "Pattern Data", value: JSON.stringify(item.metadata.pattern_data) } 
           ]
         },
-        reuploadLinkedFiles: true // This tells Crossmint "Take this string and turn it into an IPFS file for me"
+        reuploadLinkedFiles: true // This tells Crossmint to upload the Base64 to IPFS
       }
 
       try {

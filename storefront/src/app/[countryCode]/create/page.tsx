@@ -35,8 +35,6 @@ export default function CreatePage() {
     
     // 1. FREEZE! 
     setCaptureMode(true);
-
-    // 2. Wait a moment for the 3D engine to snap to position
     await new Promise(resolve => setTimeout(resolve, 100));
 
     const variantId = process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
@@ -51,19 +49,16 @@ export default function CreatePage() {
     }
 
     try {
-      // 3. 📸 TAKE THE SCREENSHOT (The Missing Piece!)
+      // 2. CAPTURE IMAGE (Base64)
       const canvas = document.querySelector('#kandi-canvas canvas') as HTMLCanvasElement;
-      let imageUrl = "https://placehold.co/400"; 
+      let imageBase64 = "https://placehold.co/400"; 
 
       if (canvas) {
-        // Get the raw image data string
-        imageUrl = canvas.toDataURL("image/png");
+        imageBase64 = canvas.toDataURL("image/png");
         console.log("Screenshot captured!");
-      } else {
-        console.warn("Canvas not found for screenshot.");
       }
 
-      // 4. Handle Cart Logic
+      // 3. CART LOGIC
       let cartId = Cookies.get("_medusa_cart_id");
       const headers = {
         "Content-Type": "application/json",
@@ -71,39 +66,28 @@ export default function CreatePage() {
       };
 
       if (!cartId) {
-        console.log("Creating new cart...");
-        
-        // Get Regions to find US
         const regionRes = await fetch(`${backendUrl}/store/regions`, { headers });
         const regionData = await regionRes.json();
+        const usRegion = regionData.regions.find((r: any) => r.countries.some((c: any) => c.iso_2 === 'us'));
         
-        const usRegion = regionData.regions.find((r: any) => 
-          r.countries.some((c: any) => c.iso_2 === 'us')
-        );
-
         if (!usRegion) {
-          alert("Error: No Region found for 'US'.");
-          setIsAdding(false);
-          setCaptureMode(false);
-          return;
+            alert("Error: No US Region found.");
+            setIsAdding(false);
+            setCaptureMode(false);
+            return;
         }
 
-        // Create Cart
         const createRes = await fetch(`${backendUrl}/store/carts`, {
           method: "POST",
           headers,
           body: JSON.stringify({ region_id: usRegion.id }) 
         });
-        
         const createData = await createRes.json();
         cartId = createData.cart.id;
-
-        Cookies.set("_medusa_cart_id", cartId, { expires: 7 });
+        Cookies.set("_medusa_cart_id", cartId!, { expires: 7 });
       }
 
-      // 5. Add Item with Metadata (Including the Image String!)
-      console.log("Adding to cart ID:", cartId);
-      
+      // 4. ADD TO CART (Pass Base64 directly)
       const addRes = await fetch(`${backendUrl}/store/carts/${cartId}/line-items`, {
         method: "POST",
         headers,
@@ -114,7 +98,7 @@ export default function CreatePage() {
             kandi_name: data.kandiName,
             kandi_vibe: data.vibeStory,
             pattern_data: data.pattern,
-            image_url: imageUrl // <--- This sends the Base64 string to the backend
+            image_url: imageBase64 // <--- Sending the raw data string
           }
         }),
       });
