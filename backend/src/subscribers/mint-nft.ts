@@ -1,3 +1,4 @@
+// Updated for production
 import { SubscriberArgs, type SubscriberConfig } from "@medusajs/medusa"
 import { IOrderModuleService } from "@medusajs/types"
 import { Modules } from "@medusajs/utils"
