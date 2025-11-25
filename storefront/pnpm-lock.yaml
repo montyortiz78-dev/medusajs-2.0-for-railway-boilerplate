@@ -25,13 +25,13 @@ importers:
         version: 2.0.1(react-dom@18.3.1(react@18.3.1))(react-hook-form@7.66.1(react@18.3.1))(react@18.3.1)
       '@medusajs/js-sdk':
         specifier: preview
-        version: 2.11.4-preview-20251124210134
+        version: 2.11.4-preview-20251125150145
       '@medusajs/types':
         specifier: preview
-        version: 2.11.4-preview-20251124210134
+        version: 2.11.4-preview-20251125150145
       '@medusajs/ui':
         specifier: preview
-        version: 4.0.28-preview-20251124210134(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
+        version: 4.0.28-preview-20251125150145(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
       '@meilisearch/instant-meilisearch':
         specifier: ^0.7.1
         version: 0.7.1
@@ -76,7 +76,7 @@ importers:
         version: 0.0.18
       next:
         specifier: ^14.0.0
-        version: 14.2.33(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 14.2.33(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       pg:
         specifier: ^8.11.3
         version: 8.16.3
@@ -122,10 +122,10 @@ importers:
         version: 0.2.12-preview-20240505115807
       '@medusajs/ui-preset':
         specifier: preview
-        version: 2.11.4-preview-20251124210134(tailwindcss@3.4.18)
+        version: 2.11.4-preview-20251125150145(tailwindcss@3.4.18)
       '@playwright/test':
         specifier: ^1.41.1
-        version: 1.56.1
+        version: 1.57.0
       '@types/lodash':
         specifier: ^4.14.195
         version: 4.17.21
@@ -459,17 +459,17 @@ packages:
   '@medusajs/client-types@0.2.12-preview-20240505115807':
     resolution: {integrity: sha512-f7T/7WUAGOFfsNsjdCcVoWLlAqryaQB+hF0v/Dzst2hv+PdJGqHfHwTNdeK3ZYhUwzSQ8YdnCYsj9OEJR9SPiQ==}
 
-  '@medusajs/icons@2.11.4-preview-20251124210134':
-    resolution: {integrity: sha512-s+lNUkYtoMvUyaexrvxxdahYIRs3VwVKN6rCkkoEckXH/6hY7qDxLqrXLpxXB35516yRU3cFGZXNDV4+QzsRJw==}
+  '@medusajs/icons@2.11.4-preview-20251125150145':
+    resolution: {integrity: sha512-y/9SfgavUYmkLeZz9Gaii5xt/4x3+tLdSZbeAdhIDtySL+Trb/6QSc3E+Vo6PWnPO08POfttL6WmApaQv2g0Tg==}
     peerDependencies:
       react: ^18.3.1
 
-  '@medusajs/js-sdk@2.11.4-preview-20251124210134':
-    resolution: {integrity: sha512-Y1+8fLKXe3KdDI/FlCatMee3ZRdGk1r2IMgdMvIOyhI7+z95k3D1h3dDuYIyuBeUsE75xyK+YJHXplgyeJ8Aaw==}
+  '@medusajs/js-sdk@2.11.4-preview-20251125150145':
+    resolution: {integrity: sha512-UrnmZxogTJDeFldTWJEqakFQp447BocKK2ZKOdIlfeUKrH0aIz+Ys8KSbCBIR2oz0+RH+bt/059yDGXphbrzDw==}
     engines: {node: '>=20'}
 
-  '@medusajs/types@2.11.4-preview-20251124210134':
-    resolution: {integrity: sha512-19xTWEitTc8YhJl9NSiFrY+og4x3wdDe3TWEkPkaw2YlyX/TbdvyoQoxnVUJgOMoOUMGnToH6yBY58LUbXR7iA==}
+  '@medusajs/types@2.11.4-preview-20251125150145':
+    resolution: {integrity: sha512-FGv5+0Y/yBdDrvhxebqsdBk3du0KEA/yqGf7xA12/8fw+pqWUW3x/0ChHz2HTw0fsxdth7B0SSfth3Yw1e1oKQ==}
     engines: {node: '>=20'}
     peerDependencies:
       ioredis: ^5.4.1
@@ -480,13 +480,13 @@ packages:
       vite:
         optional: true
 
-  '@medusajs/ui-preset@2.11.4-preview-20251124210134':
-    resolution: {integrity: sha512-wYN8v4pHXiiSWqK2MmeVKPEyYqgmsI+tPwQ+FpWXqwbNusN6N45YSshpLqabjgwVfMX9KVEfBQgxwM7FGpmqBQ==}
+  '@medusajs/ui-preset@2.11.4-preview-20251125150145':
+    resolution: {integrity: sha512-JkCp0qmhJ0C8OauzqkC2sdL6GD5Kku0niqNQfWU9dfCSHNEaFbV4A+g8a2O9RmIC24x8xCeQvP05OyqxTe5ncA==}
     peerDependencies:
       tailwindcss: ^3.4.3
 
-  '@medusajs/ui@4.0.28-preview-20251124210134':
-    resolution: {integrity: sha512-9g3Em8g8MPvIjHzJOs7onM7cuoYuwnDIMszHc3cKpuyl8UNmErVVJmzgchJdBmk2CQJ8zTBJsvfVzfxklAopxw==}
+  '@medusajs/ui@4.0.28-preview-20251125150145':
+    resolution: {integrity: sha512-TMhSKOXuD17Ze0j+Plaq0fGc7Og8I127l8WhMar3yiyXUxdzAAAj2Gr8AE/Vp3uTTdp3f/mOMEvVe9jkrhKhXA==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -594,8 +594,8 @@ packages:
   '@paypal/sdk-constants@1.0.157':
     resolution: {integrity: sha512-BjxWT9rK6dM1AOffSpvHYY47/8BY775jgEYYiwH6eL4YaqU5Epcw7zOtwQ8L4UaEn4FCAjZ2EWxaS83dCN7SpA==}
 
-  '@playwright/test@1.56.1':
-    resolution: {integrity: sha512-vSMYtL/zOcFpvJCW71Q/OEGQb7KYBPAdKh35WNSkaZA75JlAO8ED8UN6GUNTm3drWomcbcqRPFqQbLae8yBTdg==}
+  '@playwright/test@1.57.0':
+    resolution: {integrity: sha512-6TyEnHgd6SArQO8UO2OMTxshln3QMWBtPGrOCgs3wVEmQmwyuNtB10IZMfmYDE0riwNR1cu4q+pPcxMVtaG3TA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3562,13 +3562,13 @@ packages:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
     engines: {node: '>=8'}
 
-  playwright-core@1.56.1:
-    resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
+  playwright-core@1.57.0:
+    resolution: {integrity: sha512-agTcKlMw/mjBWOnD6kFZttAAGHgi/Nw0CZ2o6JqWSbMlI219lAFLZZCyqByTsvVAJq5XA5H8cA6PrvBRpBWEuQ==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.56.1:
-    resolution: {integrity: sha512-aFi5B0WovBHTEvpM3DzXTUaeN6eN0qWnTkKx4NQaH4Wvcmc153PdaY2UBdSYKaGYw+UyWXSVyxDUg5DoPEttjw==}
+  playwright@1.57.0:
+    resolution: {integrity: sha512-ilYQj1s8sr2ppEJ2YVadYBN0Mb3mdo9J0wQ+UuDhzYqURwSoW4n1Xs5vs7ORwgDGmyEh33tRMeS8KhdkMoLXQw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -4747,31 +4747,31 @@ snapshots:
 
   '@medusajs/client-types@0.2.12-preview-20240505115807': {}
 
-  '@medusajs/icons@2.11.4-preview-20251124210134(react@18.3.1)':
+  '@medusajs/icons@2.11.4-preview-20251125150145(react@18.3.1)':
     dependencies:
       react: 18.3.1
 
-  '@medusajs/js-sdk@2.11.4-preview-20251124210134':
+  '@medusajs/js-sdk@2.11.4-preview-20251125150145':
     dependencies:
       fetch-event-stream: 0.1.6
       qs: 6.14.0
 
-  '@medusajs/types@2.11.4-preview-20251124210134':
+  '@medusajs/types@2.11.4-preview-20251125150145':
     dependencies:
       bignumber.js: 9.3.1
 
-  '@medusajs/ui-preset@2.11.4-preview-20251124210134(tailwindcss@3.4.18)':
+  '@medusajs/ui-preset@2.11.4-preview-20251125150145(tailwindcss@3.4.18)':
     dependencies:
       '@tailwindcss/forms': 0.5.10(tailwindcss@3.4.18)
       tailwindcss: 3.4.18
       tailwindcss-animate: 1.0.7(tailwindcss@3.4.18)
 
-  '@medusajs/ui@4.0.28-preview-20251124210134(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)':
+  '@medusajs/ui@4.0.28-preview-20251125150145(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)':
     dependencies:
       '@dnd-kit/core': 6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@dnd-kit/utilities': 3.2.2(react@18.3.1)
-      '@medusajs/icons': 2.11.4-preview-20251124210134(react@18.3.1)
+      '@medusajs/icons': 2.11.4-preview-20251125150145(react@18.3.1)
       '@radix-ui/react-dialog': 1.1.4(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-dismissable-layer': 1.1.4(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tanstack/react-table': 8.20.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -4875,9 +4875,9 @@ snapshots:
     dependencies:
       hi-base32: 0.5.1
 
-  '@playwright/test@1.56.1':
+  '@playwright/test@1.57.0':
     dependencies:
-      playwright: 1.56.1
+      playwright: 1.57.0
 
   '@radix-ui/number@1.1.0': {}
 
@@ -7555,7 +7555,7 @@ snapshots:
       eslint: 8.10.0
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@8.10.0))(eslint@8.10.0)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.10.0)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.10.0))(eslint@8.10.0))(eslint@8.10.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.10.0)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.10.0)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@8.10.0)
       eslint-plugin-react: 7.37.5(eslint@8.10.0)
       eslint-plugin-react-hooks: 5.0.0-canary-7118f5dd7-20230705(eslint@8.10.0)
@@ -7585,7 +7585,7 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.10.0)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.10.0))(eslint@8.10.0))(eslint@8.10.0)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.10.0)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.10.0)
     transitivePeerDependencies:
       - supports-color
 
@@ -7600,7 +7600,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.10.0)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.10.0))(eslint@8.10.0))(eslint@8.10.0):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.10.0)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.10.0):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -8327,7 +8327,7 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next@14.2.33(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.56.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next@14.2.33(@babel/core@7.28.5)(@opentelemetry/api@1.9.0)(@playwright/test@1.57.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 14.2.33
       '@swc/helpers': 0.5.5
@@ -8349,7 +8349,7 @@ snapshots:
       '@next/swc-win32-ia32-msvc': 14.2.33
       '@next/swc-win32-x64-msvc': 14.2.33
       '@opentelemetry/api': 1.9.0
-      '@playwright/test': 1.56.1
+      '@playwright/test': 1.57.0
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
@@ -8504,11 +8504,11 @@ snapshots:
     dependencies:
       find-up: 4.1.0
 
-  playwright-core@1.56.1: {}
+  playwright-core@1.57.0: {}
 
-  playwright@1.56.1:
+  playwright@1.57.0:
     dependencies:
-      playwright-core: 1.56.1
+      playwright-core: 1.57.0
     optionalDependencies:
       fsevents: 2.3.2
 
