@@ -46,9 +46,10 @@ const medusaConfig = {
     }
   },
   admin: {
+    // Your hardcoded production URL
     backendUrl: "https://backend-production-622a.up.railway.app",
     disable: SHOULD_DISABLE_ADMIN,
-},
+  },
   modules: [
     {
       key: Modules.FILE,
@@ -62,14 +63,15 @@ const medusaConfig = {
               endPoint: MINIO_ENDPOINT,
               accessKey: MINIO_ACCESS_KEY,
               secretKey: MINIO_SECRET_KEY,
-              bucket: MINIO_BUCKET // Optional, default: medusa-media
+              bucket: MINIO_BUCKET 
             }
           }] : [{
             resolve: '@medusajs/file-local',
             id: 'local',
             options: {
               upload_dir: 'static',
-              backend_url: `${BACKEND_URL}/static`
+              // CRITICAL FIX: Hardcoded to your real Railway URL so images are public
+              backend_url: "https://backend-production-622a.up.railway.app/static"
             }
           }])
         ]
