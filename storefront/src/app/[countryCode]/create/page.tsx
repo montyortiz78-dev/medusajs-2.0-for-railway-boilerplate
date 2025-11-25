@@ -9,6 +9,7 @@ export default function CreatePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false); // New loading state for Cart
   const [data, setData] = useState<any>(null);
+  const [captureMode, setCaptureMode] = useState(false); // NEW STATE
 
   // 1. The AI Generator (Mock or Real)
   const handleGenerate = async (e: any) => {
@@ -31,6 +32,10 @@ export default function CreatePage() {
   // 2. The "Add to Stash" Logic
   const handleAddToStash = async () => {
     setIsAdding(true);
+    // 1. FREEZE! 
+    setCaptureMode(true);
+    // 2. Wait a moment for the 3D engine to snap to position
+    await new Promise(resolve => setTimeout(resolve, 100));
     const variantId = process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
     const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
     const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
@@ -42,6 +47,8 @@ export default function CreatePage() {
     }
 
     try {
+      // 3. Take the photo (Now it will be perfectly aligned)
+      const canvas = document.querySelector('#kandi-canvas canvas') as HTMLCanvasElement;
       let cartId = Cookies.get("_medusa_cart_id");
       const headers = {
         "Content-Type": "application/json",
@@ -118,6 +125,8 @@ export default function CreatePage() {
       console.error("Cart Error:", e);
       alert("System Error adding to cart.");
     } finally {
+      // 4. UNFREEZE! Let them play again
+      setCaptureMode(false);
       setIsAdding(false);
     }
   };
@@ -153,7 +162,8 @@ export default function CreatePage() {
           </div>
           
           <div className="bg-gradient-to-b from-zinc-900 to-black rounded-3xl p-8 border border-zinc-800">
-            <KandiVisualizer pattern={data.pattern} />
+            {/* Pass the state to the visualizer */}
+            <KandiVisualizer pattern={data.pattern} captureMode={captureMode} />
           </div>
 
           <div className="flex justify-center gap-4 mt-8">
