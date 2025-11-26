@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { retrieveCart } from "@lib/data/cart"
-import { retrieveCustomer } from "@lib/data/customer"
+import { getCustomer } from "@lib/data/customer" // CHANGED: retrieveCustomer -> getCustomer
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
@@ -27,13 +27,11 @@ export default async function CheckoutPage({
 
   const cart = await fetchCart()
   
-  // 1. Still fetch the customer...
-  const customer = await retrieveCustomer().catch(() => null)
+  // CHANGED: Use getCustomer
+  const customer = await getCustomer().catch(() => null)
 
-  // 2. ...But REMOVED the redirect logic here.
-  // We will handle the "Guest" state inside the form instead.
-
-  if (cart?.items.length === 0) {
+  // FIX: Added safe check for items
+  if (cart?.items && cart.items.length === 0) {
     redirect(`/${countryCode}`)
   }
 

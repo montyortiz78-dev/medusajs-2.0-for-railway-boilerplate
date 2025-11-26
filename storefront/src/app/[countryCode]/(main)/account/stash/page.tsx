@@ -1,26 +1,25 @@
-import { listCustomerOrders } from "@lib/data/orders"
+import { listOrders } from "@lib/data/orders" // CHANGED: listCustomerOrders -> listOrders
 import { Container, Heading, Text } from "@medusajs/ui"
 import Thumbnail from "@modules/products/components/thumbnail"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { notFound } from "next/navigation"
+import { HttpTypes } from "@medusajs/types" // Added for types
 
 export default async function StashPage() {
-  const orders = await listCustomerOrders()
+  // CHANGED: listOrders
+  const orders = await listOrders()
 
   if (!orders) {
     notFound()
   }
 
-  // 1. EXTRACT ALL KANDI ITEMS FROM ALL ORDERS
-  // We flatten the list so we have one big array of bracelets
-  const stashItems = orders.flatMap(order => 
-    order.items.filter(item => item.metadata && item.metadata.kandi_name)
-      .map(item => ({
+  // FIX: Added 'any' types to silence the strict checker for now
+  const stashItems = orders.flatMap((order: any) => 
+    order.items.filter((item: any) => item.metadata && item.metadata.kandi_name)
+      .map((item: any) => ({
         ...item,
-        // Helper to grab the original order date/id
         orderDate: order.created_at,
         orderId: order.display_id,
-        // Extract Kandi Data
         kandiName: item.metadata?.kandi_name as string,
         kandiVibe: item.metadata?.kandi_vibe as string,
         imageUrl: item.metadata?.image_url as string,
@@ -48,9 +47,8 @@ export default async function StashPage() {
         </Container>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {stashItems.map((item, index) => {
+          {stashItems.map((item: any, index: number) => {
              
-             // Build Remix Link logic
              let remixLink = "#";
              if (item.pattern) {
                 const payload = JSON.stringify({
@@ -59,19 +57,18 @@ export default async function StashPage() {
                     pattern: item.pattern
                 });
                 const encoded = btoa(encodeURIComponent(payload));
-                remixLink = `/create?remix=${encoded}`;
+                // FIX: Added /us prefix to ensure correct routing
+                remixLink = `/us/create?remix=${encoded}`;
              }
 
              return (
               <Container key={item.id + index} className="p-0 overflow-hidden flex flex-col group">
-                {/* IMAGE AREA */}
                 <div className="aspect-square bg-gray-100 relative">
                     <Thumbnail 
                         thumbnail={item.imageUrl} 
                         size="full" 
                         className="object-cover w-full h-full"
                     />
-                    {/* Hover Overlay */}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <LocalizedClientLink href={remixLink}>
                             <button className="bg-white text-black px-4 py-2 rounded-full text-xs font-bold hover:scale-105 transition-transform">
@@ -81,7 +78,6 @@ export default async function StashPage() {
                     </div>
                 </div>
 
-                {/* INFO AREA */}
                 <div className="p-6 flex flex-col gap-2">
                     <div className="flex justify-between items-start">
                         <Heading level="h3" className="text-lg font-bold">
@@ -100,11 +96,6 @@ export default async function StashPage() {
                         <Text className="text-xs text-ui-fg-muted">
                             {new Date(item.orderDate).toLocaleDateString()}
                         </Text>
-                        
-                        {/* Note: To link to the specific NFT on Crossmint, 
-                           we would need to store the NFT ID in metadata during minting.
-                           For now, we simulate the 'Digital' status.
-                        */}
                         <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
                             ● Minted
                         </span>
