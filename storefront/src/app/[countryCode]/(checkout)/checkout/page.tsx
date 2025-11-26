@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation" // Added redirect
 
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
@@ -26,9 +26,23 @@ const fetchCart = async () => {
   return cart
 }
 
-export default async function Checkout() {
+// Updated to accept 'params' so we can build the redirect URL
+export default async function Checkout({
+  params
+}: {
+  params: { countryCode: string }
+}) {
+  const { countryCode } = params
+  
   const cart = await fetchCart()
   const customer = await getCustomer()
+
+  // --- GATEKEEPER LOGIC ---
+  // If no customer is logged in, kick them to the login page
+  if (!customer) {
+    redirect(`/${countryCode}/account/login`)
+  }
+  // ------------------------
 
   return (
     <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
