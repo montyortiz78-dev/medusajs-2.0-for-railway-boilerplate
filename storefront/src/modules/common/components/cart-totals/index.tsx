@@ -1,8 +1,6 @@
 "use client"
 
 import { convertToLocale } from "@lib/util/money"
-import { InformationCircleSolid } from "@medusajs/icons"
-import { Tooltip } from "@medusajs/ui"
 import React from "react"
 
 type CartTotalsProps = {
@@ -78,7 +76,10 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           </div>
         )}
       </div>
-      <div className="h-px w-full border-b border-gray-200 my-4" />
+      
+      {/* CHANGED: border-gray-200 -> border-white/10 */}
+      <div className="h-px w-full border-b border-white/10 my-4" />
+      
       <div className="flex items-center justify-between text-ui-fg-base mb-2 txt-medium ">
         <span>Total</span>
         <span
@@ -89,7 +90,9 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           {convertToLocale({ amount: total ?? 0, currency_code })}
         </span>
       </div>
-      <div className="h-px w-full border-b border-gray-200 mt-4" />
+      
+      {/* CHANGED: border-gray-200 -> border-white/10 */}
+      <div className="h-px w-full border-b border-white/10 mt-4" />
     </div>
   )
 }
