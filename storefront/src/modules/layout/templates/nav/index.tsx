@@ -3,7 +3,7 @@ import { listRegions } from "@lib/data/regions"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
-import { MagnifyingGlass } from "@medusajs/icons"
+import { MagnifyingGlass } from "@medusajs/icons" // Import the icon
 
 export default async function Nav() {
   const regions = await listRegions().catch(() => null)
@@ -15,9 +15,9 @@ export default async function Nav() {
         
         <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
           
-          {/* Left Side: Empty to keep logo centered */}
+          {/* Left Side: Empty to keep logo centered (SideMenu removed) */}
           <div className="flex-1 basis-0 h-full flex items-center">
-             {/* SideMenu removed as requested */}
+             {/* Hamburger removed */}
           </div>
 
           {/* Center: Logo */}
@@ -38,12 +38,12 @@ export default async function Nav() {
             <div className="hidden small:flex items-center gap-x-6 h-full">
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
-                  className="hover:text-pink-400 transition-colors"
+                  className="hover:text-pink-400 transition-colors flex items-center justify-center"
                   href="/search"
                   scroll={false}
                   data-testid="nav-search-link"
                 >
-                  {/* NEW SEARCH ICON */}
+                  {/* SEARCH ICON */}
                   <MagnifyingGlass className="text-gray-300 hover:text-pink-400 w-6 h-6" />
                 </LocalizedClientLink>
               )}
