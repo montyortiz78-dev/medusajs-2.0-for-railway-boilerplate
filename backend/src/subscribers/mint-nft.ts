@@ -10,47 +10,58 @@ export default async function handleNftMinting({
   const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
   const { id } = event.data
 
-  // 1. Get the Order
+  // 1. Retrieve the Order
   const order = await orderService.retrieveOrder(id, { relations: ["items"] })
 
   const apiKey = process.env.CROSSMINT_API_KEY
   const collectionId = process.env.CROSSMINT_COLLECTION_ID
 
+  // Safety Check: Print ID status (don't print the actual key for security)
   if (!apiKey || !collectionId) {
-    logger.error("❌ Crossmint Config Missing!")
+    logger.error("❌ Crossmint Config Missing (API Key or Collection ID)")
     return
   }
+  logger.info(`✅ using Collection ID: ${collectionId}`)
 
   // 2. Loop through items
   for (const item of order.items) {
     if (item.metadata && item.metadata.pattern_data) {
       logger.info(`💎 Minting NFT for Item: ${item.id}`)
       
-      // --- DEBUGGING MODE ON ---
-      // We are ignoring the real image for one test to prove the connection works.
-      
-      // A placeholder image (Kandi bracelet example)
-      const TEST_IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Kandi_bracelets.jpg/800px-Kandi_bracelets.jpg";
-      
-      logger.info("⚠️ USING HARDCODED TEST IMAGE to debug API connection.");
+      // 3. Prepare the Image
+      let imagePayload = item.metadata.image_url as string || "";
+
+      // FIX: Ensure it is a valid Data URI
+      if (imagePayload && !imagePayload.startsWith("http") && !imagePayload.startsWith("data:")) {
+          logger.info("🔧 Formatting Base64 string to Data URI...")
+          imagePayload = `data:image/png;base64,${imagePayload}`;
+      }
+
+      // If still empty, use a fallback so the mint doesn't fail entirely
+      if (!imagePayload) {
+          logger.warn("⚠️ No image found in metadata. Using Stock Fallback.")
+          imagePayload = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Kandi_bracelets.jpg/800px-Kandi_bracelets.jpg";
+      }
 
       const nftPayload = {
         recipient: `email:${order.email}:base`, 
         metadata: {
-          name: "TEST MINT - " + (item.metadata.kandi_name as string),
-          description: "Debugging Crossmint Connection",
-          image: TEST_IMAGE_URL, // <--- Forcing a valid URL here
+          name: item.metadata.kandi_name as string,
+          description: item.metadata.kandi_vibe as string,
+          image: imagePayload, 
           attributes: [
-            { trait_type: "Vibe", value: "Debugging" }
+            { trait_type: "Vibe", value: item.metadata.kandi_vibe },
+            { trait_type: "Generated", value: "True" }
           ]
         },
-        reuploadLinkedFiles: true 
+        reuploadLinkedFiles: true // Important for Data URIs
       }
 
       try {
-        const response = await fetch(
-          `https://www.crossmint.com/api/2022-06-09/collections/${collectionId}/nfts`,
-          {
+        // USE PRODUCTION URL explicitly
+        const url = `https://www.crossmint.com/api/2022-06-09/collections/${collectionId}/nfts`;
+        
+        const response = await fetch(url, {
             method: "POST",
             headers: {
               "X-API-KEY": apiKey,
@@ -60,14 +71,15 @@ export default async function handleNftMinting({
           }
         )
 
-        const data = await response.json()
+        // READ RESPONSE SAFELY
+        const responseText = await response.text();
         
-        if (response.ok) {
-          logger.info(`✅ SUCCESS! Test NFT Minted! ID: ${data.id}`)
-          logger.info("CONCLUSION: The API works. The issue is your Base64 Image string.");
+        if (!response.ok) {
+            // This logs the ACTUAL error from Crossmint (e.g., "Image too large")
+            logger.error(`❌ Mint Failed (${response.status}): ${responseText}`);
         } else {
-          logger.error(`❌ TEST FAILED: ${JSON.stringify(data)}`)
-          logger.info("CONCLUSION: The issue is the API Key, Collection ID, or Payload structure.");
+            const data = JSON.parse(responseText);
+            logger.info(`✅ NFT Minted Successfully! ID: ${data.id}`)
         }
       } catch (error) {
         logger.error(`❌ Network Error: ${error}`)
