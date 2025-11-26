@@ -45,7 +45,6 @@ const medusaConfig = {
     }
   },
   admin: {
-    // Your hardcoded production URL
     backendUrl: "https://backend-production-622a.up.railway.app",
     disable: SHOULD_DISABLE_ADMIN,
   },
@@ -163,30 +162,7 @@ const medusaConfig = {
           },
         },
       },
-    },
-    // ------------------------------------
-    ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
-      resolve: '@rokmohar/medusa-plugin-meilisearch',
-      options: {
-        config: {
-          host: MEILISEARCH_HOST,
-          apiKey: MEILISEARCH_ADMIN_KEY
-        },
-        settings: {
-          products: {
-            type: 'products',
-            enabled: true,
-            fields: ['id', 'title', 'description', 'handle', 'variant_sku', 'thumbnail'],
-            indexSettings: {
-              searchableAttributes: ['title', 'description', 'variant_sku'],
-              displayedAttributes: ['id', 'handle', 'title', 'description', 'variant_sku', 'thumbnail'],
-              filterableAttributes: ['id', 'handle'],
-            },
-            primaryKey: 'id',
-          }
-        }
-      }
-    }] : [])
+    }
   ]
 };
 
