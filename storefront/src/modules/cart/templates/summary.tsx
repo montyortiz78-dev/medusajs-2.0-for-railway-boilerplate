@@ -28,6 +28,9 @@ const Summary = ({ cart }: SummaryProps) => {
   // SAFETY CHECK
   if (!cart) return null 
 
+  // FIX: Calculate the step so the link works
+  const step = getCheckoutStep(cart)
+
   return (
     <div className="flex flex-col gap-y-4">
       <Heading level="h2" className="text-[2rem] leading-[2.75rem]">
