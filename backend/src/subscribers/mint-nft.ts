@@ -26,22 +26,38 @@ export default async function handleNftMinting({
     if (item.metadata && item.metadata.pattern_data) {
       logger.info(`💎 Minting NFT for Item: ${item.id}`)
       
-      // 3. Get the image (Base64 or URL)
-      const imagePayload = item.metadata.image_url as string; 
+      // 3. Get the image and FIX it if necessary
+      let imagePayload = item.metadata.image_url as string || "";
       
+      // LOGGING: Let's see the first 30 characters to debug
+      logger.info(`📸 Image Data Start: ${imagePayload.substring(0, 30)}...`)
+
+      // CHECK: If it's Base64 but missing the URI prefix, add it.
+      // We assume it is a PNG since it is generated from a canvas.
+      if (imagePayload && !imagePayload.startsWith("http") && !imagePayload.startsWith("data:")) {
+          logger.info("🔧 Fixing Base64 prefix...")
+          imagePayload = `data:image/png;base64,${imagePayload}`;
+      }
+      
+      // If image is still empty, skip to prevent API error
+      if (!imagePayload) {
+          logger.error("❌ Image payload is empty. Skipping mint.")
+          continue;
+      }
+
       const nftPayload = {
         recipient: `email:${order.email}:base`, 
         metadata: {
           name: item.metadata.kandi_name as string,
           description: item.metadata.kandi_vibe as string,
-          image: imagePayload, // Send the raw Base64 string here
+          image: imagePayload, 
           attributes: [
             { trait_type: "Vibe", value: item.metadata.kandi_vibe },
             { trait_type: "Bead Count", value: (item.metadata.pattern_data as any[]).length },
             { trait_type: "Pattern Data", value: JSON.stringify(item.metadata.pattern_data) } 
           ]
         },
-        reuploadLinkedFiles: true // This tells Crossmint to upload the Base64 to IPFS
+        reuploadLinkedFiles: true // This tells Crossmint to upload the Data URI to IPFS
       }
 
       try {
