@@ -47,7 +47,6 @@ const CartDropdown = ({
     open()
   }
 
-  // Clean up the timer when the component unmounts
   useEffect(() => {
     return () => {
       if (activeTimer) {
@@ -58,7 +57,6 @@ const CartDropdown = ({
 
   const pathname = usePathname()
 
-  // open cart dropdown when modifying the cart items, but only if we're not on the cart page
   useEffect(() => {
     if (itemRef.current !== totalItems && !pathname.includes("/cart")) {
       timedOpen()
@@ -75,7 +73,7 @@ const CartDropdown = ({
       <Popover className="relative h-full">
         <Popover.Button className="h-full focus:outline-none">
           <LocalizedClientLink
-            className="hover:text-pink-400 transition-colors duration-200 font-bold text-gray-300"
+            className="hover:text-white transition-colors duration-200 font-bold"
             href="/cart"
             data-testid="nav-cart-link"
           >{`Cart (${totalItems})`}</LocalizedClientLink>
@@ -90,9 +88,10 @@ const CartDropdown = ({
           leaveFrom="opacity-100 translate-y-0"
           leaveTo="opacity-0 translate-y-1"
         >
+          {/* GLASS PANEL */}
           <Popover.Panel
             static
-            className="hidden small:block absolute top-[calc(100%+1px)] right-0 w-[420px] glass rounded-b-2xl border-x border-b border-white/10"
+            className="hidden small:block absolute top-[calc(100%+1px)] right-0 w-[420px] glass rounded-b-2xl border-x border-b border-white/10 backdrop-blur-xl"
             data-testid="nav-cart-dropdown"
           >
             <div className="p-4 flex items-center justify-center border-b border-white/10">
@@ -108,13 +107,12 @@ const CartDropdown = ({
                         : 1
                     })
                     .map((item) => {
-                      // --- CUSTOM KANDI LOGIC ---
+                      // --- CUSTOM LOGIC ---
                       const kandiName = item.metadata?.kandi_name as string | undefined;
                       const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
                       const customImage = item.metadata?.image_url as string | undefined;
                       const patternData = item.metadata?.pattern_data;
 
-                      // Build the Remix Link logic
                       let productLink = `/products/${item.variant?.product?.handle}`;
                       if (kandiName && patternData) {
                           const remixPayload = JSON.stringify({
@@ -125,7 +123,7 @@ const CartDropdown = ({
                           const encoded = btoa(encodeURIComponent(remixPayload));
                           productLink = `/create?remix=${encoded}`;
                       }
-                      // ---------------------------
+                      // --------------------
 
                       return (
                         <div
@@ -156,14 +154,12 @@ const CartDropdown = ({
                                     </LocalizedClientLink>
                                   </h3>
                                   
-                                  {/* Vibe Subtitle */}
                                   {kandiVibe && (
                                     <span className="text-xs text-gray-400 italic truncate mb-1 block">
                                       "{kandiVibe}"
                                     </span>
                                   )}
 
-                                  {/* Variant Options (Hidden for custom items) */}
                                   {!kandiName && (
                                     <LineItemOptions
                                       variant={item.variant}
@@ -175,7 +171,7 @@ const CartDropdown = ({
                                   <span
                                     data-testid="cart-item-quantity"
                                     data-value={item.quantity}
-                                    className="text-gray-500 text-small-regular"
+                                    className="text-gray-400 text-small-regular"
                                   >
                                     Qty: {item.quantity}
                                   </span>
@@ -187,7 +183,7 @@ const CartDropdown = ({
                             </div>
                             <DeleteButton
                               id={item.id}
-                              className="mt-1 self-start text-xs text-red-500 hover:text-red-400 transition-colors"
+                              className="mt-1 self-start text-xs text-red-400 hover:text-red-500 transition-colors"
                               data-testid="cart-item-remove-button"
                             >
                               Remove
