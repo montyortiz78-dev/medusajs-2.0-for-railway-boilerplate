@@ -1,7 +1,7 @@
 import { Metadata } from "next"
-import { Inter } from "next/font/google" // <--- FIX 1: Import the font
-import { clx } from "@medusajs/ui"       // <--- FIX 2: Import the utility
-import "../styles/globals.css"           // Make sure this points to your css
+import { Inter } from "next/font/google"
+import { clx } from "@medusajs/ui"
+import "../styles/globals.css" // Ensure this matches your CSS file location
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-mode="dark" className={clx("h-full", inter.variable)}>
-      <body className="bg-black text-white h-full antialiased font-sans">
+      <body className="bg-black text-white h-full antialiased font-sans selection:bg-pink-500 selection:text-white">
         <main className="relative flex flex-col min-h-screen">
           {children}
         </main>
