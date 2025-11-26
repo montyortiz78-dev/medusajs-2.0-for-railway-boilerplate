@@ -34,7 +34,7 @@
 }
 
 @layer components {
-  /* --- THE MISSING LAYOUT WRAPPER --- */
+  /* Restore the container! */
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6 small:px-14;
   }
@@ -45,14 +45,22 @@
   @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
 }
 
-/* --- GLOBAL COMPONENT FIXES --- */
+/* --- COMPONENT FIXES --- */
+/* We use specific targeting instead of @apply !important to be safer for the build */
 input, textarea, select {
-    @apply bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-500 !important;
+  background-color: rgba(24, 24, 27, 0.5) !important; /* Zinc 900 at 50% */
+  border-color: #27272a !important; /* Zinc 800 */
+  color: white !important;
 }
 
+input::placeholder, textarea::placeholder {
+  color: #71717a !important; /* Zinc 500 */
+}
+
+/* Force Modals to be dark/glassy */
 [role="dialog"] {
-    background-color: rgba(0, 0, 0, 0.8) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: white !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
 }
