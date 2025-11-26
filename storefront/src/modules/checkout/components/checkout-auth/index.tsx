@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { login, signup } from "@lib/data/customer"
+// CHANGED: Import from the new actions file
+import { loginAction, signupAction } from "../../../../../app/actions" 
 import { Button, Heading, Text, Input, Label } from "@medusajs/ui"
 import { useParams } from "next/navigation"
 import Spinner from "@modules/common/icons/spinner"
 
 const CheckoutAuth = () => {
-  const [mode, setMode] = useState<"sign-in" | "register">("register") // Default to register for new users
+  const [mode, setMode] = useState<"sign-in" | "register">("register")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { countryCode } = useParams()
@@ -21,14 +22,18 @@ const CheckoutAuth = () => {
     
     try {
       if (mode === "sign-in") {
-        await login(countryCode as string, formData)
+        await loginAction(countryCode as string, formData)
       } else {
-        await signup(countryCode as string, formData)
+        await signupAction(countryCode as string, formData)
       }
-      // The server actions usually redirect on success. 
-      // If not, we reload to refresh the 'customer' prop in the parent.
+      // Reload to update the checkout page state
       window.location.reload()
     } catch (err: any) {
+      // Ignore redirect errors (Next.js redirect throws an error that we shouldn't catch)
+      if (err.message === "NEXT_REDIRECT") {
+        window.location.reload();
+        return;
+      }
       setError(err.message || "Authentication failed")
       setIsLoading(false)
     }
@@ -38,6 +43,7 @@ const CheckoutAuth = () => {
     <div className="bg-white w-full">
       <div className="flex items-center gap-4 mb-6 border-b border-gray-100 pb-4">
         <button
+          type="button" // Add type button to prevent form submit
           onClick={() => setMode("register")}
           className={`text-lg font-bold pb-1 ${mode === "register" ? "text-black" : "text-gray-400"}`}
         >
@@ -45,6 +51,7 @@ const CheckoutAuth = () => {
         </button>
         <div className="h-6 w-[1px] bg-gray-200"></div>
         <button
+          type="button" // Add type button
           onClick={() => setMode("sign-in")}
           className={`text-lg font-bold pb-1 ${mode === "sign-in" ? "text-black" : "text-gray-400"}`}
         >
@@ -87,7 +94,7 @@ const CheckoutAuth = () => {
             <Input name="password" type="password" required />
         </div>
         
-        {/* Hidden Phone field if register requires it (optional in some starters) */}
+        {/* Hidden Phone field required by some Medusa setups */}
         {mode === "register" && (
              <Input name="phone" type="hidden" value="" />
         )}
