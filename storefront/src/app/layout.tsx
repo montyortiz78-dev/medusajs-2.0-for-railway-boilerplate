@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="en" data-mode="light">
-      <body>
+      // Example modification in src/app/layout.tsx
+      <body className={clx("bg-neutral-950 text-white font-sans", inter.variable)}>
         <main className="relative">{props.children}</main>
       </body>
     </html>
