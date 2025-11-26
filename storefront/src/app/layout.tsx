@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" data-mode="dark" className={clx("h-full", inter.variable)}>
-      <body className="bg-black text-white h-full antialiased font-sans selection:bg-pink-500 selection:text-white">
+    <html lang="en" data-mode="dark" className={clx("h-full dark", inter.variable)}>
+      <body className="bg-black text-white h-full antialiased font-sans">
         <main className="relative flex flex-col min-h-screen">
           {children}
         </main>

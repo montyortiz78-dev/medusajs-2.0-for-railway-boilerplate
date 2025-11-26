@@ -35,15 +35,11 @@ export default async function Checkout({
   const { countryCode } = params
   
   const cart = await fetchCart()
-  const customer = await getCustomer()
+  const customer = await getCustomer().catch(() => null)
 
-  // --- GATEKEEPER LOGIC ---
   if (!customer) {
-    // FIX: Redirect to /account instead of /account/login
-    // The account page handles showing the login form if you aren't signed in.
     redirect(`/${countryCode}/account`)
   }
-  // ------------------------
 
   return (
     <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">

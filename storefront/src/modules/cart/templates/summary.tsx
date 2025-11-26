@@ -25,7 +25,8 @@ function getCheckoutStep(cart: HttpTypes.StoreCart) {
 }
 
 const Summary = ({ cart }: SummaryProps) => {
-  const step = getCheckoutStep(cart)
+  // SAFETY CHECK
+  if (!cart) return null 
 
   return (
     <div className="flex flex-col gap-y-4">
