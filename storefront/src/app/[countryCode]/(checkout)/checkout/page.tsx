@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { notFound, redirect } from "next/navigation" // Added redirect
+import { notFound, redirect } from "next/navigation"
 
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
@@ -35,10 +35,10 @@ export default async function Checkout({
   const { countryCode } = params
   
   const cart = await fetchCart()
-  const customer = await getCustomer().catch(() => null)
+  const customer = await getCustomer()
 
   if (!customer) {
-    redirect(`/${countryCode}/account`)
+  redirect(`/${params.countryCode}/account`)
   }
 
   return (

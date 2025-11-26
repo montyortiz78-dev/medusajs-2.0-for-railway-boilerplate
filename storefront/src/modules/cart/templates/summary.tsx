@@ -14,6 +14,7 @@ type SummaryProps = {
   }
 }
 
+// Helper function to determine the next step
 function getCheckoutStep(cart: HttpTypes.StoreCart) {
   if (!cart?.shipping_address?.address_1 || !cart.email) {
     return "address"
@@ -28,7 +29,7 @@ const Summary = ({ cart }: SummaryProps) => {
   // SAFETY CHECK
   if (!cart) return null 
 
-  // FIX: Calculate the step so the link works
+  // FIX: Calculate the step so the variable exists!
   const step = getCheckoutStep(cart)
 
   return (
@@ -40,7 +41,7 @@ const Summary = ({ cart }: SummaryProps) => {
       <Divider />
       <CartTotals totals={cart} />
       <LocalizedClientLink
-        href={"/checkout?step=" + step} // Now 'step' exists
+        href={"/checkout?step=" + step}
         data-testid="checkout-button"
       >
         <Button className="w-full h-10">Go to checkout</Button>
