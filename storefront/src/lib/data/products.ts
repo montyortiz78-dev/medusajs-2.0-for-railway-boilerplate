@@ -19,7 +19,7 @@ export const getProductsById = cache(async function ({
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      // FIX: Disable cache to show updates immediately
+      // FIX: Disable cache
       { 
         next: { tags: ["products"] },
         cache: "no-store"
@@ -72,7 +72,6 @@ export const getProductsList = cache(async function ({
       nextPage: null,
     }
   }
-  
   return sdk.store.product
     .list(
       {
@@ -82,7 +81,7 @@ export const getProductsList = cache(async function ({
         fields: "*variants.calculated_price",
         ...queryParams,
       },
-      // FIX: Disable cache so main store page updates immediately
+      // FIX: Disable cache so changes appear immediately
       { 
         next: { tags: ["products"] },
         cache: "no-store"
@@ -102,10 +101,6 @@ export const getProductsList = cache(async function ({
     })
 })
 
-/**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
- */
 export const getProductsListWithSort = cache(async function ({
   page = 0,
   queryParams,
