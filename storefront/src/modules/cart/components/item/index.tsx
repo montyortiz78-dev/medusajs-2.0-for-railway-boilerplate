@@ -1,7 +1,6 @@
 "use client"
 
 import { Table, Text, clx } from "@medusajs/ui"
-
 import { updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import CartItemSelect from "@modules/cart/components/cart-item-select"
@@ -26,16 +25,14 @@ const Item = ({ item, type = "full" }: ItemProps) => {
 
   const { handle } = item.variant?.product ?? {}
 
-  // --- CUSTOM KANDI DATA EXTRACTION ---
+  // --- CUSTOM KANDI DATA ---
   const kandiName = item.metadata?.kandi_name as string | undefined;
   const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
   const customImage = item.metadata?.image_url as string | undefined;
-  // ------------------------------------
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
     setUpdating(true)
-
     const message = await updateLineItem({
       lineId: item.id,
       quantity,
@@ -61,7 +58,6 @@ const Item = ({ item, type = "full" }: ItemProps) => {
             "small:w-24 w-12": type === "full",
           })}
         >
-          {/* Use Custom Image if available, otherwise fallback to product thumbnail */}
           <Thumbnail
             thumbnail={customImage || item.variant?.product?.thumbnail}
             images={item.variant?.product?.images}
@@ -75,18 +71,19 @@ const Item = ({ item, type = "full" }: ItemProps) => {
           className="txt-medium-plus text-ui-fg-base"
           data-testid="product-title"
         >
-          {/* Use Custom Name if available */}
           {kandiName || item.product_title}
         </Text>
         
-        {/* Display the Vibe Story if available */}
         {kandiVibe && (
             <Text className="txt-small text-ui-fg-subtle italic truncate max-w-[200px]">
                 "{kandiVibe}"
             </Text>
         )}
 
-        <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {/* HIDE VARIANT TEXT IF KANDI */}
+        {!kandiName && (
+            <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        )}
       </Table.Cell>
 
       {type === "full" && (
@@ -109,10 +106,7 @@ const Item = ({ item, type = "full" }: ItemProps) => {
                   </option>
                 )
               )}
-
-              <option value={1} key={1}>
-                1
-              </option>
+              <option value={1} key={1}>1</option>
             </CartItemSelect>
             {updating && <Spinner />}
           </div>
