@@ -1,6 +1,7 @@
 import { SubscriberArgs, type SubscriberConfig } from "@medusajs/medusa"
 import { IOrderModuleService } from "@medusajs/types"
 import { Modules } from "@medusajs/utils"
+import { v2 as cloudinary } from 'cloudinary'
 
 export default async function handleNftMinting({
   event,
@@ -10,58 +11,82 @@ export default async function handleNftMinting({
   const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
   const { id } = event.data
 
-  // 1. Retrieve the Order
+  // 1. Configure Cloudinary
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME
+  const cloudKey = process.env.CLOUDINARY_API_KEY
+  const cloudSecret = process.env.CLOUDINARY_API_SECRET
+
+  if (cloudName && cloudKey && cloudSecret) {
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: cloudKey,
+      api_secret: cloudSecret
+    });
+  } else {
+    logger.error("❌ Cloudinary Config Missing! Cannot host images.")
+    return
+  }
+
+  // 2. Get the Order
   const order = await orderService.retrieveOrder(id, { relations: ["items"] })
 
   const apiKey = process.env.CROSSMINT_API_KEY
   const collectionId = process.env.CROSSMINT_COLLECTION_ID
 
-  // Safety Check: Print ID status (don't print the actual key for security)
   if (!apiKey || !collectionId) {
-    logger.error("❌ Crossmint Config Missing (API Key or Collection ID)")
+    logger.error("❌ Crossmint Config Missing!")
     return
   }
-  logger.info(`✅ using Collection ID: ${collectionId}`)
 
-  // 2. Loop through items
+  // 3. Loop through items
   for (const item of order.items) {
     if (item.metadata && item.metadata.pattern_data) {
-      logger.info(`💎 Minting NFT for Item: ${item.id}`)
+      logger.info(`💎 Processing Item: ${item.id}`)
       
-      // 3. Prepare the Image
-      let imagePayload = item.metadata.image_url as string || "";
-
-      // FIX: Ensure it is a valid Data URI
-      if (imagePayload && !imagePayload.startsWith("http") && !imagePayload.startsWith("data:")) {
-          logger.info("🔧 Formatting Base64 string to Data URI...")
-          imagePayload = `data:image/png;base64,${imagePayload}`;
-      }
-
-      // If still empty, use a fallback so the mint doesn't fail entirely
-      if (!imagePayload) {
-          logger.warn("⚠️ No image found in metadata. Using Stock Fallback.")
-          imagePayload = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Kandi_bracelets.jpg/800px-Kandi_bracelets.jpg";
-      }
-
-      const nftPayload = {
-        recipient: `email:${order.email}:base`, 
-        metadata: {
-          name: item.metadata.kandi_name as string,
-          description: item.metadata.kandi_vibe as string,
-          image: imagePayload, 
-          attributes: [
-            { trait_type: "Vibe", value: item.metadata.kandi_vibe },
-            { trait_type: "Generated", value: "True" }
-          ]
-        },
-        reuploadLinkedFiles: true // Important for Data URIs
-      }
-
       try {
-        // USE PRODUCTION URL explicitly
-        const url = `https://www.crossmint.com/api/2022-06-09/collections/${collectionId}/nfts`;
+        // --- STEP A: HOST THE IMAGE ---
+        let imageUrl = "";
+        let base64Image = item.metadata.image_url as string;
+
+        if (!base64Image) {
+            logger.warn("⚠️ No image data found. Skipping.")
+            continue;
+        }
+
+        // Ensure Base64 prefix exists
+        if (!base64Image.startsWith("data:")) {
+            base64Image = `data:image/png;base64,${base64Image}`;
+        }
+
+        logger.info("☁️ Uploading image to Cloudinary...");
         
-        const response = await fetch(url, {
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(base64Image, {
+            folder: "kandi-orders",
+        });
+
+        imageUrl = uploadResult.secure_url;
+        logger.info(`✅ Image Hosted at: ${imageUrl}`);
+
+        // --- STEP B: MINT THE NFT ---
+        const nftPayload = {
+          recipient: `email:${order.email}:base`, 
+          metadata: {
+            name: item.metadata.kandi_name as string,
+            description: item.metadata.kandi_vibe as string,
+            image: imageUrl, // Now we use the real HTTP URL
+            attributes: [
+              { trait_type: "Vibe", value: item.metadata.kandi_vibe },
+              { trait_type: "Generated", value: "True" }
+            ]
+          },
+          reuploadLinkedFiles: true 
+        }
+
+        // Use PRODUCTION URL
+        const crossmintUrl = `https://www.crossmint.com/api/2022-06-09/collections/${collectionId}/nfts`;
+        
+        const response = await fetch(crossmintUrl, {
             method: "POST",
             headers: {
               "X-API-KEY": apiKey,
@@ -71,18 +96,17 @@ export default async function handleNftMinting({
           }
         )
 
-        // READ RESPONSE SAFELY
         const responseText = await response.text();
         
         if (!response.ok) {
-            // This logs the ACTUAL error from Crossmint (e.g., "Image too large")
             logger.error(`❌ Mint Failed (${response.status}): ${responseText}`);
         } else {
             const data = JSON.parse(responseText);
             logger.info(`✅ NFT Minted Successfully! ID: ${data.id}`)
         }
+
       } catch (error) {
-        logger.error(`❌ Network Error: ${error}`)
+        logger.error(`❌ Error processing NFT: ${error}`)
       }
     }
   }
