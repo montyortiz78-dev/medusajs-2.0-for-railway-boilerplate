@@ -24,11 +24,11 @@ const AccountNav = ({
         {route !== `/${countryCode}/account` ? (
           <LocalizedClientLink
             href="/account"
-            className="flex items-center gap-x-2 text-small-regular py-2"
+            className="flex items-center gap-x-2 text-small-regular py-2 text-white"
             data-testid="account-main-link"
           >
             <>
-              <div className="w-1.5 h-1.5 bg-ui-fg-base rounded-full" />
+              <div className="w-1.5 h-1.5 bg-pink-500 rounded-full" />
               <span>Account</span>
             </>
           </LocalizedClientLink>
@@ -36,7 +36,7 @@ const AccountNav = ({
       </div>
       <div className="hidden small:block">
         <div className="pb-4">
-          <h3 className="text-base-semi">Account</h3>
+          <h3 className="text-base-semi text-white">Account</h3>
         </div>
         <div className="text-base-regular">
           <ul className="flex mb-0 justify-start items-start flex-col gap-y-4">
@@ -46,13 +46,13 @@ const AccountNav = ({
               </AccountNavLink>
             </li>
             
-            {/* --- NEW LINK: MY STASH --- */}
+            {/* --- NEW TAB: MY STASH --- */}
             <li>
               <AccountNavLink href="/account/stash" route={route!}>
                 💎 My Stash
               </AccountNavLink>
             </li>
-            {/* -------------------------- */}
+            {/* ------------------------- */}
 
             <li>
               <AccountNavLink href="/account/profile" route={route!}>
@@ -69,11 +69,11 @@ const AccountNav = ({
                 Orders
               </AccountNavLink>
             </li>
-            <li className="text-grey-700">
+            <li className="text-gray-400 hover:text-white">
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-x-2 text-ui-fg-base"
+                className="flex items-center gap-x-2"
                 data-testid="logout-button"
               >
                 Log out
@@ -99,8 +99,9 @@ const AccountNavLink = ({ href, route, children }: AccountNavLinkProps) => {
   return (
     <LocalizedClientLink
       href={href}
-      className={clx("text-ui-fg-subtle hover:text-ui-fg-base", {
-        "text-ui-fg-base font-semibold": active,
+      className={clx("text-gray-400 hover:text-white transition-colors", {
+        "text-white font-semibold": active,
+        "text-pink-400 font-bold": active && href.includes("stash"), // Special flair for Stash
       })}
     >
       {children}
