@@ -26,6 +26,12 @@ const Item = ({ item, type = "full" }: ItemProps) => {
 
   const { handle } = item.variant?.product ?? {}
 
+  // --- CUSTOM KANDI DATA EXTRACTION ---
+  const kandiName = item.metadata?.kandi_name as string | undefined;
+  const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
+  const customImage = item.metadata?.image_url as string | undefined;
+  // ------------------------------------
+
   const changeQuantity = async (quantity: number) => {
     setError(null)
     setUpdating(true)
@@ -42,7 +48,6 @@ const Item = ({ item, type = "full" }: ItemProps) => {
       })
   }
 
-  // TODO: Update this to grab the actual max inventory
   const maxQtyFromInventory = 10
   const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
 
@@ -56,8 +61,9 @@ const Item = ({ item, type = "full" }: ItemProps) => {
             "small:w-24 w-12": type === "full",
           })}
         >
+          {/* Use Custom Image if available, otherwise fallback to product thumbnail */}
           <Thumbnail
-            thumbnail={item.variant?.product?.thumbnail}
+            thumbnail={customImage || item.variant?.product?.thumbnail}
             images={item.variant?.product?.images}
             size="square"
           />
@@ -69,8 +75,17 @@ const Item = ({ item, type = "full" }: ItemProps) => {
           className="txt-medium-plus text-ui-fg-base"
           data-testid="product-title"
         >
-          {item.product_title}
+          {/* Use Custom Name if available */}
+          {kandiName || item.product_title}
         </Text>
+        
+        {/* Display the Vibe Story if available */}
+        {kandiVibe && (
+            <Text className="txt-small text-ui-fg-subtle italic truncate max-w-[200px]">
+                "{kandiVibe}"
+            </Text>
+        )}
+
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
       </Table.Cell>
 
@@ -84,7 +99,6 @@ const Item = ({ item, type = "full" }: ItemProps) => {
               className="w-14 h-10 p-4"
               data-testid="product-select-button"
             >
-              {/* TODO: Update this with the v2 way of managing inventory */}
               {Array.from(
                 {
                   length: Math.min(maxQuantity, 10),

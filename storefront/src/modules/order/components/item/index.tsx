@@ -11,11 +11,21 @@ type ItemProps = {
 }
 
 const Item = ({ item }: ItemProps) => {
+  // --- CUSTOM KANDI DATA EXTRACTION ---
+  const kandiName = item.metadata?.kandi_name as string | undefined;
+  const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
+  const customImage = item.metadata?.image_url as string | undefined;
+  // ------------------------------------
+
   return (
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
         <div className="flex w-16">
-          <Thumbnail thumbnail={item.thumbnail} size="square" />
+          {/* Custom Thumbnail Logic */}
+          <Thumbnail 
+            thumbnail={customImage || item.thumbnail} 
+            size="square" 
+          />
         </div>
       </Table.Cell>
 
@@ -24,8 +34,17 @@ const Item = ({ item }: ItemProps) => {
           className="txt-medium-plus text-ui-fg-base"
           data-testid="product-name"
         >
-          {item.title}
+          {/* Custom Name Logic */}
+          {kandiName || item.title}
         </Text>
+        
+        {/* Custom Vibe Logic */}
+        {kandiVibe && (
+            <Text className="txt-small text-ui-fg-subtle italic">
+                "{kandiVibe}"
+            </Text>
+        )}
+
         {item.variant && (
           <LineItemOptions variant={item.variant} data-testid="product-variant" />
         )}
