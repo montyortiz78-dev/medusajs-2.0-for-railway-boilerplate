@@ -29,6 +29,25 @@ const Item = ({ item, type = "full" }: ItemProps) => {
   const kandiName = item.metadata?.kandi_name as string | undefined;
   const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
   const customImage = item.metadata?.image_url as string | undefined;
+  const patternData = item.metadata?.pattern_data;
+
+  // GENERATE REMIX LINK
+  let productLink = `/products/${handle}`; // Default
+  
+  if (kandiName && patternData) {
+    // Pack the data into a safe URL string
+    const remixPayload = JSON.stringify({
+        name: kandiName,
+        vibe: kandiVibe,
+        pattern: patternData
+    });
+    // Encode it (btoa = Base64) to look cleaner in URL
+    const encoded = btoa(encodeURIComponent(remixPayload));
+    
+    // Point to the home/create page with the data
+    productLink = `/?remix=${encoded}`;
+  }
+  // -------------------------
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -52,10 +71,9 @@ const Item = ({ item, type = "full" }: ItemProps) => {
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
         <LocalizedClientLink
-          href={`/products/${handle}`}
+          href={productLink} // <--- USE THE NEW LINK VARIABLE HERE
           className={clx("flex", {
-            "w-16": type === "preview",
-            "small:w-24 w-12": type === "full",
+             // ... classes
           })}
         >
           <Thumbnail
@@ -71,7 +89,10 @@ const Item = ({ item, type = "full" }: ItemProps) => {
           className="txt-medium-plus text-ui-fg-base"
           data-testid="product-title"
         >
-          {kandiName || item.product_title}
+            {/* Wrap the title in the link too for better UX */}
+            <LocalizedClientLink href={productLink}>
+                {kandiName || item.product_title}
+            </LocalizedClientLink>
         </Text>
         
         {kandiVibe && (

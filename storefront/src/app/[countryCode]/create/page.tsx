@@ -1,17 +1,41 @@
 'use client';
 
 import Cookies from 'js-cookie';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation'; // Import this
 import KandiVisualizer from '../../../components/kandi-visualizer';
 
-export default function CreatePage() {
+// We need a wrapper component to safely use useSearchParams in Next.js
+function KandiGeneratorContent() {
   const [vibe, setVibe] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false); 
   const [data, setData] = useState<any>(null);
   const [captureMode, setCaptureMode] = useState(false);
+  
+  const searchParams = useSearchParams();
 
-  // 1. The AI Generator
+  // 1. LISTEN FOR REMIX DATA ON LOAD
+  useEffect(() => {
+    const remixData = searchParams.get('remix');
+    if (remixData) {
+      try {
+        // Decode the data from the URL
+        const decoded = JSON.parse(decodeURIComponent(atob(remixData)));
+        
+        setData({
+            kandiName: decoded.name,
+            vibeStory: decoded.vibe,
+            pattern: decoded.pattern
+        });
+        setVibe(decoded.vibe); // Pre-fill the input
+      } catch (e) {
+        console.error("Failed to load remix data", e);
+      }
+    }
+  }, [searchParams]);
+
+  // 2. The AI Generator
   const handleGenerate = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
@@ -29,11 +53,11 @@ export default function CreatePage() {
     }
   };
 
-  // 2. The "Add to Stash" Logic
+  // 3. The "Add to Stash" Logic
   const handleAddToStash = async () => {
     setIsAdding(true);
     
-    // 1. FREEZE! 
+    // Freeze & Wait for Camera Reset
     setCaptureMode(true);
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -49,16 +73,15 @@ export default function CreatePage() {
     }
 
     try {
-      // 2. CAPTURE IMAGE (Base64)
+      // Capture Image
       const canvas = document.querySelector('#kandi-canvas canvas') as HTMLCanvasElement;
       let imageBase64 = "https://placehold.co/400"; 
 
       if (canvas) {
         imageBase64 = canvas.toDataURL("image/png");
-        console.log("Screenshot captured!");
       }
 
-      // 3. CART LOGIC
+      // Cart Logic
       let cartId = Cookies.get("_medusa_cart_id");
       const headers = {
         "Content-Type": "application/json",
@@ -87,7 +110,7 @@ export default function CreatePage() {
         Cookies.set("_medusa_cart_id", cartId!, { expires: 7 });
       }
 
-      // 4. ADD TO CART (Pass Base64 directly)
+      // Add to Cart
       const addRes = await fetch(`${backendUrl}/store/carts/${cartId}/line-items`, {
         method: "POST",
         headers,
@@ -98,7 +121,7 @@ export default function CreatePage() {
             kandi_name: data.kandiName,
             kandi_vibe: data.vibeStory,
             pattern_data: data.pattern,
-            image_url: imageBase64 // <--- Sending the raw data string
+            image_url: imageBase64 
           }
         }),
       });
@@ -171,5 +194,14 @@ export default function CreatePage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Default export wrapper for Suspense (Required for useSearchParams)
+export default function CreatePage() {
+  return (
+    <Suspense fallback={<div className="text-white text-center p-20">Loading Generator...</div>}>
+      <KandiGeneratorContent />
+    </Suspense>
   );
 }
