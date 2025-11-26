@@ -31,6 +31,20 @@ const nextConfig = {
         protocol: "https",
         hostname: "medusa-server-testing.s3.amazonaws.com",
       },
+      // ADDED THIS: Necessary for your Kandi images
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
+      // Fallback for placeholders if needed
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+      }
     ],
   },
   serverRuntimeConfig: {

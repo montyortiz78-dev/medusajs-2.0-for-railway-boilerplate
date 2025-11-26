@@ -3,64 +3,18 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* --- DARK MODE OVERRIDES --- */
-    --ui-bg-base: #000000;
-    --ui-bg-subtle: #18181b;
-    --ui-bg-subtle-pressed: #27272a;
-    --ui-bg-subtle-hover: #27272a;
-    --ui-bg-field: #09090b;
-    --ui-bg-field-hover: #18181b;
-    --ui-bg-component: #18181b;
-    --ui-bg-component-hover: #27272a;
-    --ui-bg-component-pressed: #27272a;
-
-    --ui-fg-base: #ffffff;
-    --ui-fg-subtle: #a1a1aa;
-    --ui-fg-muted: #71717a;
-    --ui-fg-interactive: #ec4899; 
-
-    --ui-border-base: #27272a;
-    --ui-border-strong: #3f3f46;
-    --ui-border-interactive: #ec4899;
-  }
-
   body {
     @apply bg-black text-white antialiased;
-    background-image: radial-gradient(circle at 50% 0%, #1e1e24 0%, #000000 60%);
-    background-attachment: fixed;
     min-height: 100vh;
   }
 }
 
 @layer components {
-  /* Restore the container! */
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6 small:px-14;
   }
-}
-
-/* --- GLASS UTILITY --- */
-.glass {
-  @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
-}
-
-/* --- COMPONENT FIXES --- */
-/* We use specific targeting instead of @apply !important to be safer for the build */
-input, textarea, select {
-  background-color: rgba(24, 24, 27, 0.5) !important; /* Zinc 900 at 50% */
-  border-color: #27272a !important; /* Zinc 800 */
-  color: white !important;
-}
-
-input::placeholder, textarea::placeholder {
-  color: #71717a !important; /* Zinc 500 */
-}
-
-/* Force Modals to be dark/glassy */
-[role="dialog"] {
-  background-color: rgba(0, 0, 0, 0.8) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+  
+  .glass {
+    @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
+  }
 }
