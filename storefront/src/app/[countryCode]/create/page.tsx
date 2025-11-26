@@ -120,7 +120,7 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center font-sans">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-900 via-black to-black text-white p-8 flex flex-col items-center font-sans">
       <h1 className="text-5xl font-black mb-8 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-blue-500 tracking-tighter">
         PHYGITAL MARKET
       </h1>
