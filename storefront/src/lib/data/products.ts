@@ -19,7 +19,11 @@ export const getProductsById = cache(async function ({
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      { next: { tags: ["products"] } }
+      // FIX: Disable cache to show updates immediately
+      { 
+        next: { tags: ["products"] },
+        cache: "no-store"
+      }
     )
     .then(({ products }) => products)
 })
@@ -35,7 +39,11 @@ export const getProductByHandle = cache(async function (
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      { next: { tags: ["products"] } }
+      // FIX: Disable cache
+      { 
+        next: { tags: ["products"] },
+        cache: "no-store"
+      }
     )
     .then(({ products }) => products[0])
 })
@@ -64,6 +72,7 @@ export const getProductsList = cache(async function ({
       nextPage: null,
     }
   }
+  
   return sdk.store.product
     .list(
       {
@@ -73,7 +82,11 @@ export const getProductsList = cache(async function ({
         fields: "*variants.calculated_price",
         ...queryParams,
       },
-      { next: { tags: ["products"] } }
+      // FIX: Disable cache so main store page updates immediately
+      { 
+        next: { tags: ["products"] },
+        cache: "no-store"
+      }
     )
     .then(({ products, count }) => {
       const nextPage = count > offset + limit ? pageParam + 1 : null
