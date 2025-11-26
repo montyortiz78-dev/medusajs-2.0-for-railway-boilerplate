@@ -38,9 +38,10 @@ export default async function Checkout({
   const customer = await getCustomer()
 
   // --- GATEKEEPER LOGIC ---
-  // If no customer is logged in, kick them to the login page
   if (!customer) {
-    redirect(`/${countryCode}/account/login`)
+    // FIX: Redirect to /account instead of /account/login
+    // The account page handles showing the login form if you aren't signed in.
+    redirect(`/${countryCode}/account`)
   }
   // ------------------------
 
