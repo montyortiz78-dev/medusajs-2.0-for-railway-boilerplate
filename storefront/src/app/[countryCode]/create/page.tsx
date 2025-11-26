@@ -35,7 +35,7 @@ export default function CreatePage() {
     
     // 1. FREEZE! 
     setCaptureMode(true);
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     const variantId = process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
     const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;

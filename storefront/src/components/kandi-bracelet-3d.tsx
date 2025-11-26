@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { useRef, useMemo, useEffect } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Float } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -31,12 +31,11 @@ function Bead({ type, color, position, rotation }: { type: string, color: string
         {type === 'flower' && <icosahedronGeometry args={[0.48]} />}
         {!['pony','star','heart','skull','flower'].includes(type) && <sphereGeometry args={[0.3, 32, 32]} />}
 
-        {/* UPGRADE: Physical Material for "Hard Plastic" look */}
         <meshPhysicalMaterial 
           color={hex}
-          roughness={0.1}          // Very smooth
-          metalness={0.0}          // Plastic is not metal
-          clearcoat={1.0}          // The "acrylic" shiny layer
+          roughness={0.1}
+          metalness={0.0}
+          clearcoat={1.0}
           clearcoatRoughness={0.1}
           emissive={hex}
           emissiveIntensity={color.includes('neon') || color.includes('glow') ? 0.2 : 0}
@@ -72,6 +71,7 @@ function BraceletRing({ pattern, captureMode }: { pattern: any[], captureMode: b
   useFrame((state, delta) => {
     if (groupRef.current) {
       if (captureMode) {
+        // HARD SNAP: Force bracelet to neutral rotation immediately
         groupRef.current.rotation.set(0, 0, 0);
       } else {
         groupRef.current.rotation.z -= delta * 0.1;
@@ -103,23 +103,52 @@ function BraceletRing({ pattern, captureMode }: { pattern: any[], captureMode: b
   );
 }
 
+// NEW COMPONENT: Controls the Camera behavior
+function CameraRig({ captureMode }: { captureMode: boolean }) {
+  const { camera } = useThree();
+  
+  useFrame(() => {
+    if (captureMode) {
+      // FORCE SNAP: Move camera to perfect front center
+      camera.position.set(0, 0, 9);
+      camera.lookAt(0, 0, 0);
+      camera.updateProjectionMatrix();
+    }
+  });
+
+  return null;
+}
+
 export default function KandiBracelet3D({ pattern, captureMode = false }: { pattern: any[], captureMode?: boolean }) {
   return (
     <div className="w-full h-[400px] cursor-grab active:cursor-grabbing">
-      <Canvas camera={{ position: [0, 0, 9], fov: 45 }} shadows gl={{ preserveDrawingBuffer: true }} id="kandi-canvas">
-        {/* Brighter, cleaner lighting to show off colors */}
+      <Canvas 
+        camera={{ position: [0, 0, 9], fov: 45 }} 
+        shadows 
+        gl={{ preserveDrawingBuffer: true }} 
+        id="kandi-canvas"
+      >
         <ambientLight intensity={0.8} />
         <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={1.5} castShadow />
         <pointLight position={[-10, -5, 5]} intensity={0.5} color="white" />
         
-        <Float speed={captureMode ? 0 : 3} rotationIntensity={captureMode ? 0 : 0.2} floatIntensity={captureMode ? 0 : 0.2}>
+        {/* Disable Float completely during capture to prevent tilting */}
+        <Float 
+            speed={captureMode ? 0 : 3} 
+            rotationIntensity={captureMode ? 0 : 0.2} 
+            floatIntensity={captureMode ? 0 : 0.2}
+            floatingRange={captureMode ? [0,0] : undefined} // Force it to stay at 0
+        >
            <BraceletRing pattern={pattern} captureMode={captureMode} />
         </Float>
 
+        {/* Camera Rig handles the view reset */}
+        <CameraRig captureMode={captureMode} />
+
         <ContactShadows position={[0, -5, 0]} opacity={0.3} scale={15} blur={2.5} far={5} />
-        
-        {/* City Preset gives nice realistic reflections on plastic */}
         <Environment preset="city" />
+        
+        {/* Disable manual controls during capture */}
         <OrbitControls enableZoom={false} enabled={!captureMode} />
       </Canvas>
     </div>
