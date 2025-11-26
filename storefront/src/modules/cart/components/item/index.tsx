@@ -35,17 +35,15 @@ const Item = ({ item, type = "full" }: ItemProps) => {
   let productLink = `/products/${handle}`; // Default
   
   if (kandiName && patternData) {
-    // Pack the data into a safe URL string
     const remixPayload = JSON.stringify({
         name: kandiName,
         vibe: kandiVibe,
         pattern: patternData
     });
-    // Encode it (btoa = Base64) to look cleaner in URL
     const encoded = btoa(encodeURIComponent(remixPayload));
     
-    // Point to the home/create page with the data
-    productLink = `/?remix=${encoded}`;
+    // FIX: Point to /create instead of /
+    productLink = `/create?remix=${encoded}`; 
   }
   // -------------------------
 
