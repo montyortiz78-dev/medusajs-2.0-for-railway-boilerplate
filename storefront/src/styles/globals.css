@@ -1,6 +1,6 @@
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
@@ -33,18 +33,23 @@
   }
 }
 
+@layer components {
+  /* --- THE MISSING LAYOUT WRAPPER --- */
+  .content-container {
+    @apply max-w-[1440px] w-full mx-auto px-6 small:px-14;
+  }
+}
+
 /* --- GLASS UTILITY --- */
 .glass {
   @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
 }
 
 /* --- GLOBAL COMPONENT FIXES --- */
-/* Force input fields to be visible on dark background */
 input, textarea, select {
     @apply bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-500 !important;
 }
 
-/* Force Modals to be dark/glassy */
 [role="dialog"] {
     background-color: rgba(0, 0, 0, 0.8) !important;
     backdrop-filter: blur(12px) !important;
