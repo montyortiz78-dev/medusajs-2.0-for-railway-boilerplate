@@ -12,6 +12,17 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // FIX: Add these screens so 'small:px-14' works
+      screens: {
+        "2xsmall": "320px",
+        "xsmall": "512px",
+        "small": "1024px",
+        "medium": "1280px",
+        "large": "1440px",
+        "xlarge": "1680px",
+        "2xlarge": "1920px",
+      },
+      // Keep your animations
       animation: {
         "gradient-xy": "gradient-xy 3s ease infinite",
       },
