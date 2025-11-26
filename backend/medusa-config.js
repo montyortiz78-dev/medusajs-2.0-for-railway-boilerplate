@@ -69,7 +69,6 @@ const medusaConfig = {
             id: 'local',
             options: {
               upload_dir: 'static',
-              // CRITICAL FIX: Hardcoded to your real Railway URL so images are public
               backend_url: "https://backend-production-622a.up.railway.app/static"
             }
           }])
@@ -136,7 +135,37 @@ const medusaConfig = {
     }] : [])
   ],
   plugins: [
-  ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
+    // --- ALGOLIA SEARCH CONFIGURATION ---
+    {
+      resolve: `medusa-plugin-algolia`,
+      options: {
+        application_id: process.env.ALGOLIA_APP_ID,
+        admin_api_key: process.env.ALGOLIA_ADMIN_API_KEY,
+        settings: {
+          products: {
+            indexSettings: {
+              searchableAttributes: ["title", "description", "variant_sku"],
+              attributesToRetrieve: [
+                "id",
+                "title",
+                "description",
+                "handle",
+                "thumbnail",
+                "images",
+                "variants",
+                "variant_sku",
+                "options",
+                "collection_title",
+                "collection_handle",
+              ],
+            },
+            primaryKey: "id",
+          },
+        },
+      },
+    },
+    // ------------------------------------
+    ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
       resolve: '@rokmohar/medusa-plugin-meilisearch',
       options: {
         config: {
