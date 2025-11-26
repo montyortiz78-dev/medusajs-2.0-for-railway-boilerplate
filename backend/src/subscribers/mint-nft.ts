@@ -21,43 +21,30 @@ export default async function handleNftMinting({
     return
   }
 
-  // 2. Loop through items to find the custom one
+  // 2. Loop through items
   for (const item of order.items) {
     if (item.metadata && item.metadata.pattern_data) {
       logger.info(`💎 Minting NFT for Item: ${item.id}`)
       
-      // 3. Get the image and FIX it if necessary
-      let imagePayload = item.metadata.image_url as string || "";
+      // --- DEBUGGING MODE ON ---
+      // We are ignoring the real image for one test to prove the connection works.
       
-      // LOGGING: Let's see the first 30 characters to debug
-      logger.info(`📸 Image Data Start: ${imagePayload.substring(0, 30)}...`)
-
-      // CHECK: If it's Base64 but missing the URI prefix, add it.
-      // We assume it is a PNG since it is generated from a canvas.
-      if (imagePayload && !imagePayload.startsWith("http") && !imagePayload.startsWith("data:")) {
-          logger.info("🔧 Fixing Base64 prefix...")
-          imagePayload = `data:image/png;base64,${imagePayload}`;
-      }
+      // A placeholder image (Kandi bracelet example)
+      const TEST_IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Kandi_bracelets.jpg/800px-Kandi_bracelets.jpg";
       
-      // If image is still empty, skip to prevent API error
-      if (!imagePayload) {
-          logger.error("❌ Image payload is empty. Skipping mint.")
-          continue;
-      }
+      logger.info("⚠️ USING HARDCODED TEST IMAGE to debug API connection.");
 
       const nftPayload = {
         recipient: `email:${order.email}:base`, 
         metadata: {
-          name: item.metadata.kandi_name as string,
-          description: item.metadata.kandi_vibe as string,
-          image: imagePayload, 
+          name: "TEST MINT - " + (item.metadata.kandi_name as string),
+          description: "Debugging Crossmint Connection",
+          image: TEST_IMAGE_URL, // <--- Forcing a valid URL here
           attributes: [
-            { trait_type: "Vibe", value: item.metadata.kandi_vibe },
-            { trait_type: "Bead Count", value: (item.metadata.pattern_data as any[]).length },
-            { trait_type: "Pattern Data", value: JSON.stringify(item.metadata.pattern_data) } 
+            { trait_type: "Vibe", value: "Debugging" }
           ]
         },
-        reuploadLinkedFiles: true // This tells Crossmint to upload the Data URI to IPFS
+        reuploadLinkedFiles: true 
       }
 
       try {
@@ -76,9 +63,11 @@ export default async function handleNftMinting({
         const data = await response.json()
         
         if (response.ok) {
-          logger.info(`✅ NFT Minted! ID: ${data.id}`)
+          logger.info(`✅ SUCCESS! Test NFT Minted! ID: ${data.id}`)
+          logger.info("CONCLUSION: The API works. The issue is your Base64 Image string.");
         } else {
-          logger.error(`❌ Mint Failed: ${JSON.stringify(data)}`)
+          logger.error(`❌ TEST FAILED: ${JSON.stringify(data)}`)
+          logger.info("CONCLUSION: The issue is the API Key, Collection ID, or Payload structure.");
         }
       } catch (error) {
         logger.error(`❌ Network Error: ${error}`)
