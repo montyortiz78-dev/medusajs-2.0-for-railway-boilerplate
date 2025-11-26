@@ -36,9 +36,7 @@ const CartDropdown = ({
 
   const timedOpen = () => {
     open()
-
     const timer = setTimeout(close, 5000)
-
     setActiveTimer(timer)
   }
 
@@ -46,11 +44,9 @@ const CartDropdown = ({
     if (activeTimer) {
       clearTimeout(activeTimer)
     }
-
     open()
   }
 
-  // Clean up the timer when the component unmounts
   useEffect(() => {
     return () => {
       if (activeTimer) {
@@ -61,7 +57,6 @@ const CartDropdown = ({
 
   const pathname = usePathname()
 
-  // open cart dropdown when modifying the cart items, but only if we're not on the cart page
   useEffect(() => {
     if (itemRef.current !== totalItems && !pathname.includes("/cart")) {
       timedOpen()
@@ -95,85 +90,106 @@ const CartDropdown = ({
         >
           <Popover.Panel
             static
-            className="hidden small:block absolute top-[calc(100%+1px)] right-0 bg-white border-x border-b border-gray-200 w-[420px] text-ui-fg-base"
+            className="hidden small:block absolute top-[calc(100%+1px)] right-0 bg-white border-x border-b border-gray-200 w-[420px] text-ui-fg-base shadow-xl rounded-b-lg"
             data-testid="nav-cart-dropdown"
           >
-            <div className="p-4 flex items-center justify-center">
+            <div className="p-4 flex items-center justify-center border-b border-gray-100">
               <h3 className="text-large-semi">Cart</h3>
             </div>
             {cartState && cartState.items?.length ? (
               <>
-                <div className="overflow-y-scroll max-h-[402px] px-4 grid grid-cols-1 gap-y-8 no-scrollbar p-px">
+                <div className="overflow-y-scroll max-h-[402px] px-4 grid grid-cols-1 gap-y-8 no-scrollbar p-px py-4">
                   {cartState.items
                     .sort((a, b) => {
                       return (a.created_at ?? "") > (b.created_at ?? "")
                         ? -1
                         : 1
                     })
-                    .map((item) => (
-                      <div
-                        className="grid grid-cols-[122px_1fr] gap-x-4"
-                        key={item.id}
-                        data-testid="cart-item"
-                      >
-                        <LocalizedClientLink
-                          href={`/products/${item.variant?.product?.handle}`}
-                          className="w-24"
+                    .map((item) => {
+                      // --- CUSTOM KANDI DATA ---
+                      const kandiName = item.metadata?.kandi_name as string | undefined;
+                      const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
+                      const customImage = item.metadata?.image_url as string | undefined;
+                      // -------------------------
+
+                      return (
+                        <div
+                          className="grid grid-cols-[80px_1fr] gap-x-4"
+                          key={item.id}
+                          data-testid="cart-item"
                         >
-                          <Thumbnail
-                            thumbnail={item.variant?.product?.thumbnail}
-                            images={item.variant?.product?.images}
-                            size="square"
-                          />
-                        </LocalizedClientLink>
-                        <div className="flex flex-col justify-between flex-1">
-                          <div className="flex flex-col flex-1">
-                            <div className="flex items-start justify-between">
-                              <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
-                                <h3 className="text-base-regular overflow-hidden text-ellipsis">
-                                  <LocalizedClientLink
-                                    href={`/products/${item.variant?.product?.handle}`}
-                                    data-testid="product-link"
+                          <LocalizedClientLink
+                            href={`/products/${item.variant?.product?.handle}`}
+                            className="w-20"
+                          >
+                            <Thumbnail
+                              thumbnail={customImage || item.variant?.product?.thumbnail}
+                              images={item.variant?.product?.images}
+                              size="square"
+                            />
+                          </LocalizedClientLink>
+                          <div className="flex flex-col justify-between flex-1">
+                            <div className="flex flex-col flex-1">
+                              <div className="flex items-start justify-between">
+                                <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
+                                  <h3 className="text-base-regular overflow-hidden text-ellipsis font-semibold">
+                                    <LocalizedClientLink
+                                      href={`/products/${item.variant?.product?.handle}`}
+                                      data-testid="product-link"
+                                    >
+                                      {kandiName || item.title}
+                                    </LocalizedClientLink>
+                                  </h3>
+                                  
+                                  {/* VIBE SUBTITLE */}
+                                  {kandiVibe && (
+                                    <span className="text-xs text-ui-fg-subtle italic truncate block mb-1">
+                                      "{kandiVibe}"
+                                    </span>
+                                  )}
+
+                                  {/* HIDE VARIANT IF KANDI */}
+                                  {!kandiName && (
+                                    <LineItemOptions
+                                      variant={item.variant}
+                                      data-testid="cart-item-variant"
+                                      data-value={item.variant}
+                                    />
+                                  )}
+
+                                  <span
+                                    data-testid="cart-item-quantity"
+                                    data-value={item.quantity}
+                                    className="text-small-regular text-ui-fg-muted"
                                   >
-                                    {item.title}
-                                  </LocalizedClientLink>
-                                </h3>
-                                <LineItemOptions
-                                  variant={item.variant}
-                                  data-testid="cart-item-variant"
-                                  data-value={item.variant}
-                                />
-                                <span
-                                  data-testid="cart-item-quantity"
-                                  data-value={item.quantity}
-                                >
-                                  Quantity: {item.quantity}
-                                </span>
-                              </div>
-                              <div className="flex justify-end">
-                                <LineItemPrice item={item} style="tight" />
+                                    Quantity: {item.quantity}
+                                  </span>
+                                </div>
+                                <div className="flex justify-end">
+                                  <LineItemPrice item={item} style="tight" />
+                                </div>
                               </div>
                             </div>
+                            <DeleteButton
+                              id={item.id}
+                              className="mt-1 self-start text-xs text-red-500 hover:text-red-700"
+                              data-testid="cart-item-remove-button"
+                            >
+                              Remove
+                            </DeleteButton>
                           </div>
-                          <DeleteButton
-                            id={item.id}
-                            className="mt-1"
-                            data-testid="cart-item-remove-button"
-                          >
-                            Remove
-                          </DeleteButton>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                 </div>
-                <div className="p-4 flex flex-col gap-y-4 text-small-regular">
+                <div className="p-4 flex flex-col gap-y-4 text-small-regular border-t border-gray-100 bg-gray-50">
                   <div className="flex items-center justify-between">
                     <span className="text-ui-fg-base font-semibold">
                       Subtotal{" "}
-                      <span className="font-normal">(excl. taxes)</span>
+                      <span className="font-normal text-ui-fg-muted">(excl. taxes)</span>
                     </span>
                     <span
-                      className="text-large-semi"
+                      className="text-large-semi text-ui-fg-base"
                       data-testid="cart-subtotal"
                       data-value={subtotal}
                     >
@@ -185,7 +201,7 @@ const CartDropdown = ({
                   </div>
                   <LocalizedClientLink href="/cart" passHref>
                     <Button
-                      className="w-full"
+                      className="w-full h-[40px]"
                       size="large"
                       data-testid="go-to-cart-button"
                     >
