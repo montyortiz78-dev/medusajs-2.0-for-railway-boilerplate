@@ -1,7 +1,9 @@
-// ... imports (Keep exactly as they are in your file)
+"use client"
+
 import React, { useEffect, useState } from "react"
 import { PencilSquare as Edit, Trash } from "@medusajs/icons"
 import { Button, Heading, Text, clx } from "@medusajs/ui"
+
 import useToggleState from "@lib/hooks/use-toggle-state"
 import CountrySelect from "@modules/checkout/components/country-select"
 import Input from "@modules/common/components/input"
@@ -62,7 +64,7 @@ const EditAddress: React.FC<EditAddressProps> = ({
         className={clx(
           "border rounded-rounded p-5 min-h-[220px] h-full w-full flex flex-col justify-between transition-colors border-white/10 glass", 
           {
-            "border-pink-500 bg-pink-500/10": isActive, // CHANGED: Gray-900 -> Pink-500
+            "border-pink-500 bg-pink-500/10": isActive,
           }
         )}
         data-testid="address-container"

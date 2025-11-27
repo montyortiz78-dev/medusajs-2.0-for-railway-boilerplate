@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@medusajs/ui"
 import { useMemo } from "react"
 
@@ -24,7 +26,6 @@ const OrderCard = ({ order }: OrderCardProps) => {
   }, [order])
 
   return (
-    // CHANGED: bg-white -> glass
     <div className="glass p-6 rounded-xl flex flex-col border border-white/10" data-testid="order-card">
       <div className="uppercase text-large-semi mb-1 text-white">
         #<span data-testid="order-display-id">{order.display_id}</span>
