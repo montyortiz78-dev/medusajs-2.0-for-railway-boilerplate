@@ -54,7 +54,8 @@ const Payment = ({
       style: {
         base: {
           fontFamily: "Inter, sans-serif",
-          color: "#424270",
+          // UPDATED: Changed text color to white for dark mode
+          color: "#ffffff",
           "::placeholder": {
             color: "rgb(107 114 128)",
           },
@@ -114,7 +115,8 @@ const Payment = ({
   }, [isOpen])
 
   return (
-    <div className="bg-white">
+    // UPDATED: Removed bg-white
+    <div className="bg-transparent">
       <div className="flex flex-row items-center justify-between mb-6">
         <Heading
           level="h2"
