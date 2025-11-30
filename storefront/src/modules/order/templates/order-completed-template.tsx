@@ -9,6 +9,7 @@ import OrderDetails from "@modules/order/components/order-details"
 import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import { HttpTypes } from "@medusajs/types"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -25,7 +26,6 @@ export default function OrderCompletedTemplate({
         {cartId && (
           <OnboardingCta orderId={order.id} />
         )}
-        {/* UPDATED: Removed bg-white, added glass and padding */}
         <div
           className="flex flex-col gap-4 max-w-4xl h-full w-full py-10 glass p-8 rounded-lg"
           data-testid="order-complete-container"
@@ -45,7 +45,28 @@ export default function OrderCompletedTemplate({
           <CartTotals totals={order} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />
-          <Help />
+          
+          {/* UPDATED HELP SECTION WITH CORRECT LINKS */}
+          <div className="mt-6">
+            <Heading level="h1" className="text-base-semi">
+                Need help?
+            </Heading>
+            <div className="text-base-regular my-2">
+                <ul className="gap-y-2 flex flex-col text-ui-fg-interactive">
+                    <li>
+                        <LocalizedClientLink href="/contact">
+                            Contact
+                        </LocalizedClientLink>
+                    </li>
+                    <li>
+                        <LocalizedClientLink href="/returns">
+                            Returns & Exchanges
+                        </LocalizedClientLink>
+                    </li>
+                </ul>
+            </div>
+          </div>
+          
         </div>
       </div>
     </div>
