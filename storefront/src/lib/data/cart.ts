@@ -81,12 +81,12 @@ export async function retrieveCart() {
   }
 
   try {
-    // FIX: Simplified fields string to avoid 'does not have property' error
-    // We removed the '+' syntax which was causing conflicts with the '*' wildcard
+    // FIX: Use '+' syntax for relations to add them to default fields.
+    // Do NOT use '*' combined with '+'. 
     const { cart } = await sdk.store.cart.retrieve(
       cartId,
       {
-        fields: "*,items.variant.product.title,items.variant.product.thumbnail,items.variant.product.handle,region.currency_code,region.symbol,region.name",
+        fields: "+items.variant.product.title,+items.variant.product.thumbnail,+items.variant.product.handle,+region.currency_code,+region.symbol,+region.name",
       },
       headers
     )
