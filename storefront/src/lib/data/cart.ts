@@ -186,6 +186,7 @@ export async function deleteLineItem(lineId: string) {
 }
 
 export async function setAddresses(currentState: unknown, formData: FormData) {
+  let redirectUrl: string | null = null
   try {
     const cartId = getCartIdOrThrow()
     const data = Object.fromEntries(formData.entries()) as Record<string, string>
@@ -225,11 +226,13 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
 
     await sdk.store.cart.update(cartId, payload, {}, getMedusaHeaders(["cart"]))
     revalidateTag("cart")
-    redirect(
-      `/${data.shipping_address_country_code}/checkout?step=delivery`
-    )
+    // Set the URL here, but don't call redirect() yet
+    redirectUrl = `/${data.shipping_address_country_code}/checkout?step=delivery`
   } catch (e: any) {
     return medusaError(e)
+  }// Call redirect outside the try/catch block
+  if (redirectUrl) {
+    redirect(redirectUrl)
   }
 }
 
