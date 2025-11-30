@@ -281,6 +281,7 @@ export async function initiatePaymentSession(
 }
 
 export async function placeOrder() {
+  let redirectUrl: string | null = null
   try {
     const cartId = getCartIdOrThrow()
     
@@ -293,12 +294,18 @@ export async function placeOrder() {
     if (result.type === "order" && result.order) {
       revalidateTag("cart")
       removeCartId()
-      return result.order
+      // Construct the redirect URL using the order's country code and ID
+      const countryCode = result.order.shipping_address?.country_code?.toLowerCase()
+      redirectUrl = `/${countryCode}/order/confirmed/${result.order.id}`
+
+    } else {
+      return null
     }
-    
-    return null
   } catch (e: any) {
     return medusaError(e)
+  }// Redirect must be called outside the try/catch block to avoid NEXT_REDIRECT errors
+  if (redirectUrl) {
+    redirect(redirectUrl)
   }
 }
 
