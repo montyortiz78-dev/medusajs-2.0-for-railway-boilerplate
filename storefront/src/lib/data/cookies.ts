@@ -44,7 +44,6 @@ export const getAuthHeaders = () => {
   return {}
 }
 
-// This is the function cart.ts is looking for
 export const getMedusaHeaders = (tags: string[] = []) => {
   const headers = {
     ...getAuthHeaders(),

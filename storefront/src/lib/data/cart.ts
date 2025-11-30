@@ -30,13 +30,12 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
     let regionId: string | undefined
 
     try {
-      // 1. Fetch regions to find the correct ID for the country
       const regions = await listRegions()
       const region = regions.find((r) => 
         r.countries?.some((c) => c.iso_2 === countryCode)
       )
       
-      // 2. Use the found region, or fallback to the first one if geo-detection fails
+      // Fallback: If no match, use the first region available
       if (region) {
         regionId = region.id
       } else if (regions.length > 0) {
@@ -50,7 +49,6 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
        throw new Error("Could not determine a valid region for cart creation.")
     }
 
-    // 3. Create the cart with the region_id
     const { cart } = await sdk.store.cart.create(
       {
         items: [{ variant_id: variantId, quantity }],
@@ -83,7 +81,8 @@ export async function retrieveCart() {
   }
 
   try {
-    // FIX: Simplified fields string to avoid parser errors (Entity 'Cart' does not have property '')
+    // FIX: Simplified fields string to avoid 'does not have property' error
+    // We removed the '+' syntax which was causing conflicts with the '*' wildcard
     const { cart } = await sdk.store.cart.retrieve(
       cartId,
       {
