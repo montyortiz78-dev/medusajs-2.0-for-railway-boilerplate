@@ -17,14 +17,17 @@ type OrderCompletedTemplateProps = {
 export default function OrderCompletedTemplate({
   order,
 }: OrderCompletedTemplateProps) {
-  const isOnboarding = cookies().get("_medusa_onboarding")?.value === "true"
+  const cartId = cookies().get("_medusa_cart_id")?.value
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
       <div className="content-container flex flex-col justify-center items-center gap-y-10 max-w-4xl h-full w-full">
-        {isOnboarding && <OnboardingCta orderId={order.id} />}
+        {cartId && (
+          <OnboardingCta orderId={order.id} />
+        )}
+        {/* UPDATED: Removed bg-white, added glass and padding */}
         <div
-          className="flex flex-col gap-4 max-w-4xl h-full bg-white w-full py-10"
+          className="flex flex-col gap-4 max-w-4xl h-full w-full py-10 glass p-8 rounded-lg"
           data-testid="order-complete-container"
         >
           <Heading
