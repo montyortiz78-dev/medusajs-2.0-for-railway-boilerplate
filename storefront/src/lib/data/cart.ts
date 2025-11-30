@@ -191,16 +191,17 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     const cartId = getCartIdOrThrow()
     const data = Object.fromEntries(formData.entries()) as Record<string, string>
 
+    // FIX 1: Use bracket notation to access keys with dots
     const address = {
-      first_name: data.shipping_address_first_name,
-      last_name: data.shipping_address_last_name,
-      address_1: data.shipping_address_address_1,
-      address_2: data.shipping_address_address_2,
-      company: data.shipping_address_company,
-      postal_code: data.shipping_address_postal_code,
-      city: data.shipping_address_city,
-      country_code: data.shipping_address_country_code,
-      phone: data.shipping_address_phone,
+      first_name: data["shipping_address.first_name"],
+      last_name: data["shipping_address.last_name"],
+      address_1: data["shipping_address.address_1"],
+      address_2: data["shipping_address.address_2"],
+      company: data["shipping_address.company"],
+      postal_code: data["shipping_address.postal_code"],
+      city: data["shipping_address.city"],
+      country_code: data["shipping_address.country_code"],
+      phone: data["shipping_address.phone"],
     }
 
     const payload: any = {
@@ -211,26 +212,30 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     if (data.same_as_billing === "on") {
       payload.billing_address = address
     } else {
+      // FIX 2: Use bracket notation for billing address keys as well
       payload.billing_address = {
-        first_name: data.billing_address_first_name,
-        last_name: data.billing_address_last_name,
-        address_1: data.billing_address_address_1,
-        address_2: data.billing_address_address_2,
-        company: data.billing_address_company,
-        postal_code: data.billing_address_postal_code,
-        city: data.billing_address_city,
-        country_code: data.billing_address_country_code,
-        phone: data.billing_address_phone,
+        first_name: data["billing_address.first_name"],
+        last_name: data["billing_address.last_name"],
+        address_1: data["billing_address.address_1"],
+        address_2: data["billing_address.address_2"],
+        company: data["billing_address.company"],
+        postal_code: data["billing_address.postal_code"],
+        city: data["billing_address.city"],
+        country_code: data["billing_address.country_code"],
+        phone: data["billing_address.phone"],
       }
     }
 
     await sdk.store.cart.update(cartId, payload, {}, getMedusaHeaders(["cart"]))
     revalidateTag("cart")
-    // Set the URL here, but don't call redirect() yet
-    redirectUrl = `/${data.shipping_address_country_code}/checkout?step=delivery`
+    // Set the redirect URL here (using the correct key)
+    redirectUrl = `/${data["shipping_address.country_code"]}/checkout?step=delivery`
+  
   } catch (e: any) {
     return medusaError(e)
-  }// Call redirect outside the try/catch block
+  }
+  
+  // FIX 3: Call redirect outside the try/catch block to properly handle NEXT_REDIRECT
   if (redirectUrl) {
     redirect(redirectUrl)
   }
