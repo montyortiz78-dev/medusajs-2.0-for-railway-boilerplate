@@ -1,4 +1,5 @@
 import { getPricesForVariant } from "@lib/util/get-product-price"
+import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { clx } from "@medusajs/ui"
 
@@ -11,13 +12,20 @@ const LineItemUnitPrice = ({
   item,
   style = "default",
 }: LineItemUnitPriceProps) => {
-  const {
-    original_price,
-    calculated_price,
-    original_price_number,
-    calculated_price_number,
-    percentage_diff,
-  } = getPricesForVariant(item.variant) ?? {}
+  const variantPrices = getPricesForVariant(item.variant)
+
+  // Use fallback values from item if variant prices are missing
+  const original_price_number = variantPrices?.original_price_number ?? item.unit_price
+  const calculated_price_number = variantPrices?.calculated_price_number ?? item.unit_price
+  
+  // FIX: Cast item.variant to any to access 'prices' which may not exist on the strict type
+  const currency_code = variantPrices?.currency_code ?? 
+    (item as any).currency_code ?? 
+    (item.variant as any)?.prices?.[0]?.currency_code ?? 
+    "USD"
+  
+  const percentage_diff = variantPrices?.percentage_diff ?? 0
+
   const hasReducedPrice = calculated_price_number < original_price_number
 
   return (
@@ -32,7 +40,10 @@ const LineItemUnitPrice = ({
               className="line-through"
               data-testid="product-unit-original-price"
             >
-              {original_price}
+              {convertToLocale({
+                amount: original_price_number,
+                currency_code
+              })}
             </span>
           </p>
           {style === "default" && (
@@ -46,7 +57,10 @@ const LineItemUnitPrice = ({
         })}
         data-testid="product-unit-price"
       >
-        {calculated_price}
+        {convertToLocale({
+          amount: calculated_price_number,
+          currency_code
+        })}
       </span>
     </div>
   )

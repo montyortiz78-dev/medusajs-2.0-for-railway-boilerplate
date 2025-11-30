@@ -11,8 +11,17 @@ type LineItemPriceProps = {
 }
 
 const LineItemPrice = ({ item, style = "default" }: LineItemPriceProps) => {
-  const { currency_code, calculated_price_number, original_price_number } =
-    getPricesForVariant(item.variant) ?? {}
+  const variantPrices = getPricesForVariant(item.variant)
+
+  // Use fallback values from item if variant prices are missing
+  const calculated_price_number = variantPrices?.calculated_price_number ?? item.unit_price
+  const original_price_number = variantPrices?.original_price_number ?? item.unit_price
+  
+  // FIX: Cast item.variant to any to access 'prices' which may not exist on the strict type
+  const currency_code = variantPrices?.currency_code ?? 
+    (item as any).currency_code ?? 
+    (item.variant as any)?.prices?.[0]?.currency_code ?? 
+    "USD"
 
   const adjustmentsSum = (item.adjustments || []).reduce(
     (acc, adjustment) => adjustment.amount + acc,
