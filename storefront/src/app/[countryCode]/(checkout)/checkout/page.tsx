@@ -26,7 +26,6 @@ const fetchCart = async () => {
   return cart
 }
 
-// Updated to accept 'params' so we can build the redirect URL
 export default async function Checkout({
   params
 }: {
@@ -38,11 +37,12 @@ export default async function Checkout({
   const customer = await getCustomer()
 
   if (!customer) {
-  redirect(`/${params.countryCode}/account`)
+    redirect(`/${params.countryCode}/account`)
   }
 
   return (
-    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12">
+    // UPDATED: Added 'glass', 'rounded-lg', and 'p-8' to the grid container
+    <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-40 py-12 glass rounded-lg p-8">
       <Wrapper cart={cart}>
         <CheckoutForm cart={cart} customer={customer} />
       </Wrapper>
