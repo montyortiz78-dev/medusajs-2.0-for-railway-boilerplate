@@ -1,5 +1,4 @@
 import { Metadata } from "next"
-import { Heading, Text } from "@medusajs/ui"
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -10,39 +9,38 @@ export default function ContactPage() {
   return (
     <div className="content-container py-12 min-h-[calc(100vh-64px)]">
       <div className="max-w-2xl mx-auto glass p-8 rounded-lg">
-        <Heading level="h1" className="text-3xl mb-6 text-ui-fg-base">
+        <h1 className="text-3xl font-medium mb-6 text-ui-fg-base font-sans">
           Contact Us
-        </Heading>
-        <Text className="text-ui-fg-subtle mb-8">
+        </h1>
+        <p className="text-ui-fg-subtle mb-8 text-base-regular font-sans">
           Have a question about your order or need help with a custom design? We're here to help!
-        </Text>
+        </p>
 
         <div className="flex flex-col gap-y-6">
           <div>
-            <Heading level="h3" className="text-lg mb-2 text-ui-fg-base">
+            <h3 className="text-lg font-medium mb-2 text-ui-fg-base font-sans">
               Email
-            </Heading>
-            <Text className="text-ui-fg-subtle">
+            </h3>
+            <p className="text-ui-fg-subtle text-base-regular font-sans">
               <a href="mailto:support@medusastore.com" className="hover:text-ui-fg-base transition-colors">
                 support@medusastore.com
               </a>
-            </Text>
+            </p>
           </div>
 
           <div>
-            <Heading level="h3" className="text-lg mb-2 text-ui-fg-base">
+            <h3 className="text-lg font-medium mb-2 text-ui-fg-base font-sans">
               Customer Service Hours
-            </Heading>
-            <Text className="text-ui-fg-subtle">
+            </h3>
+            <p className="text-ui-fg-subtle text-base-regular font-sans">
               Monday - Friday: 9:00 AM - 5:00 PM EST
-            </Text>
+            </p>
           </div>
           
-           {/* Placeholder for a future contact form */}
            <div className="mt-8 p-6 border border-ui-border-base rounded-md bg-ui-bg-subtle">
-              <Text className="text-center text-ui-fg-muted">
+              <p className="text-center text-ui-fg-muted text-base-regular font-sans">
                 (Contact Form Coming Soon)
-              </Text>
+              </p>
            </div>
         </div>
       </div>
