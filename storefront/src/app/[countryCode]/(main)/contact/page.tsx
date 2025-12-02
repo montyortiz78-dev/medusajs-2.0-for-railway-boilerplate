@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import ContactForm from "@modules/contact/components/contact-form"
 
 export const metadata: Metadata = {
   title: "Contact Us",
@@ -16,31 +17,33 @@ export default function ContactPage() {
           Have a question about your order or need help with a custom design? We're here to help!
         </p>
 
-        <div className="flex flex-col gap-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-2 text-ui-fg-base font-sans">
-              Email
-            </h3>
-            <p className="text-ui-fg-subtle text-base-regular font-sans">
-              <a href="mailto:support@medusastore.com" className="hover:text-ui-fg-base transition-colors">
-                support@medusastore.com
-              </a>
-            </p>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-medium mb-2 text-ui-fg-base font-sans">
-              Customer Service Hours
-            </h3>
-            <p className="text-ui-fg-subtle text-base-regular font-sans">
-              Monday - Friday: 9:00 AM - 5:00 PM EST
-            </p>
+        <div className="flex flex-col gap-y-8">
+          <div className="flex flex-col gap-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-2 text-ui-fg-base font-sans">
+                Customer Service Hours
+              </h3>
+              <p className="text-ui-fg-subtle text-base-regular font-sans">
+                Monday - Friday: 9:00 AM - 5:00 PM EST
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-medium mb-2 text-ui-fg-base font-sans">
+                Email
+              </h3>
+              <p className="text-ui-fg-subtle text-base-regular font-sans">
+                <a href="mailto:support@medusastore.com" className="hover:text-ui-fg-base transition-colors">
+                  support@medusastore.com
+                </a>
+              </p>
+            </div>
           </div>
           
-           <div className="mt-8 p-6 border border-ui-border-base rounded-md bg-ui-bg-subtle">
-              <p className="text-center text-ui-fg-muted text-base-regular font-sans">
-                (Contact Form Coming Soon)
-              </p>
+           <div className="mt-4">
+              <h3 className="text-xl font-medium mb-4 text-ui-fg-base font-sans">
+                Send us a message
+              </h3>
+              <ContactForm />
            </div>
         </div>
       </div>
