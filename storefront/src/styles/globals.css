@@ -5,7 +5,7 @@
 @layer base {
   :root {
     /* --- DARK MODE OVERRIDES --- */
-    --ui-bg-base: #000000;
+    --ui-bg-base: transparent; /* Changed to transparent for 3D bg visibility */
     --ui-bg-subtle: #18181b;
     --ui-bg-subtle-pressed: #27272a;
     --ui-bg-subtle-hover: #27272a;
@@ -18,43 +18,44 @@
     --ui-fg-base: #ffffff;
     --ui-fg-subtle: #a1a1aa;
     --ui-fg-muted: #71717a;
-    --ui-fg-interactive: #ec4899; 
+    --ui-fg-interactive: #FF00CC; /* Kandi Pink */
 
     --ui-border-base: #27272a;
     --ui-border-strong: #3f3f46;
-    --ui-border-interactive: #ec4899;
+    --ui-border-interactive: #FF00CC; /* Kandi Pink */
   }
 
   body {
     @apply bg-black text-white antialiased;
-    background-image: radial-gradient(circle at 50% 0%, #1e1e24 0%, #000000 60%);
-    background-attachment: fixed;
+    /* Removed the solid gradient here so the Canvas component handles the background */
     min-height: 100vh;
   }
 }
 
 @layer components {
-  /* CRITICAL: This fixes the layout spacing issues */
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6 small:px-14;
   }
 }
 
-/* --- GLASS UTILITY --- */
+/* --- GLASS UTILITY (Updated for Kandi vibe) --- */
 .glass {
-  @apply bg-black/60 backdrop-blur-md border border-white/10 shadow-xl;
+  @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-[0_8px_32px_0_rgba(255,0,204,0.15)];
 }
 
 /* --- COMPONENT FIXES --- */
-/* Force inputs to be visible on dark background */
 input, textarea, select {
-  background-color: rgba(24, 24, 27, 0.5) !important;
-  border-color: #27272a !important;
+  background-color: rgba(24, 24, 27, 0.8) !important;
+  border-color: #3f3f46 !important;
   color: white !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #FF00CC !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(255, 0, 204, 0.2) !important;
 }
 
 input::placeholder, textarea::placeholder {
   color: #71717a !important;
 }
-
-/* [role="dialog"] REMOVED TO PREVENT CONFLICTS */

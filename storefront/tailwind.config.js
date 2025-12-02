@@ -12,7 +12,16 @@ module.exports = {
   ],
   theme: {
     extend: {
-      // FIX: Add these screens so 'small:px-14' works
+      colors: {
+        kandi: {
+          pink: "#FF00CC",
+          green: "#39FF14", 
+          blue: "#00FFFF",
+          yellow: "#FFFF00",
+          orange: "#FF5F1F",
+          purple: "#B026FF",
+        }
+      },
       screens: {
         "2xsmall": "320px",
         "xsmall": "512px",
@@ -22,9 +31,9 @@ module.exports = {
         "xlarge": "1680px",
         "2xlarge": "1920px",
       },
-      // Keep your animations
       animation: {
         "gradient-xy": "gradient-xy 3s ease infinite",
+        "float": "float 6s ease-in-out infinite",
       },
       keyframes: {
         "gradient-xy": {
@@ -37,6 +46,10 @@ module.exports = {
             "background-position": "right center",
           },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-20px)" },
+        }
       },
     },
   },
