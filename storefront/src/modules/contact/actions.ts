@@ -38,7 +38,7 @@ export async function sendMessage(prevState: any, formData: FormData) {
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL,
       to: process.env.RESEND_FROM_EMAIL, // Send to support
-      replyTo: email,
+      reply_to: email,
       subject: `New Contact Form Submission: ${subject}`,
       html: `
         <h2>New Message from ${first_name} ${last_name}</h2>
