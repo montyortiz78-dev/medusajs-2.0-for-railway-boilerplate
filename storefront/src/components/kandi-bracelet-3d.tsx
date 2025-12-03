@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Float } from '@react-three/drei';
 import * as THREE from 'three';
@@ -12,15 +12,26 @@ const COLOR_MAP: Record<string, string> = {
   "silver": "#C0C0C0", "gold": "#FFD700"
 };
 
+// Fallback color if map lookup fails
+const getColorHex = (colorName: string) => {
+    if (!colorName) return '#cccccc';
+    // Check if it's already a hex code
+    if (colorName.startsWith('#')) return colorName;
+    return COLOR_MAP[colorName] || '#cccccc';
+};
+
 const BEAD_WIDTHS: Record<string, number> = {
   "pony": 0.6, "star": 0.65, "heart": 0.55, "flower": 0.55, "skull": 0.7
 };
 
 const BEAD_GAP = 0.02;
 
-function Bead({ type, color, position, rotation }: { type: string, color: string, position: [number, number, number], rotation: [number, number, number] }) {
-  const hex = COLOR_MAP[color] || '#cccccc';
+function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?: string, color?: string, position: [number, number, number], rotation: [number, number, number] }) {
+  const hex = getColorHex(color);
   
+  // Safe check for special effects
+  const isNeon = color && (color.includes('neon') || color.includes('glow'));
+
   return (
     <group position={position} rotation={rotation}>
       <mesh castShadow receiveShadow>
@@ -38,7 +49,7 @@ function Bead({ type, color, position, rotation }: { type: string, color: string
           clearcoat={1.0}
           clearcoatRoughness={0.1}
           emissive={hex}
-          emissiveIntensity={color.includes('neon') || color.includes('glow') ? 0.2 : 0}
+          emissiveIntensity={isNeon ? 0.2 : 0}
         />
       </mesh>
     </group>
@@ -49,12 +60,20 @@ function BraceletRing({ pattern, captureMode }: { pattern: any[], captureMode: b
   const groupRef = useRef<THREE.Group>(null);
 
   const { beads, radius } = useMemo(() => {
-    const totalBeadWidth = pattern.reduce((sum, bead) => sum + (BEAD_WIDTHS[bead.type] || 0.6) + BEAD_GAP, 0);
+    if (!pattern || pattern.length === 0) return { beads: [], radius: 2.2 };
+
+    // Handle both simple string array (manual mode) and object array (AI mode)
+    const normalizedPattern = pattern.map(p => {
+        if (typeof p === 'string') return { type: 'pony', color: p };
+        return p;
+    });
+
+    const totalBeadWidth = normalizedPattern.reduce((sum, bead) => sum + (BEAD_WIDTHS[bead.type] || 0.6) + BEAD_GAP, 0);
     const minRadius = totalBeadWidth / (2 * Math.PI);
     const finalRadius = Math.max(minRadius, 2.2);
 
-    const beadData = pattern.map((bead, i) => {
-      const angle = (i / pattern.length) * Math.PI * 2;
+    const beadData = normalizedPattern.map((bead, i) => {
+      const angle = (i / normalizedPattern.length) * Math.PI * 2;
       const x = Math.cos(angle) * finalRadius;
       const y = Math.sin(angle) * finalRadius;
       
@@ -71,7 +90,6 @@ function BraceletRing({ pattern, captureMode }: { pattern: any[], captureMode: b
   useFrame((state, delta) => {
     if (groupRef.current) {
       if (captureMode) {
-        // HARD SNAP: Force bracelet to neutral rotation immediately
         groupRef.current.rotation.set(0, 0, 0);
       } else {
         groupRef.current.rotation.z -= delta * 0.1;
@@ -103,13 +121,11 @@ function BraceletRing({ pattern, captureMode }: { pattern: any[], captureMode: b
   );
 }
 
-// NEW COMPONENT: Controls the Camera behavior
 function CameraRig({ captureMode }: { captureMode: boolean }) {
   const { camera } = useThree();
   
   useFrame(() => {
     if (captureMode) {
-      // FORCE SNAP: Move camera to perfect front center
       camera.position.set(0, 0, 9);
       camera.lookAt(0, 0, 0);
       camera.updateProjectionMatrix();
@@ -132,23 +148,20 @@ export default function KandiBracelet3D({ pattern, captureMode = false }: { patt
         <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={1.5} castShadow />
         <pointLight position={[-10, -5, 5]} intensity={0.5} color="white" />
         
-        {/* Disable Float completely during capture to prevent tilting */}
         <Float 
             speed={captureMode ? 0 : 3} 
             rotationIntensity={captureMode ? 0 : 0.2} 
             floatIntensity={captureMode ? 0 : 0.2}
-            floatingRange={captureMode ? [0,0] : undefined} // Force it to stay at 0
+            floatingRange={captureMode ? [0,0] : undefined}
         >
            <BraceletRing pattern={pattern} captureMode={captureMode} />
         </Float>
 
-        {/* Camera Rig handles the view reset */}
         <CameraRig captureMode={captureMode} />
 
         <ContactShadows position={[0, -5, 0]} opacity={0.3} scale={15} blur={2.5} far={5} />
         <Environment preset="city" />
         
-        {/* Disable manual controls during capture */}
         <OrbitControls enableZoom={false} enabled={!captureMode} />
       </Canvas>
     </div>

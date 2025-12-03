@@ -26,9 +26,6 @@ function KandiVisualizer({ pattern, captureMode = false }: Props) {
   return (
     <div className="w-full overflow-hidden rounded-3xl bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black border border-ui-border-base shadow-2xl h-[400px] relative">
        <KandiBracelet3D 
-         // Using pattern length as key forces remount only when count changes, 
-         // but allowing internal updates for color changes is better for performance.
-         // However, for stability with dynamic imports, let's rely on the component to handle updates.
          pattern={pattern} 
          captureMode={captureMode} 
        />
@@ -36,5 +33,4 @@ function KandiVisualizer({ pattern, captureMode = false }: Props) {
   );
 }
 
-// Memoize to prevent re-renders from parent state changes that don't affect props
 export default memo(KandiVisualizer);
