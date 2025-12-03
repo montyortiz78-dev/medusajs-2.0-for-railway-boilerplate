@@ -3,10 +3,10 @@
 import Cookies from 'js-cookie';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button, Input, Label, clx } from "@medusajs/ui";
+import { Input, Label, clx } from "@medusajs/ui";
 import { Sparkles, Adjustments } from "@medusajs/icons";
 import KandiVisualizer from '../../../components/kandi-visualizer';
-import KandiManualBuilder from '../../../components/kandi-manual-builder';
+import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
 
 function KandiGeneratorContent() {
   // --- STATE ---
@@ -16,8 +16,9 @@ function KandiGeneratorContent() {
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
   const [vibeStory, setVibeStory] = useState('Custom Design');
-  // Initialize strictly as empty array
-  const [pattern, setPattern] = useState<string[]>([]);
+  
+  // Pattern is now an array of objects { id, color } to support DnD
+  const [pattern, setPattern] = useState<BeadItem[]>([]);
   
   // UI State
   const [isLoading, setIsLoading] = useState(false);
@@ -35,8 +36,16 @@ function KandiGeneratorContent() {
         const decoded = JSON.parse(decodeURIComponent(atob(remixData)));
         setKandiName(decoded.name || 'Remixed Kandi');
         setVibeStory(decoded.vibe || 'Remixed Vibe');
-        setPattern(decoded.pattern || []);
         setVibe(decoded.vibe || '');
+        
+        // Convert string pattern to object pattern if needed
+        if (decoded.pattern) {
+            const safePattern = decoded.pattern.map((p: any) => {
+                if (typeof p === 'string') return { id: Math.random().toString(36).substr(2, 9), color: p };
+                return p;
+            });
+            setPattern(safePattern);
+        }
         setHasGenerated(true);
       } catch (e) {
         console.error("Failed to load remix data", e);
@@ -59,7 +68,14 @@ function KandiGeneratorContent() {
       
       setKandiName(result.kandiName);
       setVibeStory(result.vibeStory);
-      setPattern(result.pattern);
+      
+      // Convert API string array to Object array for DnD
+      const objectPattern = result.pattern.map((color: string) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        color: color
+      }));
+      
+      setPattern(objectPattern);
       setHasGenerated(true);
     } catch (e) {
       console.error("Generator Error:", e);
@@ -135,7 +151,8 @@ function KandiGeneratorContent() {
           metadata: {
             kandi_name: kandiName,
             kandi_vibe: vibeStory,
-            pattern_data: pattern,
+            // Save as simple array of colors to save DB space
+            pattern_data: pattern.map(p => p.color), 
             image_url: imageBase64 
           }
         }),
@@ -196,7 +213,7 @@ function KandiGeneratorContent() {
                 
                 {/* AI MODE */}
                 {mode === 'ai' && (
-                    <form onSubmit={handleAiGenerate} className="space-y-4">
+                    <form onSubmit={handleAiGenerate} className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
                         <div className="space-y-2">
                             <Label className="text-ui-fg-base font-bold">Describe your vibe</Label>
                             <textarea 
@@ -218,7 +235,7 @@ function KandiGeneratorContent() {
 
                 {/* MANUAL MODE */}
                 {mode === 'manual' && (
-                     <div className="space-y-4 animate-in fade-in duration-300">
+                     <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
                         <div className="space-y-2">
                             <Label className="text-ui-fg-base font-bold">Name your creation</Label>
                             <Input 
@@ -229,7 +246,7 @@ function KandiGeneratorContent() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-ui-fg-base font-bold">Design Pattern</Label>
+                            <Label className="text-ui-fg-base font-bold">Design Pattern (Drag to Sort)</Label>
                             <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
                         </div>
                      </div>
@@ -251,7 +268,10 @@ function KandiGeneratorContent() {
               {/* 3D Canvas Container */}
               <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
                 {pattern.length > 0 ? (
-                    <KandiVisualizer pattern={pattern} captureMode={captureMode} />
+                    <KandiVisualizer 
+                        pattern={pattern.map(p => p.color)} 
+                        captureMode={captureMode} 
+                    />
                 ) : (
                     <div className="text-ui-fg-muted text-center flex flex-col items-center">
                         <span className="text-4xl mb-2">📿</span>
