@@ -73,7 +73,7 @@ const CartDropdown = ({
       <Popover className="relative h-full">
         <Popover.Button className="h-full focus:outline-none">
           <LocalizedClientLink
-            className="hover:text-white transition-colors duration-200 font-bold"
+            className="hover:text-ui-fg-base text-ui-fg-subtle transition-colors duration-200 font-bold"
             href="/cart"
             data-testid="nav-cart-link"
           >{`Cart (${totalItems})`}</LocalizedClientLink>
@@ -88,14 +88,13 @@ const CartDropdown = ({
           leaveFrom="opacity-100 translate-y-0"
           leaveTo="opacity-0 translate-y-1"
         >
-          {/* GLASS PANEL */}
           <Popover.Panel
             static
-            className="hidden small:block absolute top-[calc(100%+1px)] right-0 w-[420px] glass rounded-b-2xl border-x border-b border-white/10 backdrop-blur-xl"
+            className="hidden small:block absolute top-[calc(100%+1px)] right-0 w-[420px] glass rounded-b-2xl border-x border-b border-ui-border-base backdrop-blur-xl bg-ui-bg-component/80"
             data-testid="nav-cart-dropdown"
           >
-            <div className="p-4 flex items-center justify-center border-b border-white/10">
-              <h3 className="text-large-semi text-white">Your Cart</h3>
+            <div className="p-4 flex items-center justify-center border-b border-ui-border-base">
+              <h3 className="text-large-semi text-ui-fg-base">Your Cart</h3>
             </div>
             {cartState && cartState.items?.length ? (
               <>
@@ -107,23 +106,23 @@ const CartDropdown = ({
                         : 1
                     })
                     .map((item) => {
-                      // --- CUSTOM LOGIC ---
-                      const kandiName = item.metadata?.kandi_name as string | undefined;
-                      const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
-                      const customImage = item.metadata?.image_url as string | undefined;
-                      const patternData = item.metadata?.pattern_data;
-
-                      let productLink = `/products/${item.variant?.product?.handle}`;
-                      if (kandiName && patternData) {
-                          const remixPayload = JSON.stringify({
-                              name: kandiName,
-                              vibe: kandiVibe,
-                              pattern: patternData
-                          });
-                          const encoded = btoa(encodeURIComponent(remixPayload));
-                          productLink = `/create?remix=${encoded}`;
-                      }
-                      // --------------------
+                       // --- CUSTOM LOGIC ---
+                       const kandiName = item.metadata?.kandi_name as string | undefined;
+                       const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
+                       const customImage = item.metadata?.image_url as string | undefined;
+                       const patternData = item.metadata?.pattern_data;
+ 
+                       let productLink = `/products/${item.variant?.product?.handle}`;
+                       if (kandiName && patternData) {
+                           const remixPayload = JSON.stringify({
+                               name: kandiName,
+                               vibe: kandiVibe,
+                               pattern: patternData
+                           });
+                           const encoded = btoa(encodeURIComponent(remixPayload));
+                           productLink = `/create?remix=${encoded}`;
+                       }
+                       // --------------------
 
                       return (
                         <div
@@ -145,7 +144,7 @@ const CartDropdown = ({
                             <div className="flex flex-col flex-1">
                               <div className="flex items-start justify-between">
                                 <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
-                                  <h3 className="text-base-regular overflow-hidden text-ellipsis font-bold text-white">
+                                  <h3 className="text-base-regular overflow-hidden text-ellipsis font-bold text-ui-fg-base">
                                     <LocalizedClientLink
                                       href={productLink}
                                       data-testid="product-link"
@@ -155,7 +154,7 @@ const CartDropdown = ({
                                   </h3>
                                   
                                   {kandiVibe && (
-                                    <span className="text-xs text-gray-400 italic truncate mb-1 block">
+                                    <span className="text-xs text-ui-fg-subtle italic truncate mb-1 block">
                                       "{kandiVibe}"
                                     </span>
                                   )}
@@ -167,23 +166,22 @@ const CartDropdown = ({
                                       data-value={item.variant}
                                     />
                                   )}
-                                  
                                   <span
                                     data-testid="cart-item-quantity"
                                     data-value={item.quantity}
-                                    className="text-gray-400 text-small-regular"
+                                    className="text-ui-fg-subtle text-small-regular"
                                   >
                                     Qty: {item.quantity}
                                   </span>
                                 </div>
-                                <div className="flex justify-end text-white">
+                                <div className="flex justify-end text-ui-fg-base">
                                   <LineItemPrice item={item} style="tight" />
                                 </div>
                               </div>
                             </div>
                             <DeleteButton
                               id={item.id}
-                              className="mt-1 self-start text-xs text-red-400 hover:text-red-500 transition-colors"
+                              className="mt-1 self-start text-xs text-ui-fg-subtle hover:text-ui-fg-base transition-colors"
                               data-testid="cart-item-remove-button"
                             >
                               Remove
@@ -193,14 +191,14 @@ const CartDropdown = ({
                       )
                     })}
                 </div>
-                <div className="p-4 flex flex-col gap-y-4 text-small-regular border-t border-white/10 bg-black/40">
+                <div className="p-4 flex flex-col gap-y-4 text-small-regular border-t border-ui-border-base bg-ui-bg-subtle">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-300 font-semibold">
+                    <span className="text-ui-fg-base font-semibold">
                       Subtotal{" "}
-                      <span className="font-normal text-gray-500">(excl. taxes)</span>
+                      <span className="font-normal text-ui-fg-subtle">(excl. taxes)</span>
                     </span>
                     <span
-                      className="text-large-semi text-white"
+                      className="text-large-semi text-ui-fg-base"
                       data-testid="cart-subtotal"
                       data-value={subtotal}
                     >
@@ -212,7 +210,7 @@ const CartDropdown = ({
                   </div>
                   <LocalizedClientLink href="/cart" passHref>
                     <Button
-                      className="w-full h-10 bg-white text-black hover:bg-gray-200 font-bold"
+                      className="w-full h-10 font-bold"
                       size="large"
                       data-testid="go-to-cart-button"
                     >
@@ -223,8 +221,8 @@ const CartDropdown = ({
               </>
             ) : (
               <div>
-                <div className="flex py-16 flex-col gap-y-4 items-center justify-center text-gray-400">
-                  <div className="bg-zinc-800 text-small-regular flex items-center justify-center w-6 h-6 rounded-full text-white">
+                <div className="flex py-16 flex-col gap-y-4 items-center justify-center text-ui-fg-muted">
+                  <div className="bg-ui-bg-subtle text-small-regular flex items-center justify-center w-6 h-6 rounded-full text-ui-fg-base">
                     <span>0</span>
                   </div>
                   <span>Your shopping bag is empty.</span>
@@ -232,8 +230,8 @@ const CartDropdown = ({
                     <LocalizedClientLink href="/store">
                       <>
                         <span className="sr-only">Go to all products page</span>
-                        <Button onClick={close} variant="secondary" className="border-white/20 text-white hover:bg-white/10">
-                            Explore products
+                        <Button onClick={close}>
+                          Explore products
                         </Button>
                       </>
                     </LocalizedClientLink>

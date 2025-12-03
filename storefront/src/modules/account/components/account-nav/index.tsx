@@ -24,7 +24,7 @@ const AccountNav = ({
         {route !== `/${countryCode}/account` ? (
           <LocalizedClientLink
             href="/account"
-            className="flex items-center gap-x-2 text-small-regular py-2 text-white"
+            className="flex items-center gap-x-2 text-small-regular py-2 text-ui-fg-base"
             data-testid="account-main-link"
           >
             <>
@@ -36,7 +36,7 @@ const AccountNav = ({
       </div>
       <div className="hidden small:block">
         <div className="pb-4">
-          <h3 className="text-base-semi text-white">Account</h3>
+          <h3 className="text-base-semi text-ui-fg-base">Account</h3>
         </div>
         <div className="text-base-regular">
           <ul className="flex mb-0 justify-start items-start flex-col gap-y-4">
@@ -46,13 +46,11 @@ const AccountNav = ({
               </AccountNavLink>
             </li>
             
-            {/* --- NEW TAB: MY STASH --- */}
             <li>
               <AccountNavLink href="/account/stash" route={route!}>
                 💎 My Stash
               </AccountNavLink>
             </li>
-            {/* ------------------------- */}
 
             <li>
               <AccountNavLink href="/account/profile" route={route!}>
@@ -69,7 +67,7 @@ const AccountNav = ({
                 Orders
               </AccountNavLink>
             </li>
-            <li className="text-gray-400 hover:text-white">
+            <li className="text-ui-fg-subtle hover:text-ui-fg-base">
               <button
                 type="button"
                 onClick={handleLogout}
@@ -99,9 +97,9 @@ const AccountNavLink = ({ href, route, children }: AccountNavLinkProps) => {
   return (
     <LocalizedClientLink
       href={href}
-      className={clx("text-gray-400 hover:text-white transition-colors", {
-        "text-white font-semibold": active,
-        "text-pink-400 font-bold": active && href.includes("stash"), // Special flair for Stash
+      className={clx("text-ui-fg-subtle hover:text-ui-fg-base transition-colors", {
+        "text-ui-fg-base font-semibold": active,
+        "text-pink-500 font-bold": active && href.includes("stash"),
       })}
     >
       {children}
