@@ -42,7 +42,7 @@ const AddAddress = ({ region }: { region: HttpTypes.StoreRegion }) => {
   return (
     <>
       <button
-        className="border border-white/10 glass rounded-rounded p-5 min-h-[220px] h-full w-full flex flex-col justify-between hover:border-pink-500/50 transition-colors text-white"
+        className="border border-ui-border-base glass rounded-rounded p-5 min-h-[220px] h-full w-full flex flex-col justify-between hover:border-pink-500/50 transition-colors text-ui-fg-base hover:text-pink-500"
         onClick={open}
         data-testid="add-address-button"
       >
@@ -52,7 +52,7 @@ const AddAddress = ({ region }: { region: HttpTypes.StoreRegion }) => {
 
       <Modal isOpen={state} close={close} data-testid="add-address-modal">
         <Modal.Title>
-          <Heading className="mb-2 text-white">Add address</Heading>
+          <Heading className="mb-2 text-ui-fg-base">Add address</Heading>
         </Modal.Title>
         <form action={formAction}>
           <Modal.Body>
@@ -143,12 +143,12 @@ const AddAddress = ({ region }: { region: HttpTypes.StoreRegion }) => {
                 type="reset"
                 variant="secondary"
                 onClick={close}
-                className="h-10 bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+                className="h-10"
                 data-testid="cancel-button"
               >
                 Cancel
               </Button>
-              <SubmitButton data-testid="save-button" className="bg-white text-black hover:bg-gray-200">Save</SubmitButton>
+              <SubmitButton data-testid="save-button">Save</SubmitButton>
             </div>
           </Modal.Footer>
         </form>

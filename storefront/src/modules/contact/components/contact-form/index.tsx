@@ -2,7 +2,7 @@
 
 import { useFormState, useFormStatus } from "react-dom"
 import { sendMessage } from "../../actions"
-import { Button, Input, Label, Text, Textarea } from "@medusajs/ui"
+import { Button, Input, Label, Text, Textarea, clx } from "@medusajs/ui"
 import { useEffect, useRef } from "react"
 
 const initialState = {
@@ -40,11 +40,12 @@ export default function ContactForm() {
     <div className="flex flex-col gap-y-4">
       {state.message && (
         <div
-          className={`p-4 rounded-md text-small-regular ${
+          className={clx(
+            "p-4 rounded-md text-small-regular",
             state.success
-              ? "bg-green-50 text-green-900 border border-green-200"
-              : "bg-red-50 text-red-900 border border-red-200"
-          }`}
+              ? "bg-green-100 text-green-900 border border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-800"
+              : "bg-red-100 text-red-900 border border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800"
+          )}
         >
           {state.message}
         </div>
