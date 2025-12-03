@@ -1,23 +1,40 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { memo } from 'react';
 
 const KandiBracelet3D = dynamic(() => import('./kandi-bracelet-3d'), { 
   ssr: false,
-  loading: () => <div className="w-full h-[400px]" />
+  loading: () => <div className="w-full h-[400px] flex items-center justify-center text-white/50">Loading 3D View...</div>
 });
 
-// Add captureMode prop here
-export default function KandiVisualizer({ pattern, captureMode = false }: { pattern: any[], captureMode?: boolean }) {
-  if (!pattern || pattern.length === 0) return null;
+type Props = {
+  pattern: string[];
+  captureMode?: boolean;
+};
+
+function KandiVisualizer({ pattern, captureMode = false }: Props) {
+  // Defensive check: ensure pattern is an array before rendering
+  if (!Array.isArray(pattern) || pattern.length === 0) {
+    return (
+      <div className="w-full h-[400px] flex items-center justify-center text-ui-fg-muted">
+        Add beads to see preview
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full overflow-hidden rounded-3xl bg-gradient-to-b from-gray-900 to-black border border-zinc-800 shadow-2xl">
+    <div className="w-full overflow-hidden rounded-3xl bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black border border-ui-border-base shadow-2xl h-[400px] relative">
        <KandiBracelet3D 
-         key={JSON.stringify(pattern)} 
+         // Using pattern length as key forces remount only when count changes, 
+         // but allowing internal updates for color changes is better for performance.
+         // However, for stability with dynamic imports, let's rely on the component to handle updates.
          pattern={pattern} 
-         captureMode={captureMode} // Pass it down
+         captureMode={captureMode} 
        />
     </div>
   );
 }
+
+// Memoize to prevent re-renders from parent state changes that don't affect props
+export default memo(KandiVisualizer);

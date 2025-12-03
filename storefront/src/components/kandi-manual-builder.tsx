@@ -26,8 +26,10 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const addBead = (color: string) => {
-    if (pattern.length >= 35) return; // Max limit
-    setPattern([...pattern, color]);
+    if (pattern.length >= 35) return;
+    // Ensure pattern is always an array
+    const currentPattern = Array.isArray(pattern) ? pattern : [];
+    setPattern([...currentPattern, color]);
   };
 
   const removeBead = (index: number) => {

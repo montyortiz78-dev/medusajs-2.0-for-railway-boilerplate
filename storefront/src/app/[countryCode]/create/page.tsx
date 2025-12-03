@@ -16,6 +16,7 @@ function KandiGeneratorContent() {
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
   const [vibeStory, setVibeStory] = useState('Custom Design');
+  // Initialize strictly as empty array
   const [pattern, setPattern] = useState<string[]>([]);
   
   // UI State
