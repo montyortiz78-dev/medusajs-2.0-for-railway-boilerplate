@@ -56,7 +56,7 @@ export default function SearchModal() {
 
   return (
     <div className="relative z-[75]">
-      <div className="fixed inset-0 bg-opacity-75 backdrop-blur-md opacity-100 h-screen w-screen" />
+      <div className="fixed inset-0 bg-opacity-75 backdrop-blur-md opacity-100 h-screen w-screen bg-black/50" />
       <div className="fixed inset-0 px-5 sm:p-0" ref={searchRef}>
         <div className="flex flex-col justify-start w-full h-fit transform p-5 items-center text-left align-middle transition-all max-h-[75vh] bg-transparent shadow-none">
           <InstantSearch
@@ -67,7 +67,8 @@ export default function SearchModal() {
               className="flex absolute flex-col h-fit w-full sm:w-fit"
               data-testid="search-modal-container"
             >
-              <div className="w-full flex items-center gap-x-2 p-4 bg-[rgba(3,7,18,0.5)] text-ui-fg-on-color backdrop-blur-2xl rounded-rounded">
+              {/* UPDATED CONTAINER: Uses glass class for consistent theming */}
+              <div className="w-full flex items-center gap-x-2 p-4 glass rounded-xl text-ui-fg-base">
                 <MagnifyingGlassMini />
                 <SearchBox />
               </div>

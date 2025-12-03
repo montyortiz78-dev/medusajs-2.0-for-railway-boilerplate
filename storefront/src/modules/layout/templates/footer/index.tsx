@@ -8,7 +8,7 @@ export default async function Footer() {
   const { product_categories } = await getCategoriesList(0, 6)
 
   return (
-    <footer className="border-t border-white/10 bg-black w-full relative overflow-hidden">
+    <footer className="border-t border-ui-border-base bg-ui-bg-subtle w-full relative overflow-hidden transition-colors duration-300">
       
       {/* Subtle Glow at the top of footer */}
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-pink-500/50 to-transparent" />
@@ -24,7 +24,7 @@ export default async function Footer() {
             >
               KANDILAND
             </LocalizedClientLink>
-            <Text className="txt-small-plus text-gray-400 mt-4">
+            <Text className="txt-small-plus text-ui-fg-subtle mt-4">
               The world's first AI-powered Phygital Kandi market. 
               Design on the blockchain, wear in the rave.
             </Text>
@@ -34,7 +34,7 @@ export default async function Footer() {
           <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
             {product_categories && product_categories?.length > 0 && (
               <div className="flex flex-col gap-y-2">
-                <span className="txt-small-plus txt-ui-fg-base text-white font-bold">Categories</span>
+                <span className="txt-small-plus txt-ui-fg-base font-bold">Categories</span>
                 <ul className="grid grid-cols-1 gap-2" data-testid="footer-categories">
                   {product_categories?.slice(0, 6).map((c) => {
                     if (c.parent_category) return null
@@ -47,7 +47,7 @@ export default async function Footer() {
 
                     return (
                       <li
-                        className="flex flex-col gap-2 text-gray-400 hover:text-pink-400 transition-colors"
+                        className="flex flex-col gap-2 text-ui-fg-subtle hover:text-pink-400 transition-colors"
                         key={c.id}
                       >
                         <LocalizedClientLink
@@ -86,10 +86,10 @@ export default async function Footer() {
             {/* Collections */}
             {collections && collections.length > 0 && (
               <div className="flex flex-col gap-y-2">
-                <span className="txt-small-plus txt-ui-fg-base text-white font-bold">Collections</span>
+                <span className="txt-small-plus txt-ui-fg-base font-bold">Collections</span>
                 <ul
                   className={clx(
-                    "grid grid-cols-1 gap-2 text-gray-400 hover:text-pink-400 transition-colors",
+                    "grid grid-cols-1 gap-2 text-ui-fg-subtle hover:text-pink-400 transition-colors",
                     {
                       "grid-cols-2": (collections?.length || 0) > 3,
                     }
@@ -112,7 +112,7 @@ export default async function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="flex w-full mb-16 justify-between text-gray-500 border-t border-white/5 pt-6">
+        <div className="flex w-full mb-16 justify-between text-ui-fg-muted border-t border-ui-border-base pt-6">
           <Text className="txt-compact-small">
             © {new Date().getFullYear()} KandiLand Store. All rights reserved.
           </Text>

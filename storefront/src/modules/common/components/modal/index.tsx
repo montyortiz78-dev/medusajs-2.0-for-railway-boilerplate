@@ -34,8 +34,8 @@ const Modal = ({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          {/* Darker Backdrop */}
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm h-screen" />
+          {/* Darker Backdrop for both modes to ensure modal pop */}
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm h-screen" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-hidden">
@@ -66,8 +66,8 @@ const Modal = ({
                     "max-w-xl": size === "medium",
                     "max-w-3xl": size === "large",
                     "bg-transparent shadow-none": search,
-                    // CHANGED: Use 'glass' class instead of 'bg-white'
-                    "glass rounded-xl text-white border border-white/10": !search,
+                    // CHANGED: Use 'glass' class and dynamic text colors
+                    "glass rounded-xl text-ui-fg-base border border-ui-border-base shadow-xl": !search,
                   }
                 )}
               >
@@ -86,9 +86,9 @@ const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <Dialog.Title className="flex items-center justify-between">
-      <div className="text-large-semi text-white">{children}</div>
+      <div className="text-large-semi text-ui-fg-base">{children}</div>
       <div>
-        <button onClick={close} data-testid="close-modal-button" className="text-gray-400 hover:text-white transition-colors">
+        <button onClick={close} data-testid="close-modal-button" className="text-ui-fg-subtle hover:text-ui-fg-base transition-colors">
           <X size={20} />
         </button>
       </div>
@@ -98,14 +98,14 @@ const Title: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const Description: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <Dialog.Description className="flex text-small-regular text-gray-300 items-center justify-center pt-2 pb-4 h-full">
+    <Dialog.Description className="flex text-small-regular text-ui-fg-subtle items-center justify-center pt-2 pb-4 h-full">
       {children}
     </Dialog.Description>
   )
 }
 
 const Body: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <div className="flex justify-center">{children}</div>
+  return <div className="flex justify-center text-ui-fg-base">{children}</div>
 }
 
 const Footer: React.FC<{ children: React.ReactNode }> = ({ children }) => {

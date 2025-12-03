@@ -16,17 +16,17 @@ const AccountLayout: React.FC<AccountLayoutProps> = ({
 }) => {
   return (
     <div className="flex-1 small:py-12" data-testid="account-page">
-      {/* GLASS CONTAINER instead of bg-white */}
-      <div className="flex-1 content-container h-full max-w-5xl mx-auto glass rounded-xl flex flex-col">
+      {/* GLASS CONTAINER using dynamic variables from globals.css */}
+      <div className="flex-1 content-container h-full max-w-5xl mx-auto glass rounded-xl flex flex-col transition-colors duration-300">
         <div className="grid grid-cols-1  small:grid-cols-[240px_1fr] py-12">
           <div>{customer && <AccountNav customer={customer} />}</div>
           <div className="flex-1">{children}</div>
         </div>
-        {/* Subtle Border */}
-        <div className="flex flex-col small:flex-row items-end justify-between small:border-t border-white/10 py-12 gap-8">
+        {/* Subtle Border - Changed from border-white/10 to ui-border-base */}
+        <div className="flex flex-col small:flex-row items-end justify-between small:border-t border-ui-border-base py-12 gap-8">
           <div>
-            <h3 className="text-xl-semi mb-4">Got questions?</h3>
-            <span className="txt-medium">
+            <h3 className="text-xl-semi mb-4 text-ui-fg-base">Got questions?</h3>
+            <span className="txt-medium text-ui-fg-subtle">
               You can find frequently asked questions and answers on our
               customer service page.
             </span>
