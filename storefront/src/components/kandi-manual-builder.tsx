@@ -8,13 +8,14 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor, // Added TouchSensor for better mobile handling
+  MouseSensor, // Added MouseSensor
   useSensor,
   useSensors,
   DragOverlay,
   defaultDropAnimationSideEffects,
   DragStartEvent,
   DragEndEvent,
-  DragOverEvent,
   useDraggable
 } from '@dnd-kit/core';
 import {
@@ -25,6 +26,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { snapCenterToCursor } from '@dnd-kit/modifiers'; // IMPORT THIS
 
 // --- TYPES & CONSTANTS ---
 const PALETTE = [
@@ -58,23 +60,24 @@ function PaletteItem({ color, name }: { color: string, name: string }) {
   });
 
   return (
-    <button
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className="group flex flex-col items-center gap-1 touch-none"
-    >
-      <div 
+    <div className="flex flex-col items-center gap-1">
+        {/* Wrap button to isolate drag handle if needed, but direct is fine */}
+        <button
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
         className={clx(
-            "w-10 h-10 rounded-full border border-ui-border-base shadow-sm transition-all ring-2 ring-transparent group-hover:ring-ui-fg-interactive",
-            isDragging ? "opacity-50 scale-90" : "hover:scale-110"
+            "group relative w-10 h-10 rounded-full border border-ui-border-base shadow-sm transition-all ring-2 ring-transparent hover:ring-ui-fg-interactive touch-none", // touch-none is critical
+            isDragging ? "opacity-30" : "hover:scale-110"
         )}
         style={{ backgroundColor: color }}
-      />
-      <span className="text-[10px] text-ui-fg-muted uppercase tracking-wider hidden sm:block">
-        {name}
-      </span>
-    </button>
+        aria-label={`Add ${name}`}
+        >
+        </button>
+        <span className="text-[10px] text-ui-fg-muted uppercase tracking-wider hidden sm:block select-none">
+            {name}
+        </span>
+    </div>
   );
 }
 
@@ -100,16 +103,20 @@ function SortableBead({ id, color, onRemove }: { id: string, color: string, onRe
       {...attributes}
       {...listeners}
       className={clx(
-        "relative group w-8 h-8 rounded-full shadow-md cursor-grab active:cursor-grabbing border border-black/10 touch-none",
-        isDragging ? "z-50 opacity-0" : ""
+        "relative group w-8 h-8 rounded-full shadow-md cursor-grab active:cursor-grabbing border border-black/10 touch-none transition-transform", // Added transition-transform
+        isDragging ? "z-0 opacity-30 scale-75" : "hover:scale-105 z-10"
       )}
     >
         <div className="w-full h-full rounded-full" style={{ backgroundColor: color }} />
         
         {/* Remove Button on Hover */}
         <button 
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+            onClick={(e) => { 
+                e.stopPropagation(); // Prevent drag start
+                onRemove(); 
+            }}
+            onPointerDown={(e) => e.stopPropagation()} // Prevent drag start on touch
+            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600 z-20"
             title="Remove"
         >
             ×
@@ -125,7 +132,11 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
   const [activeColor, setActiveColor] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { 
+        // Delay allows scrolling on mobile, holding starts drag
+        activationConstraint: { delay: 150, tolerance: 5 } 
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -149,11 +160,9 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
     const { active } = event;
     setActiveId(active.id as string);
     
-    // If dragging from palette, grab color
     if (active.data.current?.type === 'palette') {
         setActiveColor(active.data.current.color);
     } else {
-        // If sorting existing bead, find its color
         const bead = pattern.find(p => p.id === active.id);
         if (bead) setActiveColor(bead.color);
     }
@@ -166,7 +175,7 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
 
     if (!over) return;
 
-    // Case 1: Reordering existing beads
+    // Case 1: Sorting
     if (active.data.current?.type !== 'palette' && over.id !== 'palette-area') {
         if (active.id !== over.id) {
             const oldIndex = pattern.findIndex((item) => item.id === active.id);
@@ -174,19 +183,16 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
             setPattern(arrayMove(pattern, oldIndex, newIndex));
         }
     }
-    // Case 2: Dropping Palette Item onto List
+    // Case 2: Adding from Palette
     else if (active.data.current?.type === 'palette') {
-        // Only add if dropped inside the sortable area (simplification)
-        // dnd-kit handles the "over" detection
         addBead(active.data.current.color);
     }
   };
 
-  // Custom Drop Animation
   const dropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
       styles: {
-        active: { opacity: '0.5' },
+        active: { opacity: '0.4' },
       },
     }),
   };
@@ -197,11 +203,16 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
       collisionDetection={closestCenter} 
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      // Add this modifier to center the bead on the cursor
+      modifiers={[snapCenterToCursor]} 
     >
       <div className="flex flex-col gap-6 w-full">
         
         {/* 1. The String (Sortable Area) */}
-        <div className="bg-ui-bg-subtle border border-ui-border-base rounded-xl p-4 min-h-[100px] relative transition-colors">
+        <div 
+            className="bg-ui-bg-subtle border border-ui-border-base rounded-xl p-4 min-h-[100px] relative transition-colors"
+            // Add droppable zone logic implicitly by having SortableContext
+        >
             <div className="absolute top-2 right-3 text-xs text-ui-fg-subtle font-mono">
                 {pattern.length} / 35
             </div>
@@ -212,8 +223,8 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
             >
                 <div className="flex flex-wrap gap-2 items-center justify-center min-h-[60px]">
                     {pattern.length === 0 && !activeId && (
-                        <div className="text-ui-fg-muted text-sm italic">
-                            Drag colors here or click below
+                        <div className="text-ui-fg-muted text-sm italic pointer-events-none">
+                            Drag colors here or click to add
                         </div>
                     )}
                     
@@ -241,20 +252,21 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
             </button>
         </div>
 
-        {/* 3. Palette (Draggable Source) */}
-        <div className="grid grid-cols-5 sm:grid-cols-9 gap-3">
+        {/* 3. Palette */}
+        <div className="grid grid-cols-5 sm:grid-cols-9 gap-3" id="palette-area">
             {PALETTE.map((p) => (
-                <div key={p.hex} onClick={() => addBead(p.hex)}>
+                <div key={p.hex} onClick={() => addBead(p.hex)} className="cursor-pointer">
                     <PaletteItem color={p.hex} name={p.name} />
                 </div>
             ))}
         </div>
 
         {/* 4. Drag Overlay (The "Ghost" Item) */}
-        <DragOverlay dropAnimation={dropAnimation}>
+        {/* z-index 100 ensures it sits above everything, including sticky headers */}
+        <DragOverlay dropAnimation={dropAnimation} className="z-[100] cursor-grabbing">
             {activeId && activeColor ? (
                 <div 
-                    className="w-10 h-10 rounded-full shadow-2xl border-2 border-white cursor-grabbing"
+                    className="w-10 h-10 rounded-full shadow-2xl border-2 border-white cursor-grabbing transform scale-110"
                     style={{ backgroundColor: activeColor }}
                 />
             ) : null}
