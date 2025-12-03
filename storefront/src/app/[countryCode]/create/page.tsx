@@ -8,19 +8,40 @@ import { Sparkles, Adjustments } from "@medusajs/icons";
 import KandiVisualizer from '../../../components/kandi-visualizer';
 import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
 
+// Map AI Color Names to Manual Builder Hex Codes
+const AI_COLOR_MAP: Record<string, string> = {
+  'Pink': '#FF00CC',
+  'Green': '#39FF14',
+  'Blue': '#00FFFF',
+  'Yellow': '#FFFF00',
+  'Orange': '#FF5F1F',
+  'Purple': '#B026FF',
+  'Red': '#FF0000',
+  'White': '#FFFFFF',
+  'Black': '#000000',
+  // Catch-alls for casing differences
+  'pink': '#FF00CC',
+  'green': '#39FF14',
+  'blue': '#00FFFF',
+  'yellow': '#FFFF00',
+  'orange': '#FF5F1F',
+  'purple': '#B026FF',
+  'red': '#FF0000',
+  'white': '#FFFFFF',
+  'black': '#000000',
+};
+
 function KandiGeneratorContent() {
   // --- STATE ---
   const [mode, setMode] = useState<'ai' | 'manual'>('ai');
   
-  // Data State
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
   const [vibeStory, setVibeStory] = useState('Custom Design');
   
-  // Pattern is now an array of objects { id, color } to support DnD
+  // Pattern state: Array of { id, color }
   const [pattern, setPattern] = useState<BeadItem[]>([]);
   
-  // UI State
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false); 
   const [captureMode, setCaptureMode] = useState(false);
@@ -38,11 +59,12 @@ function KandiGeneratorContent() {
         setVibeStory(decoded.vibe || 'Remixed Vibe');
         setVibe(decoded.vibe || '');
         
-        // Convert string pattern to object pattern if needed
+        // Restore pattern with IDs if needed
         if (decoded.pattern) {
+            // Check if it's a simple color array (old save) or object array
             const safePattern = decoded.pattern.map((p: any) => {
                 if (typeof p === 'string') return { id: Math.random().toString(36).substr(2, 9), color: p };
-                return p;
+                return p; // Assume it has { id, color }
             });
             setPattern(safePattern);
         }
@@ -55,7 +77,6 @@ function KandiGeneratorContent() {
 
   // --- HANDLERS ---
 
-  // 1. AI Generation
   const handleAiGenerate = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
@@ -69,22 +90,27 @@ function KandiGeneratorContent() {
       setKandiName(result.kandiName);
       setVibeStory(result.vibeStory);
       
-      // Convert API string array to Object array for DnD
-      const objectPattern = result.pattern.map((color: string) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        color: color
-      }));
+      // CONVERT AI COLORS TO HEX FOR MANUAL BUILDER
+      // The API returns { color: "Pink", type: "pony" }
+      const standardizedPattern = result.pattern.map((bead: { color: string }) => {
+         // Try exact match or fallback to black
+         const hexColor = AI_COLOR_MAP[bead.color] || AI_COLOR_MAP[bead.color.toLowerCase()] || '#000000';
+         return {
+             id: Math.random().toString(36).substr(2, 9),
+             color: hexColor
+         };
+      });
       
-      setPattern(objectPattern);
+      setPattern(standardizedPattern);
       setHasGenerated(true);
     } catch (e) {
       console.error("Generator Error:", e);
+      alert("AI Generation failed. Try again!");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 2. Add To Stash (Checkout)
   const handleAddToStash = async () => {
     if (pattern.length === 0) {
         alert("Please add some beads first!");
@@ -109,10 +135,7 @@ function KandiGeneratorContent() {
     try {
       const canvas = document.querySelector('#kandi-canvas canvas') as HTMLCanvasElement;
       let imageBase64 = "https://placehold.co/400"; 
-
-      if (canvas) {
-        imageBase64 = canvas.toDataURL("image/png");
-      }
+      if (canvas) imageBase64 = canvas.toDataURL("image/png");
 
       let cartId = Cookies.get("_medusa_cart_id");
       const headers = {
@@ -125,12 +148,7 @@ function KandiGeneratorContent() {
         const regionData = await regionRes.json();
         const usRegion = regionData.regions.find((r: any) => r.countries.some((c: any) => c.iso_2 === 'us'));
         
-        if (!usRegion) {
-            alert("Error: No US Region found.");
-            setIsAdding(false);
-            setCaptureMode(false);
-            return;
-        }
+        if (!usRegion) throw new Error("No US Region found");
 
         const createRes = await fetch(`${backendUrl}/store/carts`, {
           method: "POST",
@@ -151,7 +169,7 @@ function KandiGeneratorContent() {
           metadata: {
             kandi_name: kandiName,
             kandi_vibe: vibeStory,
-            // Save as simple array of colors to save DB space
+            // Only save colors to DB, ignore IDs
             pattern_data: pattern.map(p => p.color), 
             image_url: imageBase64 
           }
@@ -161,8 +179,7 @@ function KandiGeneratorContent() {
       if (addRes.ok) {
         window.location.href = "/us/cart"; 
       } else {
-        console.error(await addRes.json());
-        alert("Failed to add line item.");
+        throw new Error("Failed to add to cart");
       }
 
     } catch (e) {
@@ -269,6 +286,11 @@ function KandiGeneratorContent() {
               <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
                 {pattern.length > 0 ? (
                     <KandiVisualizer 
+                        // Map pattern objects back to color strings for the visualizer if necessary,
+                        // but KandiVisualizer should now accept {id, color} objects or just colors.
+                        // Since we updated Visualizer to handle objects or strings, we can pass 'pattern' as is,
+                        // BUT Visualizer expects simple array of strings in my previous thought.
+                        // Let's map it to string[] to be safe and consistent with current visualizer code.
                         pattern={pattern.map(p => p.color)} 
                         captureMode={captureMode} 
                     />
