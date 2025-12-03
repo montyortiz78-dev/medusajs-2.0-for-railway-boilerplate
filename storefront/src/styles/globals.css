@@ -4,9 +4,37 @@
 
 @layer base {
   :root {
-    /* --- DARK MODE OVERRIDES --- */
-    --ui-bg-base: transparent; /* Changed to transparent for 3D bg visibility */
-    --ui-bg-subtle: #18181b;
+    /* --- LIGHT MODE (Default) --- */
+    --ui-bg-base: #ffffff;
+    --ui-bg-subtle: #f4f4f5; /* zinc-100 */
+    --ui-bg-subtle-pressed: #e4e4e7;
+    --ui-bg-subtle-hover: #e4e4e7;
+    --ui-bg-field: #ffffff;
+    --ui-bg-field-hover: #f4f4f5;
+    --ui-bg-component: #ffffff;
+    --ui-bg-component-hover: #f4f4f5;
+    --ui-bg-component-pressed: #e4e4e7;
+
+    --ui-fg-base: #18181b; /* zinc-900 */
+    --ui-fg-subtle: #71717a; /* zinc-500 */
+    --ui-fg-muted: #a1a1aa;
+    --ui-fg-interactive: #FF00CC; /* Kandi Pink */
+    --ui-fg-on-color: #ffffff;
+
+    --ui-border-base: #e4e4e7; /* zinc-200 */
+    --ui-border-strong: #d4d4d8;
+    --ui-border-interactive: #FF00CC;
+    
+    /* Custom Glass Variables */
+    --glass-bg: rgba(255, 255, 255, 0.65);
+    --glass-border: rgba(0, 0, 0, 0.05);
+    --glass-shadow: 0 8px 32px 0 rgba(255, 0, 204, 0.1);
+  }
+
+  .dark {
+    /* --- DARK MODE --- */
+    --ui-bg-base: #000000;
+    --ui-bg-subtle: #18181b; /* zinc-900 */
     --ui-bg-subtle-pressed: #27272a;
     --ui-bg-subtle-hover: #27272a;
     --ui-bg-field: #09090b;
@@ -18,16 +46,21 @@
     --ui-fg-base: #ffffff;
     --ui-fg-subtle: #a1a1aa;
     --ui-fg-muted: #71717a;
-    --ui-fg-interactive: #FF00CC; /* Kandi Pink */
+    --ui-fg-interactive: #FF00CC;
+    --ui-fg-on-color: #000000;
 
     --ui-border-base: #27272a;
     --ui-border-strong: #3f3f46;
-    --ui-border-interactive: #FF00CC; /* Kandi Pink */
+    --ui-border-interactive: #ec4899;
+
+    /* Custom Glass Variables */
+    --glass-bg: rgba(0, 0, 0, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(255, 0, 204, 0.15);
   }
 
   body {
-    @apply bg-black text-white antialiased;
-    /* Removed the solid gradient here so the Canvas component handles the background */
+    @apply bg-ui-bg-base text-ui-fg-base antialiased transition-colors duration-300;
     min-height: 100vh;
   }
 }
@@ -38,24 +71,35 @@
   }
 }
 
-/* --- GLASS UTILITY (Updated for Kandi vibe) --- */
+/* --- GLASS UTILITY (Dynamic) --- */
 .glass {
-  @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-[0_8px_32px_0_rgba(255,0,204,0.15)];
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
-/* --- COMPONENT FIXES --- */
+/* --- COMPONENT FIXES (Dynamic for Light/Dark) --- */
+/* We remove !important forcing black/white and use CSS variables */
 input, textarea, select {
-  background-color: rgba(24, 24, 27, 0.8) !important;
-  border-color: #3f3f46 !important;
-  color: white !important;
+  background-color: var(--ui-bg-field) !important;
+  border-color: var(--ui-border-base) !important;
+  color: var(--ui-fg-base) !important;
+  transition: all 0.2s ease-in-out;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: #FF00CC !important;
+  border-color: var(--ui-fg-interactive) !important;
   outline: none !important;
   box-shadow: 0 0 0 2px rgba(255, 0, 204, 0.2) !important;
 }
 
 input::placeholder, textarea::placeholder {
-  color: #71717a !important;
+  color: var(--ui-fg-muted) !important;
+}
+
+/* Fix for Medusa UI tables/containers in light mode */
+.ui-table-row:hover {
+  background-color: var(--ui-bg-subtle-hover) !important;
 }

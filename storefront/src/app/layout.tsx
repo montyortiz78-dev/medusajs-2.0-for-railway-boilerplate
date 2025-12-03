@@ -1,33 +1,25 @@
 import { Metadata } from "next"
-import { Inter } from "next/font/google"
-import { clx } from "@medusajs/ui"
-import "../styles/globals.css" // Ensure this matches your CSS file location
+import "styles/globals.css"
+import { ThemeProvider } from "lib/providers/theme-provider"
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-})
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
 export const metadata: Metadata = {
-  title: {
-    template: "%s | KandiLand",
-    default: "KandiLand Phygital Market",
-  },
-  description: "AI-Generated Kandi. Minted on Blockchain. Delivered to your door.",
+  metadataBase: new URL(BASE_URL),
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-mode="dark" className={clx("h-full dark", inter.variable)}>
-      <body className="bg-black text-white h-full antialiased font-sans">
-        <main className="relative flex flex-col min-h-screen">
-          {children}
-        </main>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <main className="relative">{props.children}</main>
+        </ThemeProvider>
       </body>
     </html>
   )

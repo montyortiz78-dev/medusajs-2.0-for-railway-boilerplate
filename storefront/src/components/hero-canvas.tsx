@@ -1,9 +1,10 @@
 'use client';
 
-import { useRef, useMemo, useEffect } from 'react';
+import { useRef, useMemo, useEffect, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Environment, Float } from '@react-three/drei';
 import * as THREE from 'three';
+import { useTheme } from 'next-themes';
 
 const KANDI_COLORS = [
   '#FF00CC', // Pink
@@ -67,17 +68,15 @@ function FloatingBeads({
       const y = positions[i * 3 + 1];
       const z = positions[i * 3 + 2];
 
-      // Scroll moves beads up
       const scrollMove = scrollY * 8;
-
       const t = time * speeds[i];
+      
       dummy.position.set(
         x + Math.sin(t + x * 0.5) * 1,
         y + Math.cos(t + y * 0.5) * 1 + scrollMove,
         z
       );
 
-      // Mouse interaction
       const mouseX = mouse.x * 20;
       const mouseY = mouse.y * 20;
       const dx = mouseX - dummy.position.x;
@@ -118,8 +117,11 @@ function FloatingBeads({
 
 export default function HeroCanvas() {
   const scrollRef = useRef(0);
+  const { resolvedTheme } = useTheme(); // Use theme to adjust fog if needed
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       scrollRef.current = window.scrollY / 1000; 
     };
@@ -127,31 +129,31 @@ export default function HeroCanvas() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Background color based on theme
+  const bgColor = mounted && resolvedTheme === 'dark' ? '#000000' : '#f4f4f5'; // Zinc-100 for light
+  const fogColor = mounted && resolvedTheme === 'dark' ? '#000000' : '#f4f4f5';
+
   return (
-    <div className="fixed inset-0 -z-10 top-0 left-0 h-full w-full bg-[#111]">
+    <div className="fixed inset-0 -z-10 top-0 left-0 h-full w-full bg-ui-bg-subtle transition-colors duration-300">
       <Canvas camera={{ position: [0, 0, 15], fov: 45 }} gl={{ antialias: true }}>
-        <ambientLight intensity={2} />
+        {/* Lights adapt slightly to theme visibility */}
+        <ambientLight intensity={mounted && resolvedTheme === 'light' ? 2.5 : 2} />
         <pointLight position={[10, 10, 10]} color="#FF00CC" intensity={5} distance={20} />
         <pointLight position={[-10, -10, 10]} color="#00FFFF" intensity={5} distance={20} />
         
         <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-           {/* Pony Beads (Torus) */}
            <FloatingBeads 
              count={80} 
              geometry={new THREE.TorusGeometry(0.4, 0.2, 16, 32)} 
              scale={1} 
              scrollOffset={scrollRef}
            />
-           
-           {/* Letter Blocks (Box) */}
            <FloatingBeads 
              count={40} 
              geometry={new THREE.BoxGeometry(0.7, 0.7, 0.7)} 
              scale={1} 
              scrollOffset={scrollRef}
            />
-
-           {/* Spacers (Sphere) */}
            <FloatingBeads 
              count={50} 
              geometry={new THREE.SphereGeometry(0.25, 16, 16)} 
@@ -160,7 +162,8 @@ export default function HeroCanvas() {
            />
         </Float>
         
-        <Environment preset="night" />
+        <Environment preset={mounted && resolvedTheme === 'light' ? "lobby" : "night"} />
+        <fog attach="fog" args={[fogColor, 10, 40]} />
       </Canvas>
     </div>
   );
