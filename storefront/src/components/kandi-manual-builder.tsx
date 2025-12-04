@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Trash } from "@medusajs/icons";
 import { clx } from "@medusajs/ui";
 import {
   DndContext, 
   closestCenter,
-  pointerWithin, // Better collision for containers
+  pointerWithin,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -57,8 +57,6 @@ type Props = {
   setPattern: (pattern: BeadItem[]) => void;
 };
 
-// --- HELPERS ---
-// Prevent layout animation on the element being dragged to reduce jitter
 const animateLayoutChanges: AnimateLayoutChanges = (args) => 
   defaultAnimateLayoutChanges({ ...args, wasDragging: true });
 
@@ -82,7 +80,7 @@ function PaletteItem({ color, name }: { color: string, name: string }) {
             )}
             style={{ backgroundColor: color }}
             aria-label={`Add ${name}`}
-        ></button>
+        />
         <span className="text-[10px] text-ui-fg-muted uppercase tracking-wider hidden sm:block select-none">
             {name}
         </span>
@@ -108,7 +106,6 @@ function SortableBead({ id, color, onRemove, isGhost }: { id: string, color: str
     transition,
   };
 
-  // Ghost items are invisible but take up space
   if (isGhost) {
       return (
         <div
@@ -153,8 +150,7 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeColor, setActiveColor] = useState<string | null>(null);
 
-  // UseDroppable for the empty container area
-  const { setNodeRef: setWorkAreaRef } = useDroppable({
+  const { setNodeRef: setWorkAreaRef, isOver } = useDroppable({
     id: 'work-area',
   });
 
@@ -164,12 +160,9 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // -- ACTIONS --
-  
   const addBead = (color: string) => {
     if (pattern.length >= 35) return;
     const newBead = { id: Math.random().toString(36).substr(2, 9), color };
-    // Remove any ghosts before adding real bead
     const cleanPattern = pattern.filter(p => !p.isGhost);
     setPattern([...cleanPattern, newBead]);
   };
@@ -182,7 +175,7 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
     if (confirm('Clear your design?')) setPattern([]);
   };
 
-  // -- EVENT HANDLERS --
+  // --- DND EVENTS ---
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -198,8 +191,6 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    
-    // Only handle visual updates if dragging from palette
     if (!over || active.data.current?.type !== 'palette') return;
 
     const isOverWorkArea = over.id === 'work-area';
@@ -209,23 +200,19 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
         const ghostId = 'ghost-bead';
         const hasGhost = pattern.some(p => p.id === ghostId);
         
-        // Calculate where to insert
-        let insertIndex = pattern.length; // Default to end
+        let insertIndex = pattern.length;
         if (isOverBead) {
              const overIndex = pattern.findIndex(p => p.id === over.id);
              if (overIndex !== -1) insertIndex = overIndex;
         }
 
-        // Insert or Move Ghost
         if (!hasGhost) {
-            if (pattern.length >= 35) return; // Cap check
-            
+            if (pattern.length >= 35) return;
             const newGhost = { id: ghostId, color: active.data.current.color, isGhost: true };
             const newPattern = [...pattern];
             newPattern.splice(insertIndex, 0, newGhost);
             setPattern(newPattern);
         } else {
-            // If ghost exists, check if we need to move it
             const ghostIndex = pattern.findIndex(p => p.id === ghostId);
             if (ghostIndex !== insertIndex && insertIndex !== -1) {
                 setPattern(arrayMove(pattern, ghostIndex, insertIndex));
@@ -239,7 +226,6 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
     setActiveId(null);
     setActiveColor(null);
 
-    // Remove ghost if it exists (we will replace it with real item or just delete it if cancelled)
     const patternWithoutGhost = pattern.filter(p => !p.isGhost);
 
     if (!over) {
@@ -247,42 +233,34 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
         return;
     }
 
-    // Case 1: Sorting existing beads
     if (active.data.current?.type !== 'palette') {
+        // Reordering
         if (active.id !== over.id) {
             const oldIndex = pattern.findIndex((item) => item.id === active.id);
             const newIndex = pattern.findIndex((item) => item.id === over.id);
             setPattern(arrayMove(pattern, oldIndex, newIndex));
         }
-    }
-    // Case 2: Dropping Palette Item
-    else {
-        // Check if we dropped on a valid target
+    } else {
+        // Dropping new bead
         if (over.id === 'work-area' || pattern.some(p => p.id === over.id)) {
-            // Find where the ghost was (that's where the user wanted it)
             const ghostIndex = pattern.findIndex(p => p.isGhost);
             const finalIndex = ghostIndex !== -1 ? ghostIndex : pattern.length;
             
-            // Create real bead
             const newBead = { id: Math.random().toString(36).substr(2, 9), color: active.data.current.color };
-            
-            // Insert at correct position
             const newPattern = [...patternWithoutGhost];
             newPattern.splice(finalIndex, 0, newBead);
             
-            // Final length check
             if (newPattern.length <= 35) {
                 setPattern(newPattern);
             } else {
-                setPattern(patternWithoutGhost); // Revert if full
+                setPattern(patternWithoutGhost);
             }
         } else {
-            setPattern(patternWithoutGhost); // Clean up ghost
+            setPattern(patternWithoutGhost);
         }
     }
   };
 
-  // Animation for the drag overlay
   const dropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({
       styles: {
@@ -294,8 +272,7 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
   return (
     <DndContext 
       sensors={sensors} 
-      // 'pointerWithin' detects collision even if not directly over the center, usually better for containers
-      collisionDetection={pointerWithin} 
+      collisionDetection={pointerWithin} // Works best for dropping into containers
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
@@ -307,8 +284,10 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
         <div 
             ref={setWorkAreaRef} 
             className={clx(
-                "bg-ui-bg-subtle border border-ui-border-base rounded-xl p-4 min-h-[100px] relative transition-colors",
-                activeId && activeColor && pattern.length === 0 ? "ring-2 ring-ui-fg-interactive ring-opacity-50" : ""
+                "bg-ui-bg-subtle border border-ui-border-base rounded-xl p-4 min-h-[120px] relative transition-all duration-200",
+                // Highlight when dragging over empty area
+                isOver && pattern.length === 0 ? "bg-ui-bg-base border-ui-fg-interactive ring-2 ring-ui-fg-interactive ring-opacity-20 scale-[1.02]" : "",
+                activeId && activeColor && pattern.length === 0 && !isOver ? "border-dashed" : ""
             )}
         >
             <div className="absolute top-2 right-3 text-xs text-ui-fg-subtle font-mono">
@@ -319,11 +298,11 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
                 items={pattern.map(p => p.id)} 
                 strategy={rectSortingStrategy}
             >
-                <div className="flex flex-wrap gap-2 items-center justify-center min-h-[60px]">
-                    {/* Show instruction if empty and NOT dragging */}
+                <div className="flex flex-wrap gap-3 items-center justify-center min-h-[80px] content-center">
                     {pattern.length === 0 && !activeId && (
-                        <div className="text-ui-fg-muted text-sm italic pointer-events-none select-none">
-                            Drag colors here or click to add
+                        <div className="text-ui-fg-muted text-sm italic pointer-events-none select-none flex flex-col items-center gap-2">
+                            <span>Drag beads here</span>
+                            <span className="text-xs opacity-50">(or tap colors below)</span>
                         </div>
                     )}
                     
@@ -342,7 +321,7 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
 
         {/* 2. CONTROLS */}
         <div className="flex justify-between items-center">
-            <span className="text-sm text-ui-fg-subtle font-medium">Palette (Drag or Click)</span>
+            <span className="text-sm text-ui-fg-subtle font-medium">Palette</span>
             <button 
                 onClick={clearAll} 
                 className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors"
@@ -353,7 +332,7 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
         </div>
 
         {/* 3. PALETTE */}
-        <div className="grid grid-cols-5 sm:grid-cols-9 gap-3">
+        <div className="grid grid-cols-5 sm:grid-cols-9 gap-3" id="palette-area">
             {PALETTE.map((p) => (
                 <div key={p.hex} onClick={() => addBead(p.hex)} className="cursor-pointer">
                     <PaletteItem color={p.hex} name={p.name} />
@@ -362,7 +341,8 @@ export default function KandiManualBuilder({ pattern, setPattern }: Props) {
         </div>
 
         {/* 4. OVERLAY */}
-        <DragOverlay dropAnimation={dropAnimation} className="z-[100]">
+        {/* IMPORTANT: pointer-events-none allows the cursor to 'see' the drop zone underneath the dragged item */}
+        <DragOverlay dropAnimation={dropAnimation} className="z-[100] pointer-events-none">
             {activeId && activeColor ? (
                 <div 
                     className="w-10 h-10 rounded-full shadow-2xl border-2 border-white cursor-grabbing transform scale-110"
