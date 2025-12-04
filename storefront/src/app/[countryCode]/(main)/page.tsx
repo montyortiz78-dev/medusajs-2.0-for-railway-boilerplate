@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import Link from "next/link"
 
 // Components
-import Hero from "@modules/home/components/hero" // Ensure this path matches your project structure
+import HeroCanvas from "@components/hero-canvas"
 import FeaturedProducts from "@modules/home/components/featured-products"
 import FeaturedCategories from "@modules/home/components/featured-categories"
 
