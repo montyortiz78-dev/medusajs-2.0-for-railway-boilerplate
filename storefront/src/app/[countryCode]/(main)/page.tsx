@@ -1,6 +1,15 @@
 import { Metadata } from "next"
-import HeroCanvas from "@/components/hero-canvas"
 import Link from "next/link"
+
+// Components
+import HeroCanvas from "@/components/hero-canvas" // Ensure this path matches your project structure
+import FeaturedProducts from "@modules/home/components/featured-products"
+import FeaturedCategories from "@modules/home/components/featured-categories"
+
+// Data
+import { getCollectionsList } from "@lib/data/collections"
+import { getCategoriesList } from "@lib/data/categories"
+import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
   title: "Phygital Kandi Market",
@@ -12,15 +21,28 @@ export default async function Home({
 }: {
   params: { countryCode: string }
 }) {
+  // 1. Fetch Data
+  const { collections } = await getCollectionsList(0, 3)
+  const { product_categories } = await getCategoriesList(0, 20)
+  const region = await getRegion(countryCode)
+
+  if (!collections || !region) {
+    return null
+  }
+
+  // Filter for top-level categories (those without a parent)
+  const parents = product_categories.filter(c => !c.parent_category_id).slice(0, 6)
+
   return (
-    <div className="relative min-h-screen w-full overflow-hidden text-white">
+    <div className="relative w-full overflow-hidden text-white">
       
-      {/* 1. The 3D Background (Floats behind everything) */}
+      {/* --- HERO SECTION (Restored) --- */}
+      
+      {/* 1. The 3D Background (Fixed, floats behind everything) */}
       <HeroCanvas />
 
-      {/* 2. The Content Overlay */}
-      {/* "pt-32" adds padding so it doesn't hide behind the Navbar */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4 pt-20 pointer-events-none">
+      {/* 2. The Hero Content */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-4 pt-20 pointer-events-none border-b border-white/10">
         
         <div className="pointer-events-auto space-y-8 backdrop-blur-sm bg-black/40 p-8 md:p-12 rounded-3xl border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-1000">
           
@@ -37,6 +59,7 @@ export default async function Home({
           </p>
 
           <div className="flex flex-col md:flex-row gap-4 justify-center pt-6">
+            {/* Restored Link to /create */}
             <Link 
               href={`/${countryCode}/create`}
               className="px-10 py-4 bg-white text-black rounded-full font-black text-lg hover:scale-110 hover:bg-pink-100 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)]"
@@ -53,6 +76,24 @@ export default async function Home({
 
         </div>
       </div>
+
+      {/* --- SHOPPING SECTIONS --- */}
+      
+      {/* Note: We add a dark background here to ensure legibility over the fixed 3D canvas as you scroll down */}
+      <div className="relative z-10 bg-black/80 backdrop-blur-xl border-t border-white/10">
+        
+        {/* Categories Grid */}
+        <FeaturedCategories categories={parents} />
+
+        {/* Collections / Featured Products */}
+        <div className="py-12 pb-24">
+          <ul className="flex flex-col gap-x-6">
+            <FeaturedProducts collections={collections} region={region} />
+          </ul>
+        </div>
+
+      </div>
+
     </div>
   )
 }
