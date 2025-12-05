@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, clx } from "@medusajs/ui"
+import { Button } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -42,10 +42,6 @@ export default function ProductActions({
   const countryCode = useParams().countryCode as string
 
   // --- KANDI STATE ---
-  // Check if product is customizable. You can change this logic (e.g. check tags).
-  // For now, let's assume products with "custom" in the handle or title enable this.
-  const isCustomizable = product.handle?.includes("custom") || product.title?.toLowerCase().includes("custom") || product.title?.toLowerCase().includes("bracelet")
-  
   const [pattern, setPattern] = useState<BeadItem[]>([])
   // -------------------
 
@@ -94,22 +90,19 @@ export default function ProductActions({
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
 
-    // Validation: Enforce pattern if it's a custom product
-    if (isCustomizable && pattern.length === 0) {
-        alert("Please add at least one bead to your design!")
-        return
-    }
-
     setIsAdding(true)
+
+    // Pass pattern metadata only if user has added beads (optional customization)
+    const metadata = pattern.length > 0 ? {
+          kandi_pattern: pattern.map(p => p.color),
+          is_custom: true
+      } : undefined
 
     await addToCart({
       variantId: selectedVariant.id,
       quantity: 1,
       countryCode,
-      metadata: isCustomizable ? {
-          kandi_pattern: pattern.map(p => p.color), // Save simplified pattern
-          is_custom: true
-      } : undefined
+      metadata
     })
 
     setIsAdding(false)
@@ -140,14 +133,11 @@ export default function ProductActions({
           )}
         </div>
 
-        {/* --- KANDI BUILDER SECTION --- */}
-        {isCustomizable && (
-            <div className="py-4 border-t border-b border-ui-border-base my-2">
-                <span className="text-sm font-medium mb-2 block text-ui-fg-base">Customize Colors</span>
-                {/* We pass the builder here. Since it's narrow, it will stack vertically */}
-                <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
-            </div>
-        )}
+        {/* --- KANDI BUILDER SECTION (Always Visible) --- */}
+        <div className="py-4 border-t border-b border-ui-border-base my-2">
+            <span className="text-sm font-medium mb-2 block text-ui-fg-base">Customize Design (Optional)</span>
+            <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
+        </div>
         {/* ----------------------------- */}
 
         <ProductPrice product={product} variant={selectedVariant} />
