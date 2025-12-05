@@ -103,30 +103,48 @@ export async function addToCart({
   variantId,
   quantity,
   countryCode,
+  metadata,
 }: {
   variantId: string
   quantity: number
   countryCode: string
+  metadata?: Record<string, any>
 }) {
   const cartId = getCartId()
 
-  // 1. If no cart, create one
+  // 1. If no cart, create one (Note: createCart usually takes metadata in 2.0 if updated,
+  // but simpler to create then add line item if needed. For now, standard create is fine)
   if (!cartId) {
     try {
-      await createCart(variantId, quantity, countryCode)
+      const cart = await createCart(variantId, quantity, countryCode)
+      // If we have metadata, we might need to update the line item immediately 
+      // or pass it to createCart if you update that helper. 
+      // For simplicity/robustness, let's just use the "Add Line Item" flow for everything 
+      // if possible, but createCart is optimized. 
+      // If metadata is crucial for the first item, we should update the line item after creation.
+      if (cart && metadata && cart.items?.[0]) {
+      await sdk.store.cart.updateLineItem(
+        cart.id, 
+            cart.items[0].id, 
+            { metadata }, 
+            {}, 
+            getMedusaHeaders(["cart"])
+        )
+      }
       return
     } catch (e) {
       return medusaError(e)
     }
   }
 
-  // 2. If cart exists, try adding
+  // 2. If cart exists, try adding with metadata
   try {
     await sdk.store.cart.createLineItem(
       cartId,
       {
         variant_id: variantId,
         quantity,
+        metadata, // <--- PASS METADATA HERE
       },
       {},
       getMedusaHeaders(["cart"])
@@ -136,10 +154,19 @@ export async function addToCart({
     console.error("Error adding to cart:", e)
 
     // 3. If cart not found, clear cookie and retry creation
-    if (e.message?.includes("Not Found") || e.status === 404) {
+   if (e.message?.includes("Not Found") || e.status === 404) {
       removeCartId()
       try {
-        await createCart(variantId, quantity, countryCode)
+        const cart = await createCart(variantId, quantity, countryCode)
+         if (cart && metadata && cart.items?.[0]) {
+            await sdk.store.cart.updateLineItem(
+                cart.id, 
+                cart.items[0].id, 
+                { metadata }, 
+                {}, 
+                getMedusaHeaders(["cart"])
+            )
+        }
       } catch (createErr) {
         return medusaError(createErr)
       }

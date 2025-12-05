@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@medusajs/ui"
+import { Button, clx } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -13,6 +13,9 @@ import MobileActions from "./mobile-actions"
 import ProductPrice from "../product-price"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
+
+// Import Builder and Type
+import KandiManualBuilder, { BeadItem } from "../../../../components/kandi-manual-builder"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -38,6 +41,14 @@ export default function ProductActions({
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
 
+  // --- KANDI STATE ---
+  // Check if product is customizable. You can change this logic (e.g. check tags).
+  // For now, let's assume products with "custom" in the handle or title enable this.
+  const isCustomizable = product.handle?.includes("custom") || product.title?.toLowerCase().includes("custom") || product.title?.toLowerCase().includes("bracelet")
+  
+  const [pattern, setPattern] = useState<BeadItem[]>([])
+  // -------------------
+
   // If there is only 1 variant, preselect the options
   useEffect(() => {
     if (product.variants?.length === 1) {
@@ -57,7 +68,6 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // update the options when a variant is selected
   const setOptionValue = (title: string, value: string) => {
     setOptions((prev) => ({
       ...prev,
@@ -65,37 +75,30 @@ export default function ProductActions({
     }))
   }
 
-  // check if the selected variant is in stock
   const inStock = useMemo(() => {
-    // If we don't manage inventory, we can always add to cart
-    if (selectedVariant && !selectedVariant.manage_inventory) {
-      return true
-    }
-
-    // If we allow back orders on the variant, we can add to cart
-    if (selectedVariant?.allow_backorder) {
-      return true
-    }
-
-    // If there is inventory available, we can add to cart
+    if (selectedVariant && !selectedVariant.manage_inventory) return true
+    if (selectedVariant?.allow_backorder) return true
     if (
       selectedVariant?.manage_inventory &&
       (selectedVariant?.inventory_quantity || 0) > 0
     ) {
       return true
     }
-
-    // Otherwise, we can't add to cart
     return false
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
-
   const inView = useIntersection(actionsRef, "0px")
 
   // add the selected variant to the cart
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
+
+    // Validation: Enforce pattern if it's a custom product
+    if (isCustomizable && pattern.length === 0) {
+        alert("Please add at least one bead to your design!")
+        return
+    }
 
     setIsAdding(true)
 
@@ -103,6 +106,10 @@ export default function ProductActions({
       variantId: selectedVariant.id,
       quantity: 1,
       countryCode,
+      metadata: isCustomizable ? {
+          kandi_pattern: pattern.map(p => p.color), // Save simplified pattern
+          is_custom: true
+      } : undefined
     })
 
     setIsAdding(false)
@@ -133,6 +140,16 @@ export default function ProductActions({
           )}
         </div>
 
+        {/* --- KANDI BUILDER SECTION --- */}
+        {isCustomizable && (
+            <div className="py-4 border-t border-b border-ui-border-base my-2">
+                <span className="text-sm font-medium mb-2 block text-ui-fg-base">Customize Colors</span>
+                {/* We pass the builder here. Since it's narrow, it will stack vertically */}
+                <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
+            </div>
+        )}
+        {/* ----------------------------- */}
+
         <ProductPrice product={product} variant={selectedVariant} />
 
         <Button
@@ -149,6 +166,7 @@ export default function ProductActions({
             ? "Out of stock"
             : "Add to cart"}
         </Button>
+        
         <MobileActions
           product={product}
           variant={selectedVariant}
