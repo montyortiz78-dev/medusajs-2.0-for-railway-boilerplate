@@ -22,7 +22,7 @@ export default async function Footer() {
               href="/"
               className="txt-compact-xlarge-plus text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 uppercase font-black hover:text-ui-fg-base"
             >
-              KANDILAND
+              Kandi Creations
             </LocalizedClientLink>
             <Text className="txt-small-plus text-ui-fg-subtle mt-4">
               The world's first AI-powered Phygital Kandi market. 
@@ -114,7 +114,7 @@ export default async function Footer() {
         {/* Bottom Bar */}
         <div className="flex w-full mb-16 justify-between text-ui-fg-muted border-t border-ui-border-base pt-6">
           <Text className="txt-compact-small">
-            © {new Date().getFullYear()} KandiLand Store. All rights reserved.
+            © {new Date().getFullYear()} KandiCreations.com. All rights reserved.
           </Text>
         </div>
       </div>
