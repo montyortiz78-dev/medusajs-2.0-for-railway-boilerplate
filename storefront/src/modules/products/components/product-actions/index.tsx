@@ -14,8 +14,9 @@ import ProductPrice from "../product-price"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 
-// Import Builder and Type
-import KandiManualBuilder, { BeadItem } from "../../../../components/kandi-manual-builder"
+// Import Builder and Context
+import KandiManualBuilder from "../../../../components/kandi-manual-builder"
+import { useKandiContext } from "@lib/context/kandi-context"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -41,8 +42,8 @@ export default function ProductActions({
   const [isAdding, setIsAdding] = useState(false)
   const countryCode = useParams().countryCode as string
 
-  // --- KANDI STATE ---
-  const [pattern, setPattern] = useState<BeadItem[]>([])
+  // --- KANDI STATE FROM CONTEXT ---
+  const { pattern, setPattern } = useKandiContext()
   // -------------------
 
   // If there is only 1 variant, preselect the options
@@ -86,17 +87,45 @@ export default function ProductActions({
   const actionsRef = useRef<HTMLDivElement>(null)
   const inView = useIntersection(actionsRef, "0px")
 
+  // Helper to capture the 3D Canvas
+  const captureCanvasImage = (): string => {
+    try {
+      // We look for the canvas ID defined in kandi-bracelet-3d.tsx
+      const canvasContainer = document.getElementById("kandi-canvas")
+      const canvas = canvasContainer?.querySelector("canvas")
+      
+      if (canvas) {
+        return canvas.toDataURL("image/png")
+      }
+    } catch (e) {
+      console.error("Failed to capture 3D bracelet snapshot", e)
+    }
+    return ""
+  }
+
   // add the selected variant to the cart
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
 
     setIsAdding(true)
 
-    // Pass pattern metadata only if user has added beads (optional customization)
-    const metadata = pattern.length > 0 ? {
-          kandi_pattern: pattern.map(p => p.color),
-          is_custom: true
-      } : undefined
+    // Capture metadata for NFT minting
+    let metadata: Record<string, any> | undefined = undefined
+
+    if (pattern.length > 0) {
+      // Capture the visual
+      const imageUrl = captureCanvasImage()
+
+      metadata = {
+          is_custom: true,
+          // Metadata expected by backend/src/subscribers/mint-nft.ts
+          pattern_data: pattern,           // The full bead objects
+          kandi_pattern: pattern.map(p => p.color), // Simple color list
+          image_url: imageUrl,             // Base64 image from 3D Canvas
+          kandi_name: "Custom Kandi Bracelet",
+          kandi_vibe: "Creative"
+      }
+    }
 
     await addToCart({
       variantId: selectedVariant.id,
@@ -135,7 +164,7 @@ export default function ProductActions({
 
         {/* --- KANDI BUILDER SECTION (Always Visible) --- */}
         <div className="py-4 border-t border-b border-ui-border-base my-2">
-            <span className="text-sm font-medium mb-2 block text-ui-fg-base">Customize Design (Optional)</span>
+            <span className="text-sm font-medium mb-2 block text-ui-fg-base">Customize Design</span>
             <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
         </div>
         {/* ----------------------------- */}

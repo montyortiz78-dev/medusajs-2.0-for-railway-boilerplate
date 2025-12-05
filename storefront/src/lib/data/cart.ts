@@ -126,7 +126,10 @@ export async function addToCart({
       await sdk.store.cart.updateLineItem(
         cart.id, 
             cart.items[0].id, 
-            { metadata }, 
+            {
+              metadata,
+              quantity: 0
+            }, 
             {}, 
             getMedusaHeaders(["cart"])
         )
@@ -162,7 +165,10 @@ export async function addToCart({
             await sdk.store.cart.updateLineItem(
                 cart.id, 
                 cart.items[0].id, 
-                { metadata }, 
+                {
+                  metadata,
+                  quantity: 0
+                }, 
                 {}, 
                 getMedusaHeaders(["cart"])
             )
