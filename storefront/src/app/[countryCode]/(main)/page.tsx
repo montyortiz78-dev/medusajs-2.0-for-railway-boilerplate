@@ -12,8 +12,8 @@ import { getCategoriesList } from "@lib/data/categories"
 import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
-  title: "Phygital Kandi Market",
-  description: "The world's first AI-powered Kandi store.",
+  title: "Kandi Creations | Custom Kandi Bracelets, Cuffs & Accessories",
+  description: "Spread Peace, Love, Unity, and Respect with premium Kandi beads and charms. Create your own custom tradeable bracelets or shop our curated festival collections.",
 }
 
 export default async function Home({
@@ -47,14 +47,14 @@ export default async function Home({
         <div className="pointer-events-auto space-y-8 backdrop-blur-sm bg-black/40 p-8 md:p-12 rounded-3xl border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-1000">
           
           <h1 className="text-6xl md:text-9xl font-black tracking-tighter bg-gradient-to-r from-pink-500 via-green-400 to-blue-500 text-transparent bg-clip-text animate-pulse drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-            PLUR <br/> FUTURE
+            DESIGN. TRADE. CONNECT.
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-200 max-w-lg mx-auto font-light">
-            The World's First Phygital Kandi Market.
+            From 3D cuffs to singles: create the ultimate festival tradeables with our interactive builder.
             <br/>
             <span className="text-xs md:text-sm uppercase tracking-widest text-pink-500 font-bold mt-2 block">
-              AI Generated • Hand Strung • Blockchain Minted
+              The Future of Hand Strung Kandi
             </span>
           </p>
 
@@ -75,7 +75,18 @@ export default async function Home({
           </div>
 
         </div>
-      </div>
+      </div>{/* 3. About Section */}
+      <section className="relative z-10 bg-black/90 backdrop-blur-xl border-t border-white/10 py-24 px-4">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+          <h2 className="text-3xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-blue-500 drop-shadow-sm">
+            WHAT IS PHYGITAL KANDI?
+          </h2>
+          <div className="h-1 w-24 bg-gradient-to-r from-pink-500 to-blue-500 mx-auto rounded-full" />
+          <p className="text-lg md:text-xl text-gray-300 leading-relaxed font-light">
+            Kandi culture is about connection—trading a piece of yourself with a new friend. We take that tradition to the next level. Every bracelet you design isn't just hand-strung with premium pony beads; it's minted on the blockchain as a digital collectible. Whether you're looking for elaborate <strong className="text-white font-bold">3D Cuffs</strong>, simple <strong className="text-white font-bold">Singles</strong>, or rare <strong className="text-white font-bold">Perler</strong> charms, we bridge the gap between the rave and the digital world.
+          </p>
+        </div>
+      </section>
 
       {/* --- SHOPPING SECTIONS --- */}
       
