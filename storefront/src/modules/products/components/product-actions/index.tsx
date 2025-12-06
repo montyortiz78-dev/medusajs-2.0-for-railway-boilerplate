@@ -105,26 +105,26 @@ export default function ProductActions({
 
   // add the selected variant to the cart
   const handleAddToCart = async () => {
+    // 1. Validation: Ensure variant exists and pattern is not empty
     if (!selectedVariant?.id) return null
+    if (pattern.length === 0) {
+        // Optional: Trigger a toast or alert here if needed
+        return null
+    }
 
     setIsAdding(true)
 
-    // Capture metadata for NFT minting
-    let metadata: Record<string, any> | undefined = undefined
+    // 2. Capture Visual and Metadata
+    const imageUrl = captureCanvasImage()
 
-    if (pattern.length > 0) {
-      // Capture the visual
-      const imageUrl = captureCanvasImage()
-
-      metadata = {
+    const metadata = {
           is_custom: true,
           // Metadata expected by backend/src/subscribers/mint-nft.ts
           pattern_data: pattern,           // The full bead objects
           kandi_pattern: pattern.map(p => p.color), // Simple color list
           image_url: imageUrl,             // Base64 image from 3D Canvas
-          kandi_name: "Custom Kandi Bracelet",
+          kandi_name: "Custom Kandi Bracelet", // You could add a text input for this later
           kandi_vibe: "Creative"
-      }
     }
 
     await addToCart({
@@ -136,6 +136,9 @@ export default function ProductActions({
 
     setIsAdding(false)
   }
+
+  // Validation Check
+  const isValid = inStock && selectedVariant && pattern.length > 0;
 
   return (
     <>
@@ -164,8 +167,19 @@ export default function ProductActions({
 
         {/* --- KANDI BUILDER SECTION (Always Visible) --- */}
         <div className="py-4 border-t border-b border-ui-border-base my-2">
-            <span className="text-sm font-medium mb-2 block text-ui-fg-base">Customize Design</span>
+            <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-ui-fg-base">Customize Design</span>
+                <span className="text-xs text-ui-fg-subtle">
+                    {pattern.length === 0 ? "(Required)" : `${pattern.length} beads`}
+                </span>
+            </div>
             <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
+            
+            {pattern.length === 0 && (
+                <p className="text-xs text-rose-500 mt-2">
+                    * Please add at least one bead to your design.
+                </p>
+            )}
         </div>
         {/* ----------------------------- */}
 
@@ -173,7 +187,7 @@ export default function ProductActions({
 
         <Button
           onClick={handleAddToCart}
-          disabled={!inStock || !selectedVariant || !!disabled || isAdding}
+          disabled={!isValid || !!disabled || isAdding}
           variant="primary"
           className="w-full h-10"
           isLoading={isAdding}
@@ -183,6 +197,8 @@ export default function ProductActions({
             ? "Select variant"
             : !inStock
             ? "Out of stock"
+            : pattern.length === 0
+            ? "Add Beads to Design"
             : "Add to cart"}
         </Button>
         
