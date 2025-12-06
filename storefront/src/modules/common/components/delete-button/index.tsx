@@ -29,10 +29,12 @@ const DeleteButton = ({
       // If error, stop spinning so user can try again
       setIsDeleting(false)
     } else {
-      // If success, force a router refresh to update the UI (remove the item)
+      // If success, trigger refresh. 
       router.refresh()
-      // Note: We don't set isDeleting(false) here because the component 
-      // will unmount when the cart refreshes and removes this item.
+      // We explicitly stop loading here. 
+      // If the item is removed by the refresh, this component unmounts.
+      // If the item remains (e.g. cache issue), the spinner stops.
+      setIsDeleting(false)
     }
   }
 

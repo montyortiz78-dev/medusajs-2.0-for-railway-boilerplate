@@ -10,9 +10,6 @@ import { listRegions } from "./regions"
 
 // --- HELPERS ---
 
-/**
- * Helper to get the cart ID or throw if missing (for actions that require it).
- */
 function getCartIdOrThrow() {
   const cartId = getCartId()
   if (!cartId) {
@@ -21,10 +18,6 @@ function getCartIdOrThrow() {
   return cartId
 }
 
-/**
- * Creates a new cart with the given items and saves the ID in cookies.
- * FIX: Looks up the region_id based on countryCode to satisfy SDK requirements.
- */
 async function createCart(variantId: string, quantity: number, countryCode: string) {
   try {
     let regionId: string | undefined
@@ -35,7 +28,6 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
         r.countries?.some((c) => c.iso_2 === countryCode)
       )
       
-      // Fallback: If no match, use the first region available
       if (region) {
         regionId = region.id
       } else if (regions.length > 0) {
@@ -81,8 +73,6 @@ export async function retrieveCart() {
   }
 
   try {
-    // FIX: Use '+' syntax for relations to add them to default fields.
-    // Do NOT use '*' combined with '+'. 
     const { cart } = await sdk.store.cart.retrieve(
       cartId,
       {
@@ -112,23 +102,19 @@ export async function addToCart({
 }) {
   const cartId = getCartId()
 
-  // 1. If no cart, create one (Note: createCart usually takes metadata in 2.0 if updated,
-  // but simpler to create then add line item if needed. For now, standard create is fine)
+  // 1. If no cart, create one
   if (!cartId) {
     try {
       const cart = await createCart(variantId, quantity, countryCode)
-      // If we have metadata, we might need to update the line item immediately 
-      // or pass it to createCart if you update that helper. 
-      // For simplicity/robustness, let's just use the "Add Line Item" flow for everything 
-      // if possible, but createCart is optimized. 
-      // If metadata is crucial for the first item, we should update the line item after creation.
+      // If metadata is present, update the created line item
       if (cart && metadata && cart.items?.[0]) {
-      await sdk.store.cart.updateLineItem(
-        cart.id, 
+        await sdk.store.cart.updateLineItem(
+            cart.id, 
             cart.items[0].id, 
             {
               metadata,
-              quantity: 0
+              // FIX: Removed incorrect "quantity: 0" here. 
+              // We don't need to pass quantity if we are just adding metadata.
             }, 
             {}, 
             getMedusaHeaders(["cart"])
@@ -147,7 +133,7 @@ export async function addToCart({
       {
         variant_id: variantId,
         quantity,
-        metadata, // <--- PASS METADATA HERE
+        metadata,
       },
       {},
       getMedusaHeaders(["cart"])
@@ -167,7 +153,7 @@ export async function addToCart({
                 cart.items[0].id, 
                 {
                   metadata,
-                  quantity: 0
+                  // FIX: Removed incorrect "quantity: 0" here as well.
                 }, 
                 {}, 
                 getMedusaHeaders(["cart"])
@@ -213,6 +199,8 @@ export async function deleteLineItem(lineId: string) {
       getMedusaHeaders(["cart"])
     )
     revalidateTag("cart")
+    // Explicitly return null on success
+    return null
   } catch (e) {
     return medusaError(e)
   }
@@ -224,7 +212,6 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     const cartId = getCartIdOrThrow()
     const data = Object.fromEntries(formData.entries()) as Record<string, string>
 
-    // FIX 1: Use bracket notation to access keys with dots
     const address = {
       first_name: data["shipping_address.first_name"],
       last_name: data["shipping_address.last_name"],
@@ -245,7 +232,6 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     if (data.same_as_billing === "on") {
       payload.billing_address = address
     } else {
-      // FIX 2: Use bracket notation for billing address keys as well
       payload.billing_address = {
         first_name: data["billing_address.first_name"],
         last_name: data["billing_address.last_name"],
@@ -261,14 +247,12 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
 
     await sdk.store.cart.update(cartId, payload, {}, getMedusaHeaders(["cart"]))
     revalidateTag("cart")
-    // Set the redirect URL here (using the correct key)
     redirectUrl = `/${data["shipping_address.country_code"]}/checkout?step=delivery`
   
   } catch (e: any) {
     return medusaError(e)
   }
   
-  // FIX 3: Call redirect outside the try/catch block to properly handle NEXT_REDIRECT
   if (redirectUrl) {
     redirect(redirectUrl)
   }
@@ -327,7 +311,6 @@ export async function placeOrder() {
     if (result.type === "order" && result.order) {
       revalidateTag("cart")
       removeCartId()
-      // Construct the redirect URL using the order's country code and ID
       const countryCode = result.order.shipping_address?.country_code?.toLowerCase()
       redirectUrl = `/${countryCode}/order/confirmed/${result.order.id}`
 
@@ -336,7 +319,7 @@ export async function placeOrder() {
     }
   } catch (e: any) {
     return medusaError(e)
-  }// Redirect must be called outside the try/catch block to avoid NEXT_REDIRECT errors
+  }
   if (redirectUrl) {
     redirect(redirectUrl)
   }
