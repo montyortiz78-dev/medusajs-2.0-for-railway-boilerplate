@@ -10,6 +10,9 @@ import { listRegions } from "./regions"
 
 // --- HELPERS ---
 
+/**
+ * Helper to get the cart ID or throw if missing (for actions that require it).
+ */
 function getCartIdOrThrow() {
   const cartId = getCartId()
   if (!cartId) {
@@ -18,6 +21,9 @@ function getCartIdOrThrow() {
   return cartId
 }
 
+/**
+ * Creates a new cart with the given items and saves the ID in cookies.
+ */
 async function createCart(variantId: string, quantity: number, countryCode: string) {
   try {
     let regionId: string | undefined
@@ -28,6 +34,7 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
         r.countries?.some((c) => c.iso_2 === countryCode)
       )
       
+      // Fallback: If no match, use the first region available
       if (region) {
         regionId = region.id
       } else if (regions.length > 0) {
@@ -106,15 +113,16 @@ export async function addToCart({
   if (!cartId) {
     try {
       const cart = await createCart(variantId, quantity, countryCode)
-      // If metadata is present, update the created line item
+      
+      // If we have metadata, update the line item immediately.
+      // We must explicitly pass the quantity again to satisfy the SDK type definition.
       if (cart && metadata && cart.items?.[0]) {
         await sdk.store.cart.updateLineItem(
             cart.id, 
             cart.items[0].id, 
             {
               metadata,
-              // FIX: Removed incorrect "quantity: 0" here. 
-              // We don't need to pass quantity if we are just adding metadata.
+              quantity: cart.items[0].quantity, // <--- FIXED: Explicitly pass existing quantity
             }, 
             {}, 
             getMedusaHeaders(["cart"])
@@ -153,7 +161,7 @@ export async function addToCart({
                 cart.items[0].id, 
                 {
                   metadata,
-                  // FIX: Removed incorrect "quantity: 0" here as well.
+                  quantity: cart.items[0].quantity, // <--- FIXED: Explicitly pass existing quantity
                 }, 
                 {}, 
                 getMedusaHeaders(["cart"])
@@ -193,13 +201,15 @@ export async function updateLineItem({
 export async function deleteLineItem(lineId: string) {
   try {
     const cartId = getCartIdOrThrow()
+    // We pass an empty object {} as the 3rd argument (query params)
+    // so that getMedusaHeaders is correctly interpreted as the 4th argument (custom headers).
     await sdk.store.cart.deleteLineItem(
       cartId,
       lineId,
+      {}, 
       getMedusaHeaders(["cart"])
     )
     revalidateTag("cart")
-    // Explicitly return null on success
     return null
   } catch (e) {
     return medusaError(e)
@@ -320,6 +330,7 @@ export async function placeOrder() {
   } catch (e: any) {
     return medusaError(e)
   }
+  
   if (redirectUrl) {
     redirect(redirectUrl)
   }
