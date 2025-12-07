@@ -22,6 +22,7 @@ import {
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
+import { Modules } from '@medusajs/utils';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
@@ -49,6 +50,36 @@ const medusaConfig = {
     disable: SHOULD_DISABLE_ADMIN,
   },
   modules: [
+    {
+      key: Modules.FULFILLMENT,
+      resolve: '@medusajs/fulfillment',
+      options: {
+        providers: [
+          {
+            resolve: '@medusajs/fulfillment-manual',
+            id: 'manual',
+            options: {}
+          },
+          // 1. If using a community plugin (check available v2 plugins):
+          // {
+          //   resolve: 'medusa-fulfillment-shippo',
+          //   id: 'shippo',
+          //   options: {
+          //     api_key: process.env.SHIPPO_API_KEY,
+          //   }
+          // },
+          
+          // 2. OR, if building a custom provider (Recommended for v2 right now):
+          {
+            resolve: './src/modules/fulfillment-providers/usps-provider',
+            id: 'usps',
+            options: {
+              api_key: process.env.SHIPPO_API_KEY, // Using Shippo as the backend for USPS
+            }
+          }
+        ]
+      }
+    },
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
