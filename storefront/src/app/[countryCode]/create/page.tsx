@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, clx } from "@medusajs/ui";
-import { Sparkles, Adjustments, CheckCircle } from "@medusajs/icons";
+import { Sparkles, Adjustments, CheckCircle, ExclamationCircle } from "@medusajs/icons"; // Added ExclamationCircle
 import KandiVisualizer from '../../../components/kandi-visualizer';
 import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
 import { addToCart } from '../../../lib/data/cart';
@@ -30,6 +30,7 @@ function KandiGeneratorContent() {
   
   // Product & Option State
   const [product, setProduct] = useState<HttpTypes.StoreProduct | null>(null);
+  const [productError, setProductError] = useState<string | null>(null); // NEW: Error state
   const [options, setOptions] = useState<Record<string, string>>({});
   const [selectedVariant, setSelectedVariant] = useState<HttpTypes.StoreProductVariant | undefined>(undefined);
   
@@ -47,25 +48,34 @@ function KandiGeneratorContent() {
   // 1. Fetch Product Data on Mount
   useEffect(() => {
     const fetchProduct = async () => {
-      // Use env handle or fallback to 'custom-kandi'
       const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-kandi';
-      const fetchedProduct = await getCustomKandiProduct(handle);
-      
-      if (fetchedProduct) {
-        setProduct(fetchedProduct);
+      console.log("Fetching product with handle:", handle); // DEBUG LOG
+
+      try {
+        const fetchedProduct = await getCustomKandiProduct(handle);
         
-        // Auto-select first options if available
-        if (fetchedProduct.options) {
-          const defaultOptions: Record<string, string> = {};
-          fetchedProduct.options.forEach(opt => {
-             if (opt.values && opt.values.length > 0) {
-               defaultOptions[opt.id] = opt.values[0].value;
-             }
-          });
-          setOptions(defaultOptions);
+        if (fetchedProduct) {
+          console.log("Product fetched:", fetchedProduct.title);
+          setProduct(fetchedProduct);
+          setProductError(null);
+          
+          // Auto-select first options if available
+          if (fetchedProduct.options) {
+            const defaultOptions: Record<string, string> = {};
+            fetchedProduct.options.forEach(opt => {
+               if (opt.values && opt.values.length > 0) {
+                 defaultOptions[opt.id] = opt.values[0].value;
+               }
+            });
+            setOptions(defaultOptions);
+          }
+        } else {
+            console.error("Product not found via API.");
+            setProductError(`Product not found. Checked handle: "${handle}". Ensure product is Published.`);
         }
-      } else {
-          console.warn("Custom Kandi Product not found. Fallback to Env ID might happen.");
+      } catch (err) {
+          console.error("Error fetching product:", err);
+          setProductError("System error loading product configuration.");
       }
     };
     fetchProduct();
@@ -75,18 +85,14 @@ function KandiGeneratorContent() {
   useEffect(() => {
     if (!product || !product.variants) return;
 
-    // Find the variant that matches all selected options
     const variant = product.variants.find((v) => 
-        v.options?.every((opt) => {
-            // FIX: Check if option_id exists before using it as an index key
-            return opt.option_id && options[opt.option_id] === opt.value;
-        })
+        v.options?.every((opt) => opt.option_id && options[opt.option_id] === opt.value)
     );
     
     setSelectedVariant(variant);
   }, [product, options]);
 
-  // 3. Handle Remix Params
+  // 3. Handle Remix Params (Existing code...)
   useEffect(() => {
     const remixData = searchParams.get('remix');
     if (remixData) {
@@ -142,11 +148,9 @@ function KandiGeneratorContent() {
   const handleAddToStash = async () => {
     if (pattern.length === 0) return alert("Please add some beads first!");
 
-    // Prioritize resolved variant, then fallback to ENV variant ID
-    const targetVariantId = selectedVariant?.id || process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
-
-    if (!targetVariantId) {
-      alert("Error: Product Variant not available. Please select valid options.");
+    // STRICTER CHECK: Ensure we actually have a selected variant from the fetched product
+    if (!selectedVariant?.id) {
+      alert("Please wait for product options to load or select all options.");
       return;
     }
 
@@ -159,10 +163,8 @@ function KandiGeneratorContent() {
       let imageBase64 = "https://placehold.co/400"; 
       if (canvas) imageBase64 = canvas.toDataURL("image/png");
 
-      // FIX: addToCart throws on error (via medusaError), so we don't assign it to 'error'.
-      // If it fails, it goes to the catch block.
       await addToCart({
-        variantId: targetVariantId,
+        variantId: selectedVariant.id,
         quantity: 1,
         countryCode: params.countryCode as string,
         metadata: {
@@ -173,7 +175,6 @@ function KandiGeneratorContent() {
         }
       });
 
-      // If we reach here, it succeeded
       router.push(`/${params.countryCode}/cart`);
 
     } catch (e: any) {
@@ -232,6 +233,13 @@ function KandiGeneratorContent() {
             </div>
             
             {/* PRODUCT OPTIONS SECTION */}
+            {productError && (
+               <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 text-red-600 dark:text-red-400 flex items-center gap-2 animate-in fade-in">
+                  <ExclamationCircle />
+                  <span className="text-sm font-medium">{productError}</span>
+               </div>
+            )}
+
             {product && product.options && product.options.length > 0 && (
               <div className="bg-white/50 dark:bg-zinc-900/80 p-6 rounded-3xl border border-ui-border-base shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -291,15 +299,16 @@ function KandiGeneratorContent() {
                      Remix ↺
                    </button>
                 )}
+                 {/* DISABLED IF NO PRODUCT OR NO VARIANT SELECTED */}
                  <button 
                    onClick={handleAddToStash}
-                   disabled={isAdding || pattern.length === 0 || (!!product && !selectedVariant)}
+                   disabled={isAdding || pattern.length === 0 || !selectedVariant}
                    className="py-3 px-8 rounded-full bg-ui-fg-base text-ui-bg-base hover:opacity-90 font-bold text-sm transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full lg:w-auto"
                  >
                    {isAdding ? "Adding..." : (
                      selectedVariant?.calculated_price?.calculated_amount 
                        ? `Add to Stash (${selectedVariant.calculated_price.calculated_amount} ${selectedVariant.calculated_price.currency_code})`
-                       : "Add to Stash"
+                       : "Add to Stash (Select Options)"
                    )}
                  </button>
               </div>
