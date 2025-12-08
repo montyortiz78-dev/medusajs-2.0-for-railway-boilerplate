@@ -45,7 +45,9 @@ function KandiGeneratorContent() {
   // --- INITIALIZATION ---
   useEffect(() => {
     const fetchProduct = async () => {
+      // FIX: Changed default from 'custom-kandi' to 'custom-ai-kandi'
       const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-ai-kandi';
+      
       try {
         const fetchedProduct = await getCustomKandiProduct(handle);
         if (fetchedProduct) {
@@ -76,7 +78,6 @@ function KandiGeneratorContent() {
     
     const variant = product.variants.find((v) => 
         v.options?.every((opt) => {
-            // FIX 1: Safely handle null/undefined option_id
             if (!opt.option_id) return false;
             return options[opt.option_id] === opt.value;
         })
@@ -88,15 +89,11 @@ function KandiGeneratorContent() {
   const isOptionAvailable = (optionId: string, value: string) => {
     if (!product?.variants) return false;
 
-    // 1. Create a hypothetical selection
     const hypotheticalOptions = { ...options, [optionId]: value };
 
-    // 2. Check if ANY variant exists that matches this hypothesis
     return product.variants.some((variant) => {
       return variant.options?.every((opt) => {
-        // FIX 2: Safely handle null/undefined option_id
-        if (!opt.option_id) return true; // Skip malformed options
-
+        if (!opt.option_id) return true;
         const currentSelectedValue = hypotheticalOptions[opt.option_id];
         return currentSelectedValue === undefined || opt.value === currentSelectedValue;
       });
