@@ -95,7 +95,9 @@ export default function ProductActions({
       const canvas = canvasContainer?.querySelector("canvas")
       
       if (canvas) {
-        return canvas.toDataURL("image/png")
+        // FIX: Use JPEG with 0.5 quality to reduce payload size significantly.
+        // PNGs can easily exceed 1MB limit for Server Actions.
+        return canvas.toDataURL("image/jpeg", 0.5)
       }
     } catch (e) {
       console.error("Failed to capture 3D bracelet snapshot", e)
@@ -127,12 +129,17 @@ export default function ProductActions({
           kandi_vibe: "Creative"
     }
 
-    await addToCart({
+    const error = await addToCart({
       variantId: selectedVariant.id,
       quantity: 1,
       countryCode,
       metadata
     })
+
+    if (error) {
+      console.error("Failed to add to cart:", error)
+      // Optional: Add a toast here to notify the user of the error
+    }
 
     setIsAdding(false)
   }
