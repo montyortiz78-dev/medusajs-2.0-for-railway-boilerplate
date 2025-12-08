@@ -48,7 +48,7 @@ function KandiGeneratorContent() {
   // 1. Fetch Product Data on Mount
   useEffect(() => {
     const fetchProduct = async () => {
-      const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-kandi';
+      const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-ai-kandi';
       console.log("Fetching product with handle:", handle); // DEBUG LOG
 
       try {
