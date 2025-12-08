@@ -45,7 +45,7 @@ function KandiGeneratorContent() {
   // --- INITIALIZATION ---
   useEffect(() => {
     const fetchProduct = async () => {
-      const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-kandi';
+      const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-ai-kandi';
       try {
         const fetchedProduct = await getCustomKandiProduct(handle);
         if (fetchedProduct) {
