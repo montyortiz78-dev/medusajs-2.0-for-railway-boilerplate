@@ -1,12 +1,13 @@
 'use client';
 
-import Cookies from 'js-cookie';
+import Cookies from 'js-cookie'; // Note: Used for other things if needed, but addToCart handles cookies server-side
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, clx } from "@medusajs/ui";
 import { Sparkles, Adjustments } from "@medusajs/icons";
 import KandiVisualizer from '../../../components/kandi-visualizer';
 import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
+import { addToCart } from '../../../lib/data/cart';
 
 // Map AI Color Names to Manual Builder Hex Codes
 const AI_COLOR_MAP: Record<string, string> = {
@@ -48,6 +49,8 @@ function KandiGeneratorContent() {
   const [hasGenerated, setHasGenerated] = useState(false);
 
   const searchParams = useSearchParams();
+  const params = useParams();
+  const router = useRouter();
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -119,11 +122,10 @@ function KandiGeneratorContent() {
 
     setIsAdding(true);
     setCaptureMode(true);
+    // Allow visualizer to render clean state for capture
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const variantId = process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
-    const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL;
-    const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY;
 
     if (!variantId) {
       alert("Error: Custom Product ID not found.");
@@ -137,54 +139,28 @@ function KandiGeneratorContent() {
       let imageBase64 = "https://placehold.co/400"; 
       if (canvas) imageBase64 = canvas.toDataURL("image/png");
 
-      let cartId = Cookies.get("_medusa_cart_id");
-      const headers = {
-        "Content-Type": "application/json",
-        "x-publishable-api-key": publishableKey || "",
-      };
-
-      if (!cartId) {
-        const regionRes = await fetch(`${backendUrl}/store/regions`, { headers });
-        const regionData = await regionRes.json();
-        const usRegion = regionData.regions.find((r: any) => r.countries.some((c: any) => c.iso_2 === 'us'));
-        
-        if (!usRegion) throw new Error("No US Region found");
-
-        const createRes = await fetch(`${backendUrl}/store/carts`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ region_id: usRegion.id }) 
-        });
-        const createData = await createRes.json();
-        cartId = createData.cart.id;
-        Cookies.set("_medusa_cart_id", cartId!, { expires: 7 });
-      }
-
-      const addRes = await fetch(`${backendUrl}/store/carts/${cartId}/line-items`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          variant_id: variantId,
-          quantity: 1,
-          metadata: {
+      // Use the Server Action to add to cart.
+      // medusaError throws on failure, so we just await here.
+      await addToCart({
+        variantId: variantId,
+        quantity: 1,
+        countryCode: params.countryCode as string,
+        metadata: {
             kandi_name: kandiName,
             kandi_vibe: vibeStory,
             // Only save colors to DB, ignore IDs
             pattern_data: pattern.map(p => p.color), 
             image_url: imageBase64 
-          }
-        }),
+        }
       });
 
-      if (addRes.ok) {
-        window.location.href = "/us/cart"; 
-      } else {
-        throw new Error("Failed to add to cart");
-      }
+      // If we reach here, it succeeded
+      router.push(`/${params.countryCode}/cart`);
 
-    } catch (e) {
+    } catch (e: any) {
       console.error("Cart Error:", e);
-      alert("System Error adding to cart.");
+      // medusaError throws an Error with a friendly message
+      alert(e.message || "System Error adding to cart.");
     } finally {
       setCaptureMode(false);
       setIsAdding(false);
@@ -286,11 +262,6 @@ function KandiGeneratorContent() {
               <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
                 {pattern.length > 0 ? (
                     <KandiVisualizer 
-                        // Map pattern objects back to color strings for the visualizer if necessary,
-                        // but KandiVisualizer should now accept {id, color} objects or just colors.
-                        // Since we updated Visualizer to handle objects or strings, we can pass 'pattern' as is,
-                        // BUT Visualizer expects simple array of strings in my previous thought.
-                        // Let's map it to string[] to be safe and consistent with current visualizer code.
                         pattern={pattern.map(p => p.color)} 
                         captureMode={captureMode} 
                     />
