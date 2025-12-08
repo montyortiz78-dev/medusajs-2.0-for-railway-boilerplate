@@ -1,47 +1,37 @@
 'use client';
 
-import Cookies from 'js-cookie'; // Note: Used for other things if needed, but addToCart handles cookies server-side
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, clx } from "@medusajs/ui";
-import { Sparkles, Adjustments } from "@medusajs/icons";
+import { Sparkles, Adjustments, CheckCircle } from "@medusajs/icons";
 import KandiVisualizer from '../../../components/kandi-visualizer';
 import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
 import { addToCart } from '../../../lib/data/cart';
+import { getCustomKandiProduct } from './actions';
+import { HttpTypes } from "@medusajs/types";
 
 // Map AI Color Names to Manual Builder Hex Codes
 const AI_COLOR_MAP: Record<string, string> = {
-  'Pink': '#FF00CC',
-  'Green': '#39FF14',
-  'Blue': '#00FFFF',
-  'Yellow': '#FFFF00',
-  'Orange': '#FF5F1F',
-  'Purple': '#B026FF',
-  'Red': '#FF0000',
-  'White': '#FFFFFF',
-  'Black': '#000000',
-  // Catch-alls for casing differences
-  'pink': '#FF00CC',
-  'green': '#39FF14',
-  'blue': '#00FFFF',
-  'yellow': '#FFFF00',
-  'orange': '#FF5F1F',
-  'purple': '#B026FF',
-  'red': '#FF0000',
-  'white': '#FFFFFF',
-  'black': '#000000',
+  'Pink': '#FF00CC', 'Green': '#39FF14', 'Blue': '#00FFFF',
+  'Yellow': '#FFFF00', 'Orange': '#FF5F1F', 'Purple': '#B026FF',
+  'Red': '#FF0000', 'White': '#FFFFFF', 'Black': '#000000',
+  'pink': '#FF00CC', 'green': '#39FF14', 'blue': '#00FFFF',
+  'yellow': '#FFFF00', 'orange': '#FF5F1F', 'purple': '#B026FF',
+  'red': '#FF0000', 'white': '#FFFFFF', 'black': '#000000',
 };
 
 function KandiGeneratorContent() {
   // --- STATE ---
   const [mode, setMode] = useState<'ai' | 'manual'>('ai');
-  
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
   const [vibeStory, setVibeStory] = useState('Custom Design');
-  
-  // Pattern state: Array of { id, color }
   const [pattern, setPattern] = useState<BeadItem[]>([]);
+  
+  // Product & Option State
+  const [product, setProduct] = useState<HttpTypes.StoreProduct | null>(null);
+  const [options, setOptions] = useState<Record<string, string>>({});
+  const [selectedVariant, setSelectedVariant] = useState<HttpTypes.StoreProductVariant | undefined>(undefined);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false); 
@@ -53,6 +43,50 @@ function KandiGeneratorContent() {
   const router = useRouter();
 
   // --- INITIALIZATION ---
+  
+  // 1. Fetch Product Data on Mount
+  useEffect(() => {
+    const fetchProduct = async () => {
+      // Use env handle or fallback to 'custom-kandi'
+      const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-kandi';
+      const fetchedProduct = await getCustomKandiProduct(handle);
+      
+      if (fetchedProduct) {
+        setProduct(fetchedProduct);
+        
+        // Auto-select first options if available
+        if (fetchedProduct.options) {
+          const defaultOptions: Record<string, string> = {};
+          fetchedProduct.options.forEach(opt => {
+             if (opt.values && opt.values.length > 0) {
+               defaultOptions[opt.id] = opt.values[0].value;
+             }
+          });
+          setOptions(defaultOptions);
+        }
+      } else {
+          console.warn("Custom Kandi Product not found. Fallback to Env ID might happen.");
+      }
+    };
+    fetchProduct();
+  }, []);
+
+  // 2. Resolve Variant when Options Change
+  useEffect(() => {
+    if (!product || !product.variants) return;
+
+    // Find the variant that matches all selected options
+    const variant = product.variants.find((v) => 
+        v.options?.every((opt) => {
+            // FIX: Check if option_id exists before using it as an index key
+            return opt.option_id && options[opt.option_id] === opt.value;
+        })
+    );
+    
+    setSelectedVariant(variant);
+  }, [product, options]);
+
+  // 3. Handle Remix Params
   useEffect(() => {
     const remixData = searchParams.get('remix');
     if (remixData) {
@@ -61,13 +95,10 @@ function KandiGeneratorContent() {
         setKandiName(decoded.name || 'Remixed Kandi');
         setVibeStory(decoded.vibe || 'Remixed Vibe');
         setVibe(decoded.vibe || '');
-        
-        // Restore pattern with IDs if needed
         if (decoded.pattern) {
-            // Check if it's a simple color array (old save) or object array
             const safePattern = decoded.pattern.map((p: any) => {
                 if (typeof p === 'string') return { id: Math.random().toString(36).substr(2, 9), color: p };
-                return p; // Assume it has { id, color }
+                return p;
             });
             setPattern(safePattern);
         }
@@ -80,6 +111,10 @@ function KandiGeneratorContent() {
 
   // --- HANDLERS ---
 
+  const handleOptionChange = (optionId: string, value: string) => {
+    setOptions(prev => ({ ...prev, [optionId]: value }));
+  };
+
   const handleAiGenerate = async (e: any) => {
     e.preventDefault();
     setIsLoading(true);
@@ -89,25 +124,15 @@ function KandiGeneratorContent() {
         body: JSON.stringify({ vibe }),
       });
       const result = await response.json();
-      
       setKandiName(result.kandiName);
       setVibeStory(result.vibeStory);
-      
-      // CONVERT AI COLORS TO HEX FOR MANUAL BUILDER
-      // The API returns { color: "Pink", type: "pony" }
       const standardizedPattern = result.pattern.map((bead: { color: string }) => {
-         // Try exact match or fallback to black
          const hexColor = AI_COLOR_MAP[bead.color] || AI_COLOR_MAP[bead.color.toLowerCase()] || '#000000';
-         return {
-             id: Math.random().toString(36).substr(2, 9),
-             color: hexColor
-         };
+         return { id: Math.random().toString(36).substr(2, 9), color: hexColor };
       });
-      
       setPattern(standardizedPattern);
       setHasGenerated(true);
     } catch (e) {
-      console.error("Generator Error:", e);
       alert("AI Generation failed. Try again!");
     } finally {
       setIsLoading(false);
@@ -115,40 +140,34 @@ function KandiGeneratorContent() {
   };
 
   const handleAddToStash = async () => {
-    if (pattern.length === 0) {
-        alert("Please add some beads first!");
-        return;
+    if (pattern.length === 0) return alert("Please add some beads first!");
+
+    // Prioritize resolved variant, then fallback to ENV variant ID
+    const targetVariantId = selectedVariant?.id || process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
+
+    if (!targetVariantId) {
+      alert("Error: Product Variant not available. Please select valid options.");
+      return;
     }
 
     setIsAdding(true);
     setCaptureMode(true);
-    // Allow visualizer to render clean state for capture
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    const variantId = process.env.NEXT_PUBLIC_CUSTOM_KANDI_VARIANT_ID;
-
-    if (!variantId) {
-      alert("Error: Custom Product ID not found.");
-      setIsAdding(false);
-      setCaptureMode(false);
-      return;
-    }
 
     try {
       const canvas = document.querySelector('#kandi-canvas canvas') as HTMLCanvasElement;
       let imageBase64 = "https://placehold.co/400"; 
       if (canvas) imageBase64 = canvas.toDataURL("image/png");
 
-      // Use the Server Action to add to cart.
-      // medusaError throws on failure, so we just await here.
+      // FIX: addToCart throws on error (via medusaError), so we don't assign it to 'error'.
+      // If it fails, it goes to the catch block.
       await addToCart({
-        variantId: variantId,
+        variantId: targetVariantId,
         quantity: 1,
         countryCode: params.countryCode as string,
         metadata: {
             kandi_name: kandiName,
             kandi_vibe: vibeStory,
-            // Only save colors to DB, ignore IDs
             pattern_data: pattern.map(p => p.color), 
             image_url: imageBase64 
         }
@@ -159,7 +178,6 @@ function KandiGeneratorContent() {
 
     } catch (e: any) {
       console.error("Cart Error:", e);
-      // medusaError throws an Error with a friendly message
       alert(e.message || "System Error adding to cart.");
     } finally {
       setCaptureMode(false);
@@ -177,66 +195,33 @@ function KandiGeneratorContent() {
         
         {/* LEFT COLUMN: CONTROLS */}
         <div className="flex flex-col gap-6">
-            {/* Mode Switcher */}
             <div className="flex bg-ui-bg-subtle p-1 rounded-full border border-ui-border-base self-center lg:self-start">
-                <button
-                    onClick={() => setMode('ai')}
-                    className={clx(
-                        "px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all",
-                        mode === 'ai' ? "bg-ui-bg-base shadow-sm text-ui-fg-base" : "text-ui-fg-subtle hover:text-ui-fg-base"
-                    )}
-                >
-                    <Sparkles className={mode === 'ai' ? "text-pink-500" : ""} />
-                    Vibe with AI
+                <button onClick={() => setMode('ai')} className={clx("px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all", mode === 'ai' ? "bg-ui-bg-base shadow-sm text-ui-fg-base" : "text-ui-fg-subtle hover:text-ui-fg-base")}>
+                    <Sparkles className={mode === 'ai' ? "text-pink-500" : ""} /> Vibe with AI
                 </button>
-                <button
-                    onClick={() => setMode('manual')}
-                    className={clx(
-                        "px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all",
-                        mode === 'manual' ? "bg-ui-bg-base shadow-sm text-ui-fg-base" : "text-ui-fg-subtle hover:text-ui-fg-base"
-                    )}
-                >
-                    <Adjustments className={mode === 'manual' ? "text-blue-500" : ""} />
-                    Builder
+                <button onClick={() => setMode('manual')} className={clx("px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all", mode === 'manual' ? "bg-ui-bg-base shadow-sm text-ui-fg-base" : "text-ui-fg-subtle hover:text-ui-fg-base")}>
+                    <Adjustments className={mode === 'manual' ? "text-blue-500" : ""} /> Builder
                 </button>
             </div>
 
-            {/* Control Card */}
             <div className="bg-white/50 dark:bg-zinc-900/80 p-6 rounded-3xl border border-ui-border-base shadow-xl backdrop-blur-md">
-                
-                {/* AI MODE */}
                 {mode === 'ai' && (
                     <form onSubmit={handleAiGenerate} className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
                         <div className="space-y-2">
                             <Label className="text-ui-fg-base font-bold">Describe your vibe</Label>
-                            <textarea 
-                                className="w-full bg-ui-bg-field border border-ui-border-base rounded-xl p-4 text-ui-fg-base focus:border-pink-500 outline-none transition-colors placeholder:text-ui-fg-muted min-h-[120px]"
-                                placeholder="e.g. 90s Cyberpunk Rave in Tokyo, neon lights, glitch aesthetic..."
-                                value={vibe} 
-                                onChange={(e) => setVibe(e.target.value)}
-                            />
+                            <textarea className="w-full bg-ui-bg-field border border-ui-border-base rounded-xl p-4 text-ui-fg-base focus:border-pink-500 outline-none transition-colors placeholder:text-ui-fg-muted min-h-[120px]" placeholder="e.g. 90s Cyberpunk Rave in Tokyo, neon lights, glitch aesthetic..." value={vibe} onChange={(e) => setVibe(e.target.value)} />
                         </div>
-                        <button 
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl font-bold hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg shadow-pink-500/20"
-                        >
+                        <button type="submit" disabled={isLoading} className="w-full py-4 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl font-bold hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg shadow-pink-500/20">
                             {isLoading ? 'Dreaming...' : 'Generate Kandi ✨'}
                         </button>
                     </form>
                 )}
 
-                {/* MANUAL MODE */}
                 {mode === 'manual' && (
                      <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
                         <div className="space-y-2">
                             <Label className="text-ui-fg-base font-bold">Name your creation</Label>
-                            <Input 
-                                placeholder="Kandi Name" 
-                                value={kandiName}
-                                onChange={(e) => setKandiName(e.target.value)}
-                                className="bg-ui-bg-field"
-                            />
+                            <Input placeholder="Kandi Name" value={kandiName} onChange={(e) => setKandiName(e.target.value)} className="bg-ui-bg-field" />
                         </div>
                         <div className="space-y-2">
                             <Label className="text-ui-fg-base font-bold">Design Pattern (Drag to Sort)</Label>
@@ -245,26 +230,53 @@ function KandiGeneratorContent() {
                      </div>
                 )}
             </div>
+            
+            {/* PRODUCT OPTIONS SECTION */}
+            {product && product.options && product.options.length > 0 && (
+              <div className="bg-white/50 dark:bg-zinc-900/80 p-6 rounded-3xl border border-ui-border-base shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    <CheckCircle className="text-green-500"/> Finalize your Kandi
+                  </h3>
+                  <div className="space-y-4">
+                    {product.options.map((option) => (
+                      <div key={option.id} className="space-y-2">
+                        <Label className="text-sm font-medium text-ui-fg-subtle uppercase">{option.title}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {option.values?.map((val) => {
+                             const isSelected = options[option.id] === val.value;
+                             return (
+                               <button
+                                 key={val.value}
+                                 onClick={() => handleOptionChange(option.id, val.value)}
+                                 className={clx(
+                                   "px-4 py-2 rounded-lg border text-sm transition-all",
+                                   isSelected 
+                                     ? "border-pink-500 bg-pink-500/10 text-pink-600 font-bold shadow-sm" 
+                                     : "border-ui-border-base bg-ui-bg-subtle hover:border-ui-fg-muted text-ui-fg-base"
+                                 )}
+                               >
+                                 {val.value}
+                               </button>
+                             )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+              </div>
+            )}
         </div>
 
         {/* RIGHT COLUMN: VISUALIZER */}
         <div className="flex flex-col gap-6 sticky top-24">
              <div className="text-center lg:text-left">
-                <h2 className="text-4xl font-bold text-ui-fg-base mb-2 transition-all">
-                    {kandiName}
-                </h2>
-                <p className="text-ui-fg-subtle italic">
-                    "{mode === 'ai' ? vibeStory : 'Custom Hand-picked Design'}"
-                </p>
+                <h2 className="text-4xl font-bold text-ui-fg-base mb-2 transition-all">{kandiName}</h2>
+                <p className="text-ui-fg-subtle italic">"{mode === 'ai' ? vibeStory : 'Custom Hand-picked Design'}"</p>
               </div>
               
-              {/* 3D Canvas Container */}
               <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
                 {pattern.length > 0 ? (
-                    <KandiVisualizer 
-                        pattern={pattern.map(p => p.color)} 
-                        captureMode={captureMode} 
-                    />
+                    <KandiVisualizer pattern={pattern.map(p => p.color)} captureMode={captureMode} />
                 ) : (
                     <div className="text-ui-fg-muted text-center flex flex-col items-center">
                         <span className="text-4xl mb-2">📿</span>
@@ -275,19 +287,20 @@ function KandiGeneratorContent() {
 
               <div className="flex justify-center lg:justify-end gap-4">
                 {mode === 'ai' && hasGenerated && (
-                     <button 
-                     onClick={handleAiGenerate}
-                     className="py-3 px-6 rounded-full bg-ui-bg-component border border-ui-border-base hover:bg-ui-bg-component-hover font-bold text-sm transition-colors text-ui-fg-base"
-                   >
+                     <button onClick={handleAiGenerate} className="py-3 px-6 rounded-full bg-ui-bg-component border border-ui-border-base hover:bg-ui-bg-component-hover font-bold text-sm transition-colors text-ui-fg-base">
                      Remix ↺
                    </button>
                 )}
                  <button 
                    onClick={handleAddToStash}
-                   disabled={isAdding || pattern.length === 0}
+                   disabled={isAdding || pattern.length === 0 || (!!product && !selectedVariant)}
                    className="py-3 px-8 rounded-full bg-ui-fg-base text-ui-bg-base hover:opacity-90 font-bold text-sm transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full lg:w-auto"
                  >
-                   {isAdding ? "Adding..." : "Add to Stash ($15.00)"}
+                   {isAdding ? "Adding..." : (
+                     selectedVariant?.calculated_price?.calculated_amount 
+                       ? `Add to Stash (${selectedVariant.calculated_price.calculated_amount} ${selectedVariant.calculated_price.currency_code})`
+                       : "Add to Stash"
+                   )}
                  </button>
               </div>
         </div>
