@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, clx } from "@medusajs/ui";
-import { Sparkles, Adjustments, CheckCircle, ExclamationCircle } from "@medusajs/icons";
+import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle } from "@medusajs/icons";
 import KandiVisualizer from '../../../components/kandi-visualizer';
 import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
 import { addToCart } from '../../../lib/data/cart';
@@ -167,10 +167,25 @@ function KandiGeneratorContent() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-gray-900 dark:via-black dark:to-black text-ui-fg-base p-4 md:p-8 flex flex-col items-center font-sans transition-colors duration-300">
-      <h1 className="text-4xl md:text-6xl font-black mb-8 text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-blue-500 tracking-tighter text-center">
-        PHYGITAL MARKET
+      <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-blue-500 tracking-tighter">
+            THE PHYGITAL LAB
       </h1>
-      
+      <p className="text-lg text-ui-fg-subtle leading-relaxed">
+            <strong>Phygital = Physical + Digital.</strong> <br/>
+            Design your custom Kandi here. We'll ship you the <strong>real bracelet</strong> to wear 
+            AND mint a unique <strong>digital collectible (NFT)</strong> that lives on the blockchain forever.
+      </p>
+      <div className="flex flex-wrap justify-center gap-3 md:gap-6 text-sm font-bold text-ui-fg-muted uppercase tracking-wide pt-2">
+              <span className="flex items-center gap-2 bg-pink-100 dark:bg-pink-900/30 px-3 py-1 rounded-full text-pink-600 dark:text-pink-400">
+                <Sparkles className="w-4 h-4"/> Dream with AI
+              </span>
+              <span className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full text-blue-600 dark:text-blue-400">
+                <Adjustments className="w-4 h-4"/> Build by Hand
+              </span>
+              <span className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full text-green-600 dark:text-green-400">
+                📦 Get Both Versions
+              </span>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-7xl">
         {/* LEFT COLUMN */}
         <div className="flex flex-col gap-6">
@@ -302,6 +317,15 @@ function KandiGeneratorContent() {
                  </button>
               </div>
         </div>
+      </div>
+      <div className="max-w-3xl mx-auto mt-16 p-6 border-t border-ui-border-base flex gap-4 text-ui-fg-muted opacity-80 hover:opacity-100 transition-opacity">
+          <InformationCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <p className="text-xs leading-relaxed">
+            <strong>Disclaimer:</strong> The digital 3D preview is for visualization purposes only and is not an exact replica of the physical product. 
+            Our artists will replicate your pattern and colors as closely as possible, but due to the varying number of beads required for different 
+            styles (e.g., Cuffs vs. Singles) and sizes, we may need to creatively adapt the design to ensure structural integrity and fit. 
+            By purchasing, you agree to these minor artistic variations.
+          </p>
       </div>
     </div>
   );
