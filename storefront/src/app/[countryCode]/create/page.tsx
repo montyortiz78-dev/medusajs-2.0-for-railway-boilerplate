@@ -9,6 +9,7 @@ import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-b
 import { addToCart } from '../../../lib/data/cart';
 import { getCustomKandiProduct } from './actions';
 import { HttpTypes } from "@medusajs/types";
+import KandiGuide from '../../../components/kandi-guide';
 
 const AI_COLOR_MAP: Record<string, string> = {
   'Pink': '#FF00CC', 'Green': '#39FF14', 'Blue': '#00FFFF',
@@ -259,6 +260,9 @@ function KandiGeneratorContent() {
                   </div>
               </div>
             )}
+            
+            <KandiGuide />
+            
         </div>
 
         {/* RIGHT COLUMN */}
