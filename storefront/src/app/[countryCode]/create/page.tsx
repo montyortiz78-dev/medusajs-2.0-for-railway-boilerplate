@@ -10,7 +10,6 @@ import { addToCart } from '../../../lib/data/cart';
 import { getCustomKandiProduct } from './actions';
 import { HttpTypes } from "@medusajs/types";
 
-// Map AI Color Names to Manual Builder Hex Codes
 const AI_COLOR_MAP: Record<string, string> = {
   'Pink': '#FF00CC', 'Green': '#39FF14', 'Blue': '#00FFFF',
   'Yellow': '#FFFF00', 'Orange': '#FF5F1F', 'Purple': '#B026FF',
@@ -45,15 +44,13 @@ function KandiGeneratorContent() {
   // --- INITIALIZATION ---
   useEffect(() => {
     const fetchProduct = async () => {
-      // FIX: Changed default from 'custom-kandi' to 'custom-ai-kandi'
       const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-ai-kandi';
-      
       try {
         const fetchedProduct = await getCustomKandiProduct(handle);
         if (fetchedProduct) {
           setProduct(fetchedProduct);
           
-          // Smart Defaults: Find the first valid variant and pre-select its options
+          // Initial Select: Pick the first valid variant
           if (fetchedProduct.variants && fetchedProduct.variants.length > 0) {
              const firstVariant = fetchedProduct.variants[0];
              const defaultOpts: Record<string, string> = {};
@@ -72,36 +69,45 @@ function KandiGeneratorContent() {
     fetchProduct();
   }, []);
 
-  // --- LOGIC: RESOLVE VARIANT ---
+  // --- RESOLVE VARIANT ---
   useEffect(() => {
     if (!product || !product.variants) return;
     
     const variant = product.variants.find((v) => 
-        v.options?.every((opt) => {
-            if (!opt.option_id) return false;
-            return options[opt.option_id] === opt.value;
-        })
+        v.options?.every((opt) => opt.option_id && options[opt.option_id] === opt.value)
     );
     setSelectedVariant(variant);
   }, [product, options]);
 
-  // --- LOGIC: CHECK AVAILABILITY ---
-  const isOptionAvailable = (optionId: string, value: string) => {
-    if (!product?.variants) return false;
-
-    const hypotheticalOptions = { ...options, [optionId]: value };
-
-    return product.variants.some((variant) => {
-      return variant.options?.every((opt) => {
-        if (!opt.option_id) return true;
-        const currentSelectedValue = hypotheticalOptions[opt.option_id];
-        return currentSelectedValue === undefined || opt.value === currentSelectedValue;
-      });
-    });
-  };
-
+  // --- HANDLER: SMART SWITCHING ---
   const handleOptionChange = (optionId: string, value: string) => {
-    setOptions(prev => ({ ...prev, [optionId]: value }));
+    // 1. Try setting the option directly
+    const newOptions = { ...options, [optionId]: value };
+
+    // 2. Check if this exact combination exists
+    const exactMatch = product?.variants?.some(v => 
+        v.options?.every(opt => opt.option_id && newOptions[opt.option_id] === opt.value)
+    );
+
+    if (exactMatch) {
+        // Perfect, the user's choice is valid with current selections
+        setOptions(newOptions);
+    } else {
+        // 3. IMPOSSIBLE COMBINATION (The "Sticky Option" Fix)
+        // Find ANY variant that has the requested option value
+        // and switch ALL other options to match that valid variant.
+        const validVariant = product?.variants?.find(v => 
+            v.options?.some(opt => opt.option_id === optionId && opt.value === value)
+        );
+
+        if (validVariant && validVariant.options) {
+            const autoFixedOptions: Record<string, string> = {};
+            validVariant.options.forEach(opt => {
+                if (opt.option_id) autoFixedOptions[opt.option_id] = opt.value;
+            });
+            setOptions(autoFixedOptions);
+        }
+    }
   };
 
   const handleAiGenerate = async (e: any) => {
@@ -220,18 +226,25 @@ function KandiGeneratorContent() {
                         <div className="flex flex-wrap gap-2">
                           {option.values?.map((val) => {
                              const isSelected = options[option.id] === val.value;
-                             const isAvailable = isOptionAvailable(option.id, val.value);
+                             
+                             // Visual only: is this specific option value available in ANY variant?
+                             // This prevents showing values that don't exist at all.
+                             // But we DON'T check against other selected options here to avoid "Sticky" disabling.
+                             const existsInProduct = product.variants?.some(v => 
+                                v.options?.some(opt => opt.option_id === option.id && opt.value === val.value)
+                             );
 
                              return (
                                <button
                                  key={val.value}
-                                 onClick={() => isAvailable && handleOptionChange(option.id, val.value)}
-                                 disabled={!isAvailable}
+                                 onClick={() => handleOptionChange(option.id, val.value)}
+                                 // Only disable if this value literally doesn't exist for this product at all
+                                 disabled={!existsInProduct}
                                  className={clx(
                                    "px-4 py-2 rounded-lg border text-sm transition-all",
                                    isSelected 
                                      ? "border-pink-500 bg-pink-500/10 text-pink-600 font-bold shadow-sm" 
-                                     : isAvailable 
+                                     : existsInProduct
                                         ? "border-ui-border-base bg-ui-bg-subtle hover:border-ui-fg-muted text-ui-fg-base"
                                         : "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed decoration-slice line-through"
                                  )}
