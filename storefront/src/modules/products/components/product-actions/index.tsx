@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@medusajs/ui"
+import { Button, Input, Label } from "@medusajs/ui" // Added Input and Label
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -33,6 +33,9 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
+// Define the handle for the special product
+const WORD_BRACELET_HANDLE = "express-yourself-word-bracelets"
+
 export default function ProductActions({
   product,
   region,
@@ -40,11 +43,14 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [customWord, setCustomWord] = useState("") // New State for Custom Word
   const countryCode = useParams().countryCode as string
 
   // --- KANDI STATE FROM CONTEXT ---
   const { pattern, setPattern } = useKandiContext()
   // -------------------
+
+  const isWordBracelet = product.handle === WORD_BRACELET_HANDLE
 
   // If there is only 1 variant, preselect the options
   useEffect(() => {
@@ -90,13 +96,10 @@ export default function ProductActions({
   // Helper to capture the 3D Canvas
   const captureCanvasImage = (): string => {
     try {
-      // We look for the canvas ID defined in kandi-bracelet-3d.tsx
       const canvasContainer = document.getElementById("kandi-canvas")
       const canvas = canvasContainer?.querySelector("canvas")
       
       if (canvas) {
-        // FIX: Use JPEG with 0.5 quality to reduce payload size significantly.
-        // PNGs can easily exceed 1MB limit for Server Actions.
         return canvas.toDataURL("image/jpeg", 0.5)
       }
     } catch (e) {
@@ -107,26 +110,27 @@ export default function ProductActions({
 
   // add the selected variant to the cart
   const handleAddToCart = async () => {
-    // 1. Validation: Ensure variant exists and pattern is not empty
     if (!selectedVariant?.id) return null
-    if (pattern.length === 0) {
-        // Optional: Trigger a toast or alert here if needed
-        return null
+    
+    // Validation logic
+    if (pattern.length === 0) return null
+    if (isWordBracelet && customWord.trim().length === 0) {
+        return null // Block if word is empty on word bracelet
     }
 
     setIsAdding(true)
 
-    // 2. Capture Visual and Metadata
     const imageUrl = captureCanvasImage()
 
     const metadata = {
           is_custom: true,
-          // Metadata expected by backend/src/subscribers/mint-nft.ts
-          pattern_data: pattern,           // The full bead objects
-          kandi_pattern: pattern.map(p => p.color), // Simple color list
-          image_url: imageUrl,             // Base64 image from 3D Canvas
-          kandi_name: "Custom Kandi Bracelet", // You could add a text input for this later
-          kandi_vibe: "Creative"
+          pattern_data: pattern,           
+          kandi_pattern: pattern.map(p => p.color), 
+          image_url: imageUrl,             
+          kandi_name: "Custom Kandi Bracelet",
+          kandi_vibe: "Creative",
+          // Add custom word to metadata if it exists
+          ...(isWordBracelet && { custom_word: customWord.trim() })
     }
 
     const error = await addToCart({
@@ -138,14 +142,20 @@ export default function ProductActions({
 
     if (error) {
       console.error("Failed to add to cart:", error)
-      // Optional: Add a toast here to notify the user of the error
     }
 
     setIsAdding(false)
   }
 
-  // Validation Check
-  const isValid = inStock && selectedVariant && pattern.length > 0;
+  // Updated Validation Check
+  // 1. Must be in stock and variant selected
+  // 2. Must have beads (pattern > 0)
+  // 3. IF it's a word bracelet, customWord must not be empty
+  const isValid = 
+    inStock && 
+    selectedVariant && 
+    pattern.length > 0 &&
+    (!isWordBracelet || customWord.trim().length > 0);
 
   return (
     <>
@@ -172,6 +182,30 @@ export default function ProductActions({
           )}
         </div>
 
+        {/* --- CUSTOM WORD INPUT SECTION (Only for specific handle) --- */}
+        {isWordBracelet && (
+            <div className="flex flex-col gap-y-2 py-2">
+                <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
+                    Your Word (Max 12 chars)
+                </Label>
+                <Input
+                    id="custom-word-input"
+                    placeholder="e.g. PLUR, VIBE"
+                    value={customWord}
+                    onChange={(e) => {
+                        if (e.target.value.length <= 12) {
+                            setCustomWord(e.target.value.toUpperCase())
+                        }
+                    }}
+                    disabled={isAdding}
+                />
+                <span className="text-xs text-ui-fg-subtle text-right">
+                    {customWord.length} / 12 characters
+                </span>
+            </div>
+        )}
+        {/* --------------------------------------------------------- */}
+
         {/* --- KANDI BUILDER SECTION (Always Visible) --- */}
         <div className="py-4 border-t border-b border-ui-border-base my-2">
             <div className="flex justify-between items-center mb-2">
@@ -188,8 +222,7 @@ export default function ProductActions({
                 </p>
             )}
         </div>
-        {/* ----------------------------- */}
-
+        
         <ProductPrice product={product} variant={selectedVariant} />
 
         <Button
@@ -206,6 +239,8 @@ export default function ProductActions({
             ? "Out of stock"
             : pattern.length === 0
             ? "Add Beads to Design"
+            : isWordBracelet && customWord.length === 0 
+            ? "Enter Your Word" 
             : "Add to cart"}
         </Button>
         
