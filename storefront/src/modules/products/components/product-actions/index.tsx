@@ -1,13 +1,15 @@
 "use client"
 
-import { Button, Input, Label } from "@medusajs/ui" // Added Input and Label
+import { Button, Input, Label, clx } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { InformationCircle } from "@medusajs/icons" // Import icon for the link
 
 import { useIntersection } from "@lib/hooks/use-in-view"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
+import Modal from "@modules/common/components/modal" // Import Modal
 
 import MobileActions from "./mobile-actions"
 import ProductPrice from "../product-price"
@@ -17,6 +19,7 @@ import { HttpTypes } from "@medusajs/types"
 // Import Builder and Context
 import KandiManualBuilder from "../../../../components/kandi-manual-builder"
 import { useKandiContext } from "@lib/context/kandi-context"
+import KandiGuide from "../../../../components/kandi-guide" // Import the Guide
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -43,7 +46,9 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
-  const [customWord, setCustomWord] = useState("") // New State for Custom Word
+  const [customWord, setCustomWord] = useState("") 
+  const [showSizeGuide, setShowSizeGuide] = useState(false) // NEW: State for Size Guide Modal
+  
   const countryCode = useParams().countryCode as string
 
   // --- KANDI STATE FROM CONTEXT ---
@@ -52,7 +57,6 @@ export default function ProductActions({
 
   const isWordBracelet = product.handle === WORD_BRACELET_HANDLE
 
-  // If there is only 1 variant, preselect the options
   useEffect(() => {
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
@@ -93,7 +97,6 @@ export default function ProductActions({
   const actionsRef = useRef<HTMLDivElement>(null)
   const inView = useIntersection(actionsRef, "0px")
 
-  // Helper to capture the 3D Canvas
   const captureCanvasImage = (): string => {
     try {
       const canvasContainer = document.getElementById("kandi-canvas")
@@ -108,14 +111,12 @@ export default function ProductActions({
     return ""
   }
 
-  // add the selected variant to the cart
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
     
-    // Validation logic
     if (pattern.length === 0) return null
     if (isWordBracelet && customWord.trim().length === 0) {
-        return null // Block if word is empty on word bracelet
+        return null 
     }
 
     setIsAdding(true)
@@ -129,7 +130,6 @@ export default function ProductActions({
           image_url: imageUrl,             
           kandi_name: "Custom Kandi Bracelet",
           kandi_vibe: "Creative",
-          // Add custom word to metadata if it exists
           ...(isWordBracelet && { custom_word: customWord.trim() })
     }
 
@@ -147,10 +147,6 @@ export default function ProductActions({
     setIsAdding(false)
   }
 
-  // Updated Validation Check
-  // 1. Must be in stock and variant selected
-  // 2. Must have beads (pattern > 0)
-  // 3. IF it's a word bracelet, customWord must not be empty
   const isValid = 
     inStock && 
     selectedVariant && 
@@ -174,6 +170,18 @@ export default function ProductActions({
                       data-testid="product-options"
                       disabled={!!disabled || isAdding}
                     />
+                    {/* NEW: Sizing Guide Link */}
+                    {option.title === "Size" && (
+                        <button 
+                            onClick={() => setShowSizeGuide(true)}
+                            className="flex items-center gap-1.5 text-small-regular text-ui-fg-muted hover:text-ui-fg-base mt-2 transition-colors cursor-pointer group"
+                        >
+                            <InformationCircle className="w-4 h-4" />
+                            <span className="underline decoration-ui-fg-muted group-hover:decoration-ui-fg-base">
+                                Sizing Guide
+                            </span>
+                        </button>
+                    )}
                   </div>
                 )
               })}
@@ -182,7 +190,7 @@ export default function ProductActions({
           )}
         </div>
 
-        {/* --- CUSTOM WORD INPUT SECTION (Only for specific handle) --- */}
+        {/* --- CUSTOM WORD INPUT SECTION --- */}
         {isWordBracelet && (
             <div className="flex flex-col gap-y-2 py-2">
                 <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
@@ -204,9 +212,8 @@ export default function ProductActions({
                 </span>
             </div>
         )}
-        {/* --------------------------------------------------------- */}
 
-        {/* --- KANDI BUILDER SECTION (Always Visible) --- */}
+        {/* --- KANDI BUILDER SECTION --- */}
         <div className="py-4 border-t border-b border-ui-border-base my-2">
             <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-ui-fg-base">Customize Design</span>
@@ -256,6 +263,19 @@ export default function ProductActions({
           optionsDisabled={!!disabled || isAdding}
         />
       </div>
+
+      {/* NEW: Sizing Guide Modal */}
+      <Modal isOpen={showSizeGuide} close={() => setShowSizeGuide(false)} size="large">
+         <Modal.Title>
+            Kandi Sizing & Style Guide
+         </Modal.Title>
+         <Modal.Body>
+            <div className="w-full pb-6">
+                <KandiGuide />
+            </div>
+         </Modal.Body>
+      </Modal>
+
     </>
   )
 }
