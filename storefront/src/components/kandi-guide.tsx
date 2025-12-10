@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { clx } from "@medusajs/ui";
-// FIXED IMPORTS: Replaced Ruler/TableCells with Tag/Adjustments
 import { InformationCircle, Tag, Adjustments } from "@medusajs/icons"; 
 
 // --- DATA DEFINITIONS ---
@@ -94,7 +93,7 @@ const Diagrams = ({ type }: { type: StitchType }) => {
         </div>
       );
     case 'Flat':
-    case 'Multi': // Peyote style (offset)
+    case 'Multi': 
       return (
         <div className="flex gap-0.5 items-center justify-center h-24 bg-gray-50 rounded-lg dark:bg-white/5">
            {[...Array(6)].map((_, col) => (
@@ -200,7 +199,6 @@ export default function KandiGuide() {
             <div className="grid grid-cols-2 gap-4 mt-2">
                 <div className="bg-ui-bg-subtle p-3 rounded-lg border border-ui-border-base">
                     <div className="flex items-center gap-2 mb-1 text-purple-500">
-                        {/* FIXED ICON: Adjustments instead of TableCells */}
                         <Adjustments className="w-4 h-4" />
                         <span className="text-xs font-bold uppercase">Height (Rows)</span>
                     </div>
@@ -209,7 +207,6 @@ export default function KandiGuide() {
 
                 <div className="bg-ui-bg-subtle p-3 rounded-lg border border-ui-border-base">
                     <div className="flex items-center gap-2 mb-1 text-green-500">
-                        {/* FIXED ICON: Tag instead of Ruler */}
                         <Tag className="w-4 h-4" />
                         <span className="text-xs font-bold uppercase">Circumference</span>
                     </div>
@@ -217,22 +214,41 @@ export default function KandiGuide() {
                 </div>
             </div>
 
-            {/* SIZE CHEAT SHEET (Only shows if relevant) */}
+            {/* 4. SIZE CHEAT SHEET (Dynamic) */}
             <div className="mt-2 pt-4 border-t border-ui-border-base">
                 <p className="text-xs text-ui-fg-muted uppercase font-bold mb-2">Size Reference</p>
-                <div className="flex justify-between text-xs text-ui-fg-subtle">
-                    {info.sizes.type === 'Wrist' ? (
+                <div className="flex flex-col gap-1 text-xs text-ui-fg-subtle">
+                    
+                    {/* CASE: SINGLE (Show Both) */}
+                    {info.id === 'Single' ? (
                         <>
+                           <div className="flex justify-between items-center bg-ui-bg-subtle/50 px-2 py-1 rounded">
+                                <span className="font-semibold text-ui-fg-base w-12">Wrist:</span>
+                                <span>S: ~5"</span><span>M: ~6"</span><span>L: ~7"</span>
+                           </div>
+                           <div className="flex justify-between items-center bg-ui-bg-subtle/50 px-2 py-1 rounded">
+                                <span className="font-semibold text-ui-fg-base w-12">Neck:</span>
+                                <span>S: ~16"</span><span>M: ~18"</span><span>L: ~20"</span>
+                           </div>
+                        </>
+                    ) 
+                    
+                    /* CASE: WRIST ONLY */
+                    : info.sizes.type === 'Wrist' ? (
+                        <div className="flex justify-between">
                             <span><strong>S:</strong> ~5" (Child/Small)</span>
                             <span><strong>M:</strong> ~6" (Standard)</span>
                             <span><strong>L:</strong> ~7" (Large/Loose)</span>
-                        </>
-                    ) : (
-                        <>
+                        </div>
+                    ) 
+                    
+                    /* CASE: NECK ONLY (Fallback) */
+                    : (
+                        <div className="flex justify-between">
                             <span><strong>S:</strong> ~16" (Choker)</span>
                             <span><strong>M:</strong> ~18" (Standard)</span>
                             <span><strong>L:</strong> ~20" (Long)</span>
-                        </>
+                        </div>
                     )}
                 </div>
             </div>
