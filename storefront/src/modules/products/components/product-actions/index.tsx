@@ -4,22 +4,22 @@ import { Button, Input, Label, clx } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { InformationCircle } from "@medusajs/icons" // Import icon for the link
+import { InformationCircle } from "@medusajs/icons" 
 
 import { useIntersection } from "@lib/hooks/use-in-view"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
-import Modal from "@modules/common/components/modal" // Import Modal
+import Modal from "@modules/common/components/modal"
 
 import MobileActions from "./mobile-actions"
 import ProductPrice from "../product-price"
 import { addToCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 
-// Import Builder and Context
 import KandiManualBuilder from "../../../../components/kandi-manual-builder"
 import { useKandiContext } from "@lib/context/kandi-context"
-import KandiGuide from "../../../../components/kandi-guide" // Import the Guide
+// CHANGED: Import the condensed guide
+import KandiSizingGuide from "../../../../components/kandi-sizing-guide" 
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -36,7 +36,6 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
-// Define the handle for the special product
 const WORD_BRACELET_HANDLE = "express-yourself-word-bracelets"
 
 export default function ProductActions({
@@ -47,13 +46,10 @@ export default function ProductActions({
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
   const [customWord, setCustomWord] = useState("") 
-  const [showSizeGuide, setShowSizeGuide] = useState(false) // NEW: State for Size Guide Modal
+  const [showSizeGuide, setShowSizeGuide] = useState(false) 
   
   const countryCode = useParams().countryCode as string
-
-  // --- KANDI STATE FROM CONTEXT ---
   const { pattern, setPattern } = useKandiContext()
-  // -------------------
 
   const isWordBracelet = product.handle === WORD_BRACELET_HANDLE
 
@@ -170,7 +166,7 @@ export default function ProductActions({
                       data-testid="product-options"
                       disabled={!!disabled || isAdding}
                     />
-                    {/* NEW: Sizing Guide Link */}
+                    {/* Size Guide Link */}
                     {option.title === "Size" && (
                         <button 
                             onClick={() => setShowSizeGuide(true)}
@@ -190,7 +186,6 @@ export default function ProductActions({
           )}
         </div>
 
-        {/* --- CUSTOM WORD INPUT SECTION --- */}
         {isWordBracelet && (
             <div className="flex flex-col gap-y-2 py-2">
                 <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
@@ -213,7 +208,6 @@ export default function ProductActions({
             </div>
         )}
 
-        {/* --- KANDI BUILDER SECTION --- */}
         <div className="py-4 border-t border-b border-ui-border-base my-2">
             <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-ui-fg-base">Customize Design</span>
@@ -264,14 +258,14 @@ export default function ProductActions({
         />
       </div>
 
-      {/* NEW: Sizing Guide Modal */}
       <Modal isOpen={showSizeGuide} close={() => setShowSizeGuide(false)} size="large">
          <Modal.Title>
-            Kandi Sizing & Style Guide
+            Simple Sizing Guide
          </Modal.Title>
          <Modal.Body>
             <div className="w-full pb-6">
-                <KandiGuide />
+                {/* CHANGED: Render the Condensed Guide */}
+                <KandiSizingGuide />
             </div>
          </Modal.Body>
       </Modal>
