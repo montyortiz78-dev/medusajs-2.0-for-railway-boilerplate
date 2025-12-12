@@ -32,7 +32,8 @@ const RefinementList = ({ sortBy, categories, activeCategory }: RefinementListPr
   )
 
   const setCategory = (value: string) => {
-    router.push(pathname + "?" + createQueryString("category", value))
+    // FIX: Added { scroll: false } to prevent page scroll on click
+    router.push(pathname + "?" + createQueryString("category", value), { scroll: false })
   }
 
   return (
@@ -75,7 +76,8 @@ const RefinementList = ({ sortBy, categories, activeCategory }: RefinementListPr
         <SortProducts 
             sortBy={sortBy} 
             setQueryParams={(name, value) => {
-                router.push(pathname + "?" + createQueryString(name, value))
+                // FIX: Added { scroll: false } here as well
+                router.push(pathname + "?" + createQueryString(name, value), { scroll: false })
             }} 
         />
       </div>
