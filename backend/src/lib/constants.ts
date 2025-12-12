@@ -64,7 +64,7 @@ export const COOKIE_SECRET = assertValue(
 export const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT;
 export const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY;
 export const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY;
-export const MINIO_BUCKET = process.env.MINIO_BUCKET; // Optional, if not set bucket will be called: medusa-media
+export const MINIO_BUCKET = process.env.MINIO_BUCKET; 
 
 /**
  * (optional) Resend API Key and from Email - do not set if using SendGrid
@@ -100,3 +100,11 @@ export const WORKER_MODE =
  * Disable Admin
  */
 export const SHOULD_DISABLE_ADMIN = process.env.MEDUSA_DISABLE_ADMIN === 'true'
+
+// --- ADD THESE LINES AT THE BOTTOM ---
+/**
+ * Cloudinary Configuration
+ */
+export const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+export const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
+export const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
