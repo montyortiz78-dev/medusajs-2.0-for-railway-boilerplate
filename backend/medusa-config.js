@@ -20,12 +20,9 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY,
-  // New Cloudinary Constants
-  CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET
+  MEILISEARCH_ADMIN_KEY
 } from 'lib/constants';
+import { Modules } from '@medusajs/utils';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
@@ -54,41 +51,57 @@ const medusaConfig = {
   },
   modules: [
     {
+      key: Modules.FULFILLMENT,
+      resolve: '@medusajs/fulfillment',
+      options: {
+        providers: [
+          {
+            resolve: '@medusajs/fulfillment-manual',
+            id: 'manual',
+            options: {}
+          },
+          // 1. If using a community plugin (check available v2 plugins):
+          // {
+          //   resolve: 'medusa-fulfillment-shippo',
+          //   id: 'shippo',
+          //   options: {
+          //     api_key: process.env.SHIPPO_API_KEY,
+          //   }
+          // },
+          
+          // 2. OR, if building a custom provider (Recommended for v2 right now):
+          {
+            resolve: './src/modules/fulfillment-providers/usps-provider',
+            id: 'usps',
+            options: {
+              api_key: process.env.SHIPPO_API_KEY, // Using Shippo as the backend for USPS
+            }
+          }
+        ]
+      }
+    },
+    {
       key: Modules.FILE,
       resolve: '@medusajs/file',
       options: {
         providers: [
-          // 1. Cloudinary (Priority)
-          ...(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET ? [{
-            resolve: 'medusa-file-cloudinary',
-            id: 'cloudinary',
-            options: {
-              cloud_name: CLOUDINARY_CLOUD_NAME,
-              api_key: CLOUDINARY_API_KEY,
-              api_secret: CLOUDINARY_API_SECRET,
-              secure: true,
-            }
-          }] : 
-          // 2. MinIO (Fallback 1)
-          (MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
+          ...(MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
             resolve: './src/modules/minio-file',
             id: 'minio',
             options: {
               endPoint: MINIO_ENDPOINT,
               accessKey: MINIO_ACCESS_KEY,
               secretKey: MINIO_SECRET_KEY,
-              bucket: MINIO_BUCKET,
+              bucket: MINIO_BUCKET 
             }
-          }] : 
-          // 3. Local (Fallback 2)
-          [{
+          }] : [{
             resolve: '@medusajs/file-local',
             id: 'local',
             options: {
               upload_dir: 'static',
               backend_url: "https://backend-production-622a.up.railway.app/static"
             }
-          }]))
+          }])
         ]
       }
     },
@@ -149,30 +162,10 @@ const medusaConfig = {
           },
         ],
       },
-    }] : []),
-    // --- NEW FULFILLMENT MODULE ---
-    {
-      key: Modules.FULFILLMENT,
-      resolve: '@medusajs/fulfillment',
-      options: {
-        providers: [
-          {
-            resolve: '@medusajs/fulfillment-manual',
-            id: 'manual',
-            options: {}
-          },
-          {
-            resolve: './src/modules/fulfillment-providers/usps-provider',
-            id: 'usps',
-            options: {
-              api_key: process.env.SHIPPO_API_KEY,
-            }
-          }
-        ]
-      }
-    }
+    }] : [])
   ],
   plugins: [
+    // --- ALGOLIA SEARCH CONFIGURATION ---
     {
       resolve: `medusa-plugin-algolia`,
       options: {
