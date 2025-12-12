@@ -43,6 +43,7 @@
     "algoliasearch": "^5.45.0",
     "awilix": "^8.0.1",
     "cloudinary": "^2.8.0",
+    "medusa-file-cloudinary": "^1.0.2",
     "medusa-plugin-algolia": "^0.2.21",
     "medusajs-launch-utils": "0.0.18",
     "minio": "^8.0.3",
