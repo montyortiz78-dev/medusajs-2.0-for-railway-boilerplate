@@ -1,8 +1,9 @@
 import { Metadata } from "next"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy Policy for Kandi Land",
+  description: "Privacy Policy for Kandi Creations",
 }
 
 export default function PrivacyPolicyPage() {
@@ -21,7 +22,7 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">1. Introduction</h2>
           <p>
-            Welcome to Kandi Land ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. 
+            Welcome to Kandi Creations ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. 
             This Privacy Policy explains what information we collect, how we use it, and your rights when you visit our website 
             or use our "Phygital" services (creating custom Kandi and minting digital collectibles).
           </p>
@@ -70,7 +71,10 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">6. Contact Us</h2>
           <p>
-            If you have questions or comments about this policy, you may email us at support@kandiland.xyz.
+            If you have questions or comments about this policy, please visit our{" "}
+            <LocalizedClientLink href="/contact" className="text-pink-500 hover:underline">
+              Contact Page
+            </LocalizedClientLink>.
           </p>
         </section>
       </div>

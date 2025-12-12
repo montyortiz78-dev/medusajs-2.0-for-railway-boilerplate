@@ -1,8 +1,9 @@
 import { Metadata } from "next"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: "Terms of Use for Kandi Land",
+  description: "Terms of Use for Kandi Creations",
 }
 
 export default function TermsOfUsePage() {
@@ -21,7 +22,7 @@ export default function TermsOfUsePage() {
         <section>
           <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">1. Agreement to Terms</h2>
           <p>
-            These Terms of Use constitute a legally binding agreement made between you ("User") and Kandi Land ("we," "us," or "our"). 
+            These Terms of Use constitute a legally binding agreement made between you ("User") and Kandi Creations ("we," "us," or "our"). 
             By accessing our "Phygital" marketplace, creating custom designs, or purchasing products, you agree to be bound by these terms.
           </p>
         </section>
@@ -41,7 +42,7 @@ export default function TermsOfUsePage() {
           <p className="mb-2">Certain purchases include a complementary digital collectible ("NFT") minted on the blockchain.</p>
           <ul className="list-disc pl-5 space-y-1 text-ui-fg-subtle">
             <li><strong>Ownership:</strong> You own the specific NFT token associated with your purchase.</li>
-            <li><strong>License:</strong> You are granted a non-exclusive, personal license to display the digital artwork associated with your NFT. You do not own the underlying 3D generation code or the Kandi Land brand IP.</li>
+            <li><strong>License:</strong> You are granted a non-exclusive, personal license to display the digital artwork associated with your NFT. You do not own the underlying 3D generation code or the Kandi Creations brand IP.</li>
             <li><strong>Wallet Responsibility:</strong> If you choose to transfer your NFT to a personal wallet, you are responsible for the security of that wallet. We cannot recover lost or stolen digital assets once transferred.</li>
           </ul>
         </section>
@@ -67,14 +68,17 @@ export default function TermsOfUsePage() {
         <section>
           <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">6. Limitation of Liability</h2>
           <p>
-            To the fullest extent permitted by law, Kandi Land shall not be liable for any indirect, consequential, or incidental damages arising out of your use of the service or the products purchased.
+            To the fullest extent permitted by law, Kandi Creations shall not be liable for any indirect, consequential, or incidental damages arising out of your use of the service or the products purchased.
           </p>
         </section>
 
         <section>
           <h2 className="text-xl font-bold mb-3 uppercase tracking-wide">7. Contact Information</h2>
           <p>
-            For questions regarding these Terms, please contact us at support@kandiland.xyz.
+            For questions regarding these Terms, please contact us via our{" "}
+            <LocalizedClientLink href="/contact" className="text-pink-500 hover:underline">
+              Contact Page
+            </LocalizedClientLink>.
           </p>
         </section>
       </div>

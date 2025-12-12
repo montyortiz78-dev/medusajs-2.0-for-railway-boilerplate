@@ -114,7 +114,7 @@ export default async function Footer() {
         {/* Bottom Bar */}
         <div className="flex w-full mb-16 justify-between text-ui-fg-muted border-t border-ui-border-base pt-6">
           <Text className="txt-compact-small">
-            © {new Date().getFullYear()} KandiCreations.com. All rights reserved.
+            © {new Date().getFullYear()} Kandi Creations. All rights reserved.
           </Text>
         </div>
       </div>
