@@ -20,7 +20,11 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY
+  MEILISEARCH_ADMIN_KEY,
+  // --- NEW: Cloudinary Constants ---
+  CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
@@ -54,8 +58,20 @@ const medusaConfig = {
       resolve: '@medusajs/file',
       options: {
         providers: [
-          // Cloudinary removed to fix v2 compatibility crash
-          ...(MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
+          // 1. Cloudinary (Custom Local Module)
+          // Uses the code you created in src/modules/cloudinary-file
+          ...(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET ? [{
+            resolve: './src/modules/cloudinary-file', 
+            id: 'cloudinary',
+            options: {
+              cloud_name: CLOUDINARY_CLOUD_NAME,
+              api_key: CLOUDINARY_API_KEY,
+              api_secret: CLOUDINARY_API_SECRET,
+              secure: true,
+            }
+          }] : 
+          // 2. MinIO (Fallback)
+          (MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
             resolve: './src/modules/minio-file',
             id: 'minio',
             options: {
@@ -64,14 +80,16 @@ const medusaConfig = {
               secretKey: MINIO_SECRET_KEY,
               bucket: MINIO_BUCKET,
             }
-          }] : [{
+          }] : 
+          // 3. Local (Development/Default)
+          [{
             resolve: '@medusajs/file-local',
             id: 'local',
             options: {
               upload_dir: 'static',
               backend_url: "https://backend-production-622a.up.railway.app/static"
             }
-          }])
+          }]))
         ]
       }
     },
