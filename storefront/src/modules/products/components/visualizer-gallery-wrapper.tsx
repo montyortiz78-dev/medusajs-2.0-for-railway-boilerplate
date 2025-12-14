@@ -10,17 +10,19 @@ type VisualizerGalleryWrapperProps = {
 }
 
 const VisualizerGalleryWrapper = ({ images }: VisualizerGalleryWrapperProps) => {
-  const { pattern } = useKandiContext()
+  const { pattern, designConfig } = useKandiContext()
 
-  // If the user has started a pattern, show the visualizer.
-  // Otherwise, show the standard product image gallery.
   const showVisualizer = pattern.length > 0
 
   return (
     <div className="relative w-full h-full min-h-[400px]">
       {showVisualizer ? (
          <div className="sticky top-24">
-            <KandiVisualizer pattern={pattern.map(p => p.color)} />
+            <KandiVisualizer 
+                pattern={pattern.map(p => p.color)} 
+                rows={designConfig.rows}
+                stitch={designConfig.stitch}
+            />
          </div>
       ) : (
         <ImageGallery images={images || []} />

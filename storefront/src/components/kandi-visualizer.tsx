@@ -11,10 +11,11 @@ const KandiBracelet3D = dynamic(() => import('./kandi-bracelet-3d'), {
 type Props = {
   pattern: string[];
   captureMode?: boolean;
+  rows?: number;
+  stitch?: string;
 };
 
-function KandiVisualizer({ pattern, captureMode = false }: Props) {
-  // Defensive check: ensure pattern is an array before rendering
+function KandiVisualizer({ pattern, captureMode = false, rows = 1, stitch = 'ladder' }: Props) {
   if (!Array.isArray(pattern) || pattern.length === 0) {
     return (
       <div className="w-full h-[400px] flex items-center justify-center text-ui-fg-muted">
@@ -28,6 +29,8 @@ function KandiVisualizer({ pattern, captureMode = false }: Props) {
        <KandiBracelet3D 
          pattern={pattern} 
          captureMode={captureMode} 
+         rows={rows}
+         stitch={stitch}
        />
     </div>
   );

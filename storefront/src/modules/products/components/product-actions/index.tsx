@@ -18,7 +18,6 @@ import { HttpTypes } from "@medusajs/types"
 
 import KandiManualBuilder from "../../../../components/kandi-manual-builder"
 import { useKandiContext } from "@lib/context/kandi-context"
-// CHANGED: Import the condensed guide
 import KandiSizingGuide from "../../../../components/kandi-sizing-guide" 
 
 type ProductActionsProps = {
@@ -49,7 +48,7 @@ export default function ProductActions({
   const [showSizeGuide, setShowSizeGuide] = useState(false) 
   
   const countryCode = useParams().countryCode as string
-  const { pattern, setPattern } = useKandiContext()
+  const { pattern, setPattern, setDesignConfig } = useKandiContext()
 
   const isWordBracelet = product.handle === WORD_BRACELET_HANDLE
 
@@ -70,6 +69,47 @@ export default function ProductActions({
       return isEqual(variantOptions, options)
     })
   }, [product.variants, options])
+
+  // --- DEEP INTEGRATION: OPTION PARSING ---
+  useEffect(() => {
+    let rows = 1;
+    let stitch = 'ladder';
+
+    // 1. PARSE 'ROWS' OPTION (Priority 1)
+    if (options["Rows"]) {
+        // Extract number from "2", "3 Rows", "4-Layer"
+        const match = options["Rows"].toString().match(/(\d+)/);
+        if (match && match[1]) {
+            rows = parseInt(match[1]);
+        }
+    } 
+    // 2. PARSE 'TYPE' OPTION (Priority 2 - Fallback if Rows not explicitly set)
+    else if (options["Type"]) {
+        const typeVal = options["Type"].toLowerCase();
+        if (typeVal.includes('double')) rows = 2;
+        else if (typeVal.includes('triple')) rows = 3;
+        else if (typeVal.includes('cuff') && !typeVal.includes('single')) {
+             // If just "Cuff" is selected without a row count, default to 3? 
+             // Or keep 1 if ambiguous. Let's keep 1 to be safe unless explicit.
+             rows = 1; 
+        }
+    }
+
+    // 3. PARSE 'STITCH' OPTION
+    if (options["Stitch"]) {
+        stitch = options["Stitch"].toLowerCase();
+    }
+
+    // 4. METADATA OVERRIDE (Admin Power User Control)
+    if (selectedVariant?.metadata?.kandi_rows) {
+         rows = Number(selectedVariant.metadata.kandi_rows);
+    }
+    if (selectedVariant?.metadata?.kandi_stitch) {
+         stitch = String(selectedVariant.metadata.kandi_stitch);
+    }
+
+    setDesignConfig({ rows: Math.max(1, rows), stitch });
+  }, [options, selectedVariant, setDesignConfig]);
 
   const setOptionValue = (title: string, value: string) => {
     setOptions((prev) => ({
@@ -264,7 +304,6 @@ export default function ProductActions({
          </Modal.Title>
          <Modal.Body>
             <div className="w-full pb-6">
-                {/* CHANGED: Render the Condensed Guide */}
                 <KandiSizingGuide />
             </div>
          </Modal.Body>
