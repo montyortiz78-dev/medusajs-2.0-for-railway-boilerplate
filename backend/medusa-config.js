@@ -21,7 +21,7 @@ import {
   MINIO_BUCKET,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY,
-  // New Cloudinary Constants
+  // --- NEW: Cloudinary Constants ---
   CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET
@@ -58,9 +58,10 @@ const medusaConfig = {
       resolve: '@medusajs/file',
       options: {
         providers: [
-          // 1. Cloudinary (Priority)
+          // 1. Cloudinary (Custom Local Module)
+          // Uses the code you created in src/modules/cloudinary-file
           ...(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET ? [{
-            resolve: 'medusa-file-cloudinary',
+            resolve: './src/modules/cloudinary-file', 
             id: 'cloudinary',
             options: {
               cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -69,7 +70,7 @@ const medusaConfig = {
               secure: true,
             }
           }] : 
-          // 2. MinIO (Fallback 1)
+          // 2. MinIO (Fallback)
           (MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
             resolve: './src/modules/minio-file',
             id: 'minio',
@@ -80,7 +81,7 @@ const medusaConfig = {
               bucket: MINIO_BUCKET,
             }
           }] : 
-          // 3. Local (Fallback 2)
+          // 3. Local (Development/Default)
           [{
             resolve: '@medusajs/file-local',
             id: 'local',
@@ -150,7 +151,6 @@ const medusaConfig = {
         ],
       },
     }] : []),
-    // --- NEW FULFILLMENT MODULE ---
     {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',
