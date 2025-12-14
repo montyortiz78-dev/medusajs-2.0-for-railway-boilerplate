@@ -26,6 +26,17 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
+// --- CONFIGURATION: KEYWORD MAPPING ---
+// Add any new terms here if you change your Product Option names in the Admin.
+const VISUAL_CONFIG = {
+  // Keywords to identify the "Rows" option
+  ROWS_KEYWORDS: ["rows", "row", "layers", "tiers", "height", "width"], 
+  // Keywords to identify the "Stitch" option
+  STITCH_KEYWORDS: ["stitch", "pattern", "weave", "technique"],
+  // Keywords to identify "Type" (used as fallback for rows)
+  TYPE_KEYWORDS: ["type", "style", "design", "cuff"]
+}
+
 const optionsAsKeymap = (variantOptions: any) => {
   return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
     if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
@@ -70,43 +81,65 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // --- DEEP INTEGRATION: OPTION PARSING ---
+  // --- DEEP INTEGRATION: ROBUST OPTION PARSING ---
   useEffect(() => {
     let rows = 1;
     let stitch = 'ladder';
 
-    // 1. PARSE 'ROWS' OPTION (Priority 1)
-    if (options["Rows"]) {
-        // Extract number from "2", "3 Rows", "4-Layer"
-        const match = options["Rows"].toString().match(/(\d+)/);
+    // Helper: Find value from options based on a list of potential keywords
+    const findOptionValue = (keywords: string[]) => {
+        const optionKey = Object.keys(options).find(key => 
+            keywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))
+        );
+        return optionKey ? options[optionKey] : null;
+    };
+
+    const rowsVal = findOptionValue(VISUAL_CONFIG.ROWS_KEYWORDS);
+    const stitchVal = findOptionValue(VISUAL_CONFIG.STITCH_KEYWORDS);
+    const typeVal = findOptionValue(VISUAL_CONFIG.TYPE_KEYWORDS);
+
+    // 1. DETERMINE ROWS
+    if (rowsVal) {
+        // Look for any number in the string (e.g. "3 Rows", "4-Layer", "2")
+        const match = rowsVal.toString().match(/(\d+)/);
         if (match && match[1]) {
             rows = parseInt(match[1]);
         }
     } 
-    // 2. PARSE 'TYPE' OPTION (Priority 2 - Fallback if Rows not explicitly set)
-    else if (options["Type"]) {
-        const typeVal = options["Type"].toLowerCase();
-        if (typeVal.includes('double')) rows = 2;
-        else if (typeVal.includes('triple')) rows = 3;
-        else if (typeVal.includes('cuff') && !typeVal.includes('single')) {
-             // If just "Cuff" is selected without a row count, default to 3? 
-             // Or keep 1 if ambiguous. Let's keep 1 to be safe unless explicit.
-             rows = 1; 
+    // Fallback: Check "Type" for semantic words like "Double", "Triple"
+    else if (typeVal) {
+        const val = typeVal.toLowerCase();
+        if (val.includes('double') || val.includes('2')) rows = 2;
+        else if (val.includes('triple') || val.includes('3')) rows = 3;
+        else if (val.includes('quad') || val.includes('4')) rows = 4;
+        else if (val.includes('quint') || val.includes('5')) rows = 5;
+    }
+
+    // 2. DETERMINE STITCH
+    if (stitchVal) {
+        stitch = stitchVal.toLowerCase();
+    }
+
+    // 3. METADATA OVERRIDE (Priority 1 - Admin Control)
+    // This allows you to force a visual style via Admin without changing Option names.
+    // Go to Variant -> Metadata and add "kandi_rows" or "kandi_stitch".
+    if (selectedVariant?.metadata) {
+        if (selectedVariant.metadata.kandi_rows) {
+             const metaRows = Number(selectedVariant.metadata.kandi_rows);
+             if (!isNaN(metaRows)) rows = metaRows;
+        }
+        if (selectedVariant.metadata.kandi_stitch) {
+             stitch = String(selectedVariant.metadata.kandi_stitch);
         }
     }
 
-    // 3. PARSE 'STITCH' OPTION
-    if (options["Stitch"]) {
-        stitch = options["Stitch"].toLowerCase();
-    }
-
-    // 4. METADATA OVERRIDE (Admin Power User Control)
-    if (selectedVariant?.metadata?.kandi_rows) {
-         rows = Number(selectedVariant.metadata.kandi_rows);
-    }
-    if (selectedVariant?.metadata?.kandi_stitch) {
-         stitch = String(selectedVariant.metadata.kandi_stitch);
-    }
+    // Debugging: Uncomment to verify what the system is detecting
+    // console.log("Kandi Visualizer Debug:", { 
+    //    detectedRows: rows, 
+    //    detectedStitch: stitch, 
+    //    rawOptions: options,
+    //    variantMeta: selectedVariant?.metadata 
+    // });
 
     setDesignConfig({ rows: Math.max(1, rows), stitch });
   }, [options, selectedVariant, setDesignConfig]);

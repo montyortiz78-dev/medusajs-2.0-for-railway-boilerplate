@@ -345,6 +345,83 @@ export default async function seedDemoData({ container }: ExecArgs) {
   await createProductsWorkflow(container).run({
     input: {
       products: [
+        // --- CUSTOM KANDI BRACELET ---
+        {
+          title: "Custom Kandi Bracelet",
+          description: "Create your own custom Kandi design. Choose your layout, stitch, and colors.",
+          handle: "custom-kandi-bracelet",
+          weight: 50,
+          status: ProductStatus.PUBLISHED,
+          shipping_profile_id: shippingProfile.id,
+          // You can add a placeholder image or leave empty to rely on visualizer
+          images: [],
+          options: [
+            {
+              title: "Rows",
+              values: ["1", "2", "3", "4"],
+            },
+            {
+              title: "Stitch",
+              values: ["Ladder", "Peyote"],
+            },
+            {
+              title: "Size",
+              values: ["Small", "Medium", "Large"],
+            }
+          ],
+          variants: [
+            // SINGLE ROW
+            {
+              title: "Single Row / Ladder",
+              sku: "KANDI-1-LADDER-M",
+              options: {
+                Rows: "1",
+                Stitch: "Ladder",
+                Size: "Medium",
+              },
+              prices: [{ amount: 10, currency_code: "usd" }, { amount: 10, currency_code: "eur" }],
+            },
+            // DOUBLE CUFF
+            {
+              title: "Double Cuff / Ladder",
+              sku: "KANDI-2-LADDER-M",
+              options: {
+                Rows: "2",
+                Stitch: "Ladder",
+                Size: "Medium",
+              },
+              prices: [{ amount: 15, currency_code: "usd" }, { amount: 15, currency_code: "eur" }],
+            },
+            // TRIPLE CUFF
+            {
+              title: "Triple Cuff / Peyote",
+              sku: "KANDI-3-PEYOTE-M",
+              options: {
+                Rows: "3",
+                Stitch: "Peyote",
+                Size: "Medium",
+              },
+              prices: [{ amount: 20, currency_code: "usd" }, { amount: 20, currency_code: "eur" }],
+            },
+            // QUAD CUFF
+            {
+              title: "Quad Cuff / Ladder",
+              sku: "KANDI-4-LADDER-M",
+              options: {
+                Rows: "4",
+                Stitch: "Ladder",
+                Size: "Medium",
+              },
+              prices: [{ amount: 25, currency_code: "usd" }, { amount: 25, currency_code: "eur" }],
+            },
+          ],
+          sales_channels: [
+            {
+              id: defaultSalesChannel[0].id,
+            },
+          ],
+        },
+        // --- END CUSTOM KANDI ---
         {
           title: "Medusa T-Shirt",
           category_ids: [
