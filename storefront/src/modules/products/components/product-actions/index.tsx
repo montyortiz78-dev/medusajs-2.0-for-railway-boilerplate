@@ -27,13 +27,9 @@ type ProductActionsProps = {
 }
 
 // --- CONFIGURATION: KEYWORD MAPPING ---
-// Add any new terms here if you change your Product Option names in the Admin.
 const VISUAL_CONFIG = {
-  // Keywords to identify the "Rows" option
   ROWS_KEYWORDS: ["rows", "row", "layers", "tiers", "height", "width"], 
-  // Keywords to identify the "Stitch" option
   STITCH_KEYWORDS: ["stitch", "pattern", "weave", "technique"],
-  // Keywords to identify "Type" (used as fallback for rows)
   TYPE_KEYWORDS: ["type", "style", "design", "cuff"]
 }
 
@@ -46,7 +42,8 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
-const WORD_BRACELET_HANDLE = "express-yourself-word-bracelets"
+// UPDATED: Match the handle created in seed.ts
+const KANDI_PRODUCT_HANDLE = "custom-ai-kandi"
 
 export default function ProductActions({
   product,
@@ -61,7 +58,8 @@ export default function ProductActions({
   const countryCode = useParams().countryCode as string
   const { pattern, setPattern, setDesignConfig } = useKandiContext()
 
-  const isWordBracelet = product.handle === WORD_BRACELET_HANDLE
+  // UPDATED: Logic now applies to custom-ai-kandi
+  const isKandiProduct = product.handle === KANDI_PRODUCT_HANDLE
 
   useEffect(() => {
     if (product.variants?.length === 1) {
@@ -86,7 +84,6 @@ export default function ProductActions({
     let rows = 1;
     let stitch = 'ladder';
 
-    // Helper: Find value from options based on a list of potential keywords
     const findOptionValue = (keywords: string[]) => {
         const optionKey = Object.keys(options).find(key => 
             keywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))
@@ -98,31 +95,37 @@ export default function ProductActions({
     const stitchVal = findOptionValue(VISUAL_CONFIG.STITCH_KEYWORDS);
     const typeVal = findOptionValue(VISUAL_CONFIG.TYPE_KEYWORDS);
 
+    let foundRows = false;
+
     // 1. DETERMINE ROWS
     if (rowsVal) {
-        // Look for any number in the string (e.g. "3 Rows", "4-Layer", "2")
-        const match = rowsVal.toString().match(/(\d+)/);
+        const valStr = rowsVal.toString().toLowerCase();
+        const match = valStr.match(/(\d+)/);
         if (match && match[1]) {
             rows = parseInt(match[1]);
+            foundRows = true;
+        } else {
+            if (valStr.includes('double')) { rows = 2; foundRows = true; }
+            else if (valStr.includes('triple')) { rows = 3; foundRows = true; }
+            else if (valStr.includes('quad')) { rows = 4; foundRows = true; }
         }
     } 
-    // Fallback: Check "Type" for semantic words like "Double", "Triple"
-    else if (typeVal) {
+    
+    // 2. FALLBACK to TYPE
+    if (!foundRows && typeVal) {
         const val = typeVal.toLowerCase();
         if (val.includes('double') || val.includes('2')) rows = 2;
         else if (val.includes('triple') || val.includes('3')) rows = 3;
         else if (val.includes('quad') || val.includes('4')) rows = 4;
-        else if (val.includes('quint') || val.includes('5')) rows = 5;
+        else if (val.includes('cuff') && !val.includes('single')) rows = 1; 
     }
 
-    // 2. DETERMINE STITCH
+    // 3. DETERMINE STITCH
     if (stitchVal) {
         stitch = stitchVal.toLowerCase();
     }
 
-    // 3. METADATA OVERRIDE (Priority 1 - Admin Control)
-    // This allows you to force a visual style via Admin without changing Option names.
-    // Go to Variant -> Metadata and add "kandi_rows" or "kandi_stitch".
+    // 4. METADATA OVERRIDE
     if (selectedVariant?.metadata) {
         if (selectedVariant.metadata.kandi_rows) {
              const metaRows = Number(selectedVariant.metadata.kandi_rows);
@@ -132,14 +135,6 @@ export default function ProductActions({
              stitch = String(selectedVariant.metadata.kandi_stitch);
         }
     }
-
-    // Debugging: Uncomment to verify what the system is detecting
-    // console.log("Kandi Visualizer Debug:", { 
-    //    detectedRows: rows, 
-    //    detectedStitch: stitch, 
-    //    rawOptions: options,
-    //    variantMeta: selectedVariant?.metadata 
-    // });
 
     setDesignConfig({ rows: Math.max(1, rows), stitch });
   }, [options, selectedVariant, setDesignConfig]);
@@ -184,7 +179,9 @@ export default function ProductActions({
     if (!selectedVariant?.id) return null
     
     if (pattern.length === 0) return null
-    if (isWordBracelet && customWord.trim().length === 0) {
+    // If it's a "Word" bracelet we check for text, if it's "AI Kandi" maybe we just need the pattern?
+    // Adjusted logic: If it's Kandi Product, we generally assume pattern > 0 is enough unless you want a word input.
+    if (isKandiProduct && customWord.trim().length === 0 && /* check if word input is actually visible? */ false) {
         return null 
     }
 
@@ -199,7 +196,7 @@ export default function ProductActions({
           image_url: imageUrl,             
           kandi_name: "Custom Kandi Bracelet",
           kandi_vibe: "Creative",
-          ...(isWordBracelet && { custom_word: customWord.trim() })
+          ...(isKandiProduct && customWord.trim().length > 0 && { custom_word: customWord.trim() })
     }
 
     const error = await addToCart({
@@ -219,8 +216,7 @@ export default function ProductActions({
   const isValid = 
     inStock && 
     selectedVariant && 
-    pattern.length > 0 &&
-    (!isWordBracelet || customWord.trim().length > 0);
+    pattern.length > 0;
 
   return (
     <>
@@ -259,10 +255,11 @@ export default function ProductActions({
           )}
         </div>
 
-        {isWordBracelet && (
+        {/* Optional: Input for custom word if you still want it for this product */}
+        {isKandiProduct && (
             <div className="flex flex-col gap-y-2 py-2">
                 <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
-                    Your Word (Max 12 chars)
+                    Your Word (Optional)
                 </Label>
                 <Input
                     id="custom-word-input"
@@ -313,8 +310,6 @@ export default function ProductActions({
             ? "Out of stock"
             : pattern.length === 0
             ? "Add Beads to Design"
-            : isWordBracelet && customWord.length === 0 
-            ? "Enter Your Word" 
             : "Add to cart"}
         </Button>
         
