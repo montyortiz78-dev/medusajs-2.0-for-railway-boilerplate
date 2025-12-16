@@ -26,20 +26,16 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
-// --- CONFIGURATION: KEYWORD MAPPING ---
-const VISUAL_CONFIG = {
-  ROWS_KEYWORDS: ["rows", "row", "layers", "tiers", "height", "width"],
-  STITCH_KEYWORDS: ["stitch", "pattern", "weave", "technique"],
-  TYPE_KEYWORDS: ["type", "style", "design", "cuff"],
-}
-
-const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
-    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
-      acc[varopt.option.title] = varopt.value
-    }
-    return acc
-  }, {})
+// 1. CONFIGURATION: Explicit Mapping (Stable & Predictable)
+// Maps your Medusa Option Values to the Visualizer IDs
+const STITCH_MAPPING: Record<string, string> = {
+  "Ladder": "ladder",
+  "Flat": "ladder", 
+  "Multi (Peyote)": "peyote",
+  "Peyote": "peyote",
+  "Flower": "flower",
+  "X-base": "x-base",
+  "Single": "ladder", 
 }
 
 const KANDI_PRODUCT_HANDLE = "custom-ai-kandi"
@@ -58,7 +54,20 @@ export default function ProductActions({
   const { pattern, setPattern, setDesignConfig } = useKandiContext()
 
   const isKandiProduct = product.handle === KANDI_PRODUCT_HANDLE
+  const actionsRef = useRef<HTMLDivElement>(null)
+  const inView = useIntersection(actionsRef, "0px")
 
+  // Helper to convert options array to map
+  const optionsAsKeymap = (variantOptions: any) => {
+    return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
+      if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
+        acc[varopt.option.title] = varopt.value
+      }
+      return acc
+    }, {})
+  }
+
+  // Pre-select options if only 1 variant exists
   useEffect(() => {
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
@@ -66,6 +75,7 @@ export default function ProductActions({
     }
   }, [product.variants])
 
+  // Find the specific variant ID based on selected options
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
       return undefined
@@ -76,96 +86,51 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
+  // === MAIN LOGIC: Update Visualizer Config ===
   useEffect(() => {
-    // Default values for rows and stitch
+    if (!isKandiProduct) return
+
+    // 1. Defaults
     let rows = 1
     let stitch = "ladder"
 
-    const findOptionValue = (keywords: string[]): string | null => {
-      const optionKey = Object.keys(options).find((key) =>
-        keywords.some((keyword) => key.toLowerCase().includes(keyword.toLowerCase()))
-      )
-      return optionKey ? options[optionKey] ?? null : null
-    }
+    // 2. Parse User Selections
+    // We look for options with explicit titles "Rows" and "Stitch"
+    const selectedRows = options["Rows"]
+    const selectedStitch = options["Stitch"]
 
-    const rowsVal = findOptionValue(VISUAL_CONFIG.ROWS_KEYWORDS)
-    const stitchVal = findOptionValue(VISUAL_CONFIG.STITCH_KEYWORDS)
-    const typeVal = findOptionValue(VISUAL_CONFIG.TYPE_KEYWORDS)
-
-    let foundRows = false
-
-    // 1. Determine rows
-    if (rowsVal) {
-      const valStr = rowsVal.toString().toLowerCase()
-      const match = valStr.match(/(\d+)/)
-      if (match && match[1]) {
-        rows = parseInt(match[1], 10)
-        foundRows = true
-      } else {
-        if (valStr.includes("double")) {
-          rows = 2
-          foundRows = true
-        } else if (valStr.includes("triple")) {
-          rows = 3
-          foundRows = true
-        } else if (valStr.includes("quad")) {
-          rows = 4
-          foundRows = true
-        }
+    // Parse Rows (Handle "4", "4 Rows", etc.)
+    if (selectedRows) {
+      const parsedRow = parseInt(selectedRows, 10)
+      if (!isNaN(parsedRow)) {
+        rows = parsedRow
       }
     }
-    if (!foundRows && typeVal) {
-      const val = typeVal.toLowerCase()
-      if (val.includes("double") || val.includes("2")) rows = 2
-      else if (val.includes("triple") || val.includes("3")) rows = 3
-      else if (val.includes("quad") || val.includes("4")) rows = 4
-      // Leave cuff or necklace values alone; rows default to 1
+
+    // Parse Stitch (Use Mapping)
+    if (selectedStitch) {
+      stitch = STITCH_MAPPING[selectedStitch] || selectedStitch.toLowerCase()
     }
 
-    // 2. Canonicalize stitch
-    if (stitchVal) {
-      const v = stitchVal.toLowerCase().trim()
-      if (v.includes("peyote") || v.includes("multi")) {
-        stitch = "peyote"
-      } else if (v.includes("brick")) {
-        stitch = "brick"
-      } else if (v.includes("flower")) {
-        stitch = "flower"      // falls back to ladder if unsupported
-      } else if (v.includes("x-base") || v.includes("x base")) {
-        stitch = "x-base"      // falls back to ladder if unsupported
-      } else if (v.includes("flat") || v.includes("ladder") || v.includes("single")) {
-        stitch = "ladder"
-      } else {
-        stitch = v
-      }
-    } else if (typeVal) {
-      const v = typeVal.toLowerCase()
-      if (v.includes("peyote") || v.includes("multi")) stitch = "peyote"
-      else if (v.includes("brick")) stitch = "brick"
-      else if (v.includes("flower")) stitch = "flower"
-      else if (v.includes("x-base") || v.includes("x base")) stitch = "x-base"
-      else if (v.includes("flat") || v.includes("ladder") || v.includes("single")) stitch = "ladder"
-    }
-
-    // 3. Metadata override
+    // 3. Metadata Override (Highest Priority)
+    // Allows you to force a config via Medusa Admin > Product > Variant > Metadata
     if (selectedVariant?.metadata) {
-      const m = selectedVariant.metadata as Record<string, unknown>
-      if (m.kandi_rows) {
-        const metaRows = Number(m.kandi_rows)
-        if (!isNaN(metaRows)) rows = metaRows
+      if (selectedVariant.metadata.kandi_rows) {
+        rows = Number(selectedVariant.metadata.kandi_rows)
       }
-      if (m.kandi_stitch) {
-        stitch = String(m.kandi_stitch)
+      if (selectedVariant.metadata.kandi_stitch) {
+        stitch = String(selectedVariant.metadata.kandi_stitch)
       }
     }
 
+    // 4. Update Context
     setDesignConfig({
       rows: Math.max(1, rows),
-      stitch,
+      stitch: stitch,
     })
-  }, [options, selectedVariant, setDesignConfig])
 
-  // Updates option state when the user selects a different value.
+  }, [options, selectedVariant, isKandiProduct, setDesignConfig])
+
   const setOptionValue = (title: string, value: string) => {
     setOptions((prev) => ({
       ...prev,
@@ -173,21 +138,7 @@ export default function ProductActions({
     }))
   }
 
-  const inStock = useMemo(() => {
-    if (selectedVariant && !selectedVariant.manage_inventory) return true
-    if (selectedVariant?.allow_backorder) return true
-    if (
-      selectedVariant?.manage_inventory &&
-      (selectedVariant?.inventory_quantity || 0) > 0
-    ) {
-      return true
-    }
-    return false
-  }, [selectedVariant])
-
-  const actionsRef = useRef<HTMLDivElement>(null)
-  const inView = useIntersection(actionsRef, "0px")
-
+  // Capture the 3D canvas as an image
   const captureCanvasImage = (): string => {
     try {
       const canvasContainer = document.getElementById("kandi-canvas")
@@ -204,13 +155,7 @@ export default function ProductActions({
 
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
-    
     if (pattern.length === 0) return null
-    // If it's a "Word" bracelet we check for text, if it's "AI Kandi" maybe we just need the pattern?
-    // Adjusted logic: If it's Kandi Product, we generally assume pattern > 0 is enough unless you want a word input.
-    if (isKandiProduct && customWord.trim().length === 0 && /* check if word input is actually visible? */ false) {
-        return null 
-    }
 
     setIsAdding(true)
 
@@ -219,7 +164,7 @@ export default function ProductActions({
     const metadata = {
           is_custom: true,
           pattern_data: pattern,           
-          kandi_pattern: pattern.map(p => p.color), 
+          kandi_pattern: pattern.map(p => typeof p === 'string' ? p : p.color), // Handle object or string
           image_url: imageUrl,             
           kandi_name: "Custom Kandi Bracelet",
           kandi_vibe: "Creative",
@@ -240,10 +185,19 @@ export default function ProductActions({
     setIsAdding(false)
   }
 
-  const isValid = 
-    inStock && 
-    selectedVariant && 
-    pattern.length > 0;
+  const inStock = useMemo(() => {
+    if (selectedVariant && !selectedVariant.manage_inventory) return true
+    if (selectedVariant?.allow_backorder) return true
+    if (
+      selectedVariant?.manage_inventory &&
+      (selectedVariant?.inventory_quantity || 0) > 0
+    ) {
+      return true
+    }
+    return false
+  }, [selectedVariant])
+
+  const isValid = inStock && selectedVariant && pattern.length > 0
 
   return (
     <>
@@ -282,7 +236,7 @@ export default function ProductActions({
           )}
         </div>
 
-        {/* Optional: Input for custom word if you still want it for this product */}
+        {/* Custom Word Input */}
         {isKandiProduct && (
             <div className="flex flex-col gap-y-2 py-2">
                 <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">

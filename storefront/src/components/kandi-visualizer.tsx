@@ -9,7 +9,8 @@ const KandiBracelet3D = dynamic(() => import('./kandi-bracelet-3d'), {
 });
 
 type Props = {
-  pattern: string[];
+  // CHANGED: Allow objects or strings
+  pattern: ({ color: string; type?: string } | string)[]; 
   captureMode?: boolean;
   rows?: number;
   stitch?: string;
