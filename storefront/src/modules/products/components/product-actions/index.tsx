@@ -4,7 +4,7 @@ import { Button, Input, Label, clx } from "@medusajs/ui"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { InformationCircle } from "@medusajs/icons" 
+import { InformationCircle } from "@medusajs/icons"
 
 import { useIntersection } from "@lib/hooks/use-in-view"
 import Divider from "@modules/common/components/divider"
@@ -18,7 +18,7 @@ import { HttpTypes } from "@medusajs/types"
 
 import KandiManualBuilder from "../../../../components/kandi-manual-builder"
 import { useKandiContext } from "@lib/context/kandi-context"
-import KandiSizingGuide from "../../../../components/kandi-sizing-guide" 
+import KandiSizingGuide from "../../../../components/kandi-sizing-guide"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -28,9 +28,9 @@ type ProductActionsProps = {
 
 // --- CONFIGURATION: KEYWORD MAPPING ---
 const VISUAL_CONFIG = {
-  ROWS_KEYWORDS: ["rows", "row", "layers", "tiers", "height", "width"], 
+  ROWS_KEYWORDS: ["rows", "row", "layers", "tiers", "height", "width"],
   STITCH_KEYWORDS: ["stitch", "pattern", "weave", "technique"],
-  TYPE_KEYWORDS: ["type", "style", "design", "cuff"]
+  TYPE_KEYWORDS: ["type", "style", "design", "cuff"],
 }
 
 const optionsAsKeymap = (variantOptions: any) => {
@@ -42,7 +42,6 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
-// UPDATED: Match the handle created in seed.ts
 const KANDI_PRODUCT_HANDLE = "custom-ai-kandi"
 
 export default function ProductActions({
@@ -52,13 +51,12 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
-  const [customWord, setCustomWord] = useState("") 
-  const [showSizeGuide, setShowSizeGuide] = useState(false) 
-  
+  const [customWord, setCustomWord] = useState("")
+  const [showSizeGuide, setShowSizeGuide] = useState(false)
+
   const countryCode = useParams().countryCode as string
   const { pattern, setPattern, setDesignConfig } = useKandiContext()
 
-  // UPDATED: Logic now applies to custom-ai-kandi
   const isKandiProduct = product.handle === KANDI_PRODUCT_HANDLE
 
   useEffect(() => {
@@ -70,75 +68,104 @@ export default function ProductActions({
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
-      return
+      return undefined
     }
-
     return product.variants.find((v) => {
       const variantOptions = optionsAsKeymap(v.options)
       return isEqual(variantOptions, options)
     })
   }, [product.variants, options])
 
-  // --- DEEP INTEGRATION: ROBUST OPTION PARSING ---
   useEffect(() => {
-    let rows = 1;
-    let stitch = 'ladder';
+    // Default values for rows and stitch
+    let rows = 1
+    let stitch = "ladder"
 
-    const findOptionValue = (keywords: string[]) => {
-        const optionKey = Object.keys(options).find(key => 
-            keywords.some(keyword => key.toLowerCase().includes(keyword.toLowerCase()))
-        );
-        return optionKey ? options[optionKey] : null;
-    };
+    const findOptionValue = (keywords: string[]): string | null => {
+      const optionKey = Object.keys(options).find((key) =>
+        keywords.some((keyword) => key.toLowerCase().includes(keyword.toLowerCase()))
+      )
+      return optionKey ? options[optionKey] ?? null : null
+    }
 
-    const rowsVal = findOptionValue(VISUAL_CONFIG.ROWS_KEYWORDS);
-    const stitchVal = findOptionValue(VISUAL_CONFIG.STITCH_KEYWORDS);
-    const typeVal = findOptionValue(VISUAL_CONFIG.TYPE_KEYWORDS);
+    const rowsVal = findOptionValue(VISUAL_CONFIG.ROWS_KEYWORDS)
+    const stitchVal = findOptionValue(VISUAL_CONFIG.STITCH_KEYWORDS)
+    const typeVal = findOptionValue(VISUAL_CONFIG.TYPE_KEYWORDS)
 
-    let foundRows = false;
+    let foundRows = false
 
-    // 1. DETERMINE ROWS
+    // 1. Determine rows
     if (rowsVal) {
-        const valStr = rowsVal.toString().toLowerCase();
-        const match = valStr.match(/(\d+)/);
-        if (match && match[1]) {
-            rows = parseInt(match[1]);
-            foundRows = true;
-        } else {
-            if (valStr.includes('double')) { rows = 2; foundRows = true; }
-            else if (valStr.includes('triple')) { rows = 3; foundRows = true; }
-            else if (valStr.includes('quad')) { rows = 4; foundRows = true; }
+      const valStr = rowsVal.toString().toLowerCase()
+      const match = valStr.match(/(\d+)/)
+      if (match && match[1]) {
+        rows = parseInt(match[1], 10)
+        foundRows = true
+      } else {
+        if (valStr.includes("double")) {
+          rows = 2
+          foundRows = true
+        } else if (valStr.includes("triple")) {
+          rows = 3
+          foundRows = true
+        } else if (valStr.includes("quad")) {
+          rows = 4
+          foundRows = true
         }
-    } 
-    
-    // 2. FALLBACK to TYPE
+      }
+    }
     if (!foundRows && typeVal) {
-        const val = typeVal.toLowerCase();
-        if (val.includes('double') || val.includes('2')) rows = 2;
-        else if (val.includes('triple') || val.includes('3')) rows = 3;
-        else if (val.includes('quad') || val.includes('4')) rows = 4;
-        else if (val.includes('cuff') && !val.includes('single')) rows = 1; 
+      const val = typeVal.toLowerCase()
+      if (val.includes("double") || val.includes("2")) rows = 2
+      else if (val.includes("triple") || val.includes("3")) rows = 3
+      else if (val.includes("quad") || val.includes("4")) rows = 4
+      // Leave cuff or necklace values alone; rows default to 1
     }
 
-    // 3. DETERMINE STITCH
+    // 2. Canonicalize stitch
     if (stitchVal) {
-        stitch = stitchVal.toLowerCase();
+      const v = stitchVal.toLowerCase().trim()
+      if (v.includes("peyote") || v.includes("multi")) {
+        stitch = "peyote"
+      } else if (v.includes("brick")) {
+        stitch = "brick"
+      } else if (v.includes("flower")) {
+        stitch = "flower"      // falls back to ladder if unsupported
+      } else if (v.includes("x-base") || v.includes("x base")) {
+        stitch = "x-base"      // falls back to ladder if unsupported
+      } else if (v.includes("flat") || v.includes("ladder") || v.includes("single")) {
+        stitch = "ladder"
+      } else {
+        stitch = v
+      }
+    } else if (typeVal) {
+      const v = typeVal.toLowerCase()
+      if (v.includes("peyote") || v.includes("multi")) stitch = "peyote"
+      else if (v.includes("brick")) stitch = "brick"
+      else if (v.includes("flower")) stitch = "flower"
+      else if (v.includes("x-base") || v.includes("x base")) stitch = "x-base"
+      else if (v.includes("flat") || v.includes("ladder") || v.includes("single")) stitch = "ladder"
     }
 
-    // 4. METADATA OVERRIDE
+    // 3. Metadata override
     if (selectedVariant?.metadata) {
-        if (selectedVariant.metadata.kandi_rows) {
-             const metaRows = Number(selectedVariant.metadata.kandi_rows);
-             if (!isNaN(metaRows)) rows = metaRows;
-        }
-        if (selectedVariant.metadata.kandi_stitch) {
-             stitch = String(selectedVariant.metadata.kandi_stitch);
-        }
+      const m = selectedVariant.metadata as Record<string, unknown>
+      if (m.kandi_rows) {
+        const metaRows = Number(m.kandi_rows)
+        if (!isNaN(metaRows)) rows = metaRows
+      }
+      if (m.kandi_stitch) {
+        stitch = String(m.kandi_stitch)
+      }
     }
 
-    setDesignConfig({ rows: Math.max(1, rows), stitch });
-  }, [options, selectedVariant, setDesignConfig]);
+    setDesignConfig({
+      rows: Math.max(1, rows),
+      stitch,
+    })
+  }, [options, selectedVariant, setDesignConfig])
 
+  // Updates option state when the user selects a different value.
   const setOptionValue = (title: string, value: string) => {
     setOptions((prev) => ({
       ...prev,
