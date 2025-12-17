@@ -26,7 +26,14 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
-// 1. CONFIGURATION: Explicit Mapping
+// CONFIG: Allowed Keys (Case Insensitive)
+const VISUAL_CONFIG = {
+    // Only these Option Titles will trigger row changes
+    ROWS_KEYS: ["rows", "row", "tiers", "layers", "row count", "number of rows"],
+    // Only these Option Titles will trigger stitch changes
+    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave"],
+}
+
 const STITCH_MAPPING: Record<string, string> = {
   "Ladder": "ladder",
   "Flat": "ladder", 
@@ -76,9 +83,8 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // === PRE-SELECTION & DEFAULTS LOGIC ===
+  // === PRE-SELECTION LOGIC ===
   useEffect(() => {
-    // Only run if we haven't selected everything yet
     if (Object.keys(options).length === product.options?.length) return
 
     const PREFERRED_DEFAULTS: Record<string, string> = {
@@ -94,9 +100,8 @@ export default function ProductActions({
 
     product.options?.forEach((opt) => {
       const title = opt.title ?? ""
-      if (newOptions[title]) return // Already set
+      if (newOptions[title]) return 
 
-      // 1. Try Preferred
       const foundPreferred = opt.values?.find((v) => {
          const pref = PREFERRED_DEFAULTS[title]
          return pref && v.value.includes(pref)
@@ -106,7 +111,6 @@ export default function ProductActions({
         newOptions[title] = foundPreferred.value
         hasChanges = true
       } else if (opt.values && opt.values.length > 0) {
-        // 2. Fallback to First Option
         newOptions[title] = opt.values[0].value
         hasChanges = true
       }
@@ -117,26 +121,27 @@ export default function ProductActions({
     }
   }, [product.options, options])
 
-  // === VISUALIZER UPDATE LOGIC (THE FIX) ===
+  // === VISUALIZER UPDATE LOGIC (FIXED) ===
   useEffect(() => {
     if (!isKandiProduct) return
 
-    // Helper: LOOSE MATCHING (Contains vs Exact Match)
-    // This allows "Row Count" or "Number of Rows" to match "row"
-    const getOptionValue = (searchKey: string) => {
-      const key = Object.keys(options).find(k => k.toLowerCase().includes(searchKey.toLowerCase()))
-      return key ? options[key] : null
+    // Helper: Find value by checking against the Allowed Keys list
+    const getOptionValue = (allowedKeys: string[]) => {
+      const foundKey = Object.keys(options).find(key => 
+        allowedKeys.includes(key.toLowerCase())
+      )
+      return foundKey ? options[foundKey] : null
     }
 
     let rows = 1
     let stitch = "ladder"
 
     // 1. Parse Rows
-    const selectedRows = getOptionValue("row") // Looks for "Rows", "Row Count", etc.
+    const selectedRowsVal = getOptionValue(VISUAL_CONFIG.ROWS_KEYS)
     
-    if (selectedRows) {
-      const valStr = selectedRows.toString().toLowerCase()
-      const match = valStr.match(/\d+/) // Find any number
+    if (selectedRowsVal) {
+      const valStr = selectedRowsVal.toString().toLowerCase()
+      const match = valStr.match(/\d+/)
       
       if (match) {
         rows = parseInt(match[0], 10)
@@ -150,13 +155,12 @@ export default function ProductActions({
     }
 
     // 2. Parse Stitch
-    const selectedStitch = getOptionValue("stitch")
-    if (selectedStitch) {
-      stitch = STITCH_MAPPING[selectedStitch] || selectedStitch.toLowerCase()
+    const selectedStitchVal = getOptionValue(VISUAL_CONFIG.STITCH_KEYS)
+    if (selectedStitchVal) {
+      stitch = STITCH_MAPPING[selectedStitchVal] || selectedStitchVal.toLowerCase()
     }
 
     // 3. Metadata Override
-    // WARNING: If your variant has 'kandi_rows: 1' in Medusa Admin, this WILL lock it to 1.
     if (selectedVariant?.metadata) {
       if (selectedVariant.metadata.kandi_rows) {
         rows = Number(selectedVariant.metadata.kandi_rows)
@@ -166,11 +170,12 @@ export default function ProductActions({
       }
     }
 
-    // Debugging: Check your browser console to see if rows are being detected
-    console.log("Visualizer Update:", { 
-        foundRowsOption: selectedRows, 
-        parsedRows: rows, 
-        stitch 
+    // DEBUG LOG: Look at your Console to see what is calculated
+    console.log("Visualizer Calc:", { 
+        optionMap: options,
+        foundRowsVal: selectedRowsVal, 
+        calculatedRows: rows, 
+        metaRows: selectedVariant?.metadata?.kandi_rows 
     })
 
     setDesignConfig({

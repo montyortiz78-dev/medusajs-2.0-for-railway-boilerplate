@@ -19,8 +19,9 @@ const VisualizerGalleryWrapper = ({ images }: VisualizerGalleryWrapperProps) => 
       {showVisualizer ? (
          <div className="sticky top-24">
             <KandiVisualizer 
-                pattern={pattern} // CHANGED: Pass the full pattern array, do not .map()
-                rows={designConfig.rows}
+                pattern={pattern} 
+                // CRITICAL: Must use designConfig.rows, NOT '1'
+                rows={designConfig.rows} 
                 stitch={designConfig.stitch}
             />
          </div>
