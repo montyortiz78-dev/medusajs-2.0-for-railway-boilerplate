@@ -33,6 +33,7 @@ const STITCH_MAPPING: Record<string, string> = {
   "Flat": "ladder", 
   "Multi (Peyote)": "peyote",
   "Peyote": "peyote",
+  "Brick": "brick",
   "Flower": "flower",
   "X-base": "x-base",
   "Single": "ladder", 
@@ -67,42 +68,6 @@ export default function ProductActions({
     }, {})
   }
 
-  // PRE-SELECTION LOGIC
-  useEffect(() => {
-    // If options are already selected, do nothing
-    if (Object.keys(options).length > 0) return
-
-    // Define your preferred defaults here
-    const PREFERRED_DEFAULTS: Record<string, string> = {
-      "Size": "Small",
-      "Type": "Single Bracelet", 
-      "Rows": "1",
-      "Stitch": "Single"
-    }
-
-    const defaultOptions: Record<string, string> = {}
-
-    // Loop through all available Product Options (Size, Type, Rows, etc.)
-    product.options?.forEach((opt) => {
-      if (!opt.title || !opt.values || opt.values.length === 0) return
-
-      // 1. Check if our preferred value exists for this option
-      const preferredVal = PREFERRED_DEFAULTS[opt.title]
-      const hasPreferred = opt.values.some((v) => v.value === preferredVal)
-
-      if (hasPreferred) {
-        // If "Small" exists in "Size", select it
-        defaultOptions[opt.title] = preferredVal
-      } else {
-        // 2. Fallback: Select the FIRST value available (e.g. if "Small" is OOS or missing)
-        defaultOptions[opt.title] = opt.values[0].value
-      }
-    })
-
-    // Apply the defaults
-    setOptions(defaultOptions)
-  }, [product.options, product.variants])
-
   // Find the specific variant ID based on selected options
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
@@ -114,34 +79,83 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // === MAIN LOGIC: Update Visualizer Config ===
+  // === PRE-SELECTION & DEFAULTS LOGIC ===
+  useEffect(() => {
+    // If options are already fully populated, don't overwrite user choices
+    if (Object.keys(options).length === product.options?.length) return
+
+    const PREFERRED_DEFAULTS: Record<string, string> = {
+      "Size": "Small",
+      "Type": "Single Bracelet",
+      "Rows": "1",
+      "Stitch": "Single", 
+      "Stitch Type": "Single"
+    }
+
+    const newOptions = { ...options }
+    let hasChanges = false
+
+    product.options?.forEach((opt) => {
+      const title = opt.title ?? ""
+      // Skip if this option is already set
+      if (newOptions[title]) return
+
+      // 1. Try to find a matching preferred value
+      const foundPreferred = opt.values?.find((v) => {
+         const pref = PREFERRED_DEFAULTS[title]
+         // Check exact match or partial match (e.g. "Small" in "Small (6.5 in)")
+         return pref && v.value.includes(pref)
+      })
+
+      if (foundPreferred) {
+        newOptions[title] = foundPreferred.value
+        hasChanges = true
+      } else if (opt.values && opt.values.length > 0) {
+        // 2. Fallback: Pick the first available option (e.g. if "Small" is OOS)
+        newOptions[title] = opt.values[0].value
+        hasChanges = true
+      }
+    })
+
+    if (hasChanges) {
+      setOptions(newOptions)
+    }
+  }, [product.options, options])
+
+  // === VISUALIZER UPDATE LOGIC ===
   useEffect(() => {
     if (!isKandiProduct) return
+
+    // Helper: Find value ignoring case (e.g. matches "Rows", "rows", "ROWS")
+    const getOptionValue = (searchKey: string) => {
+      const key = Object.keys(options).find(k => k.toLowerCase() === searchKey.toLowerCase())
+      return key ? options[key] : null
+    }
 
     // 1. Defaults
     let rows = 1
     let stitch = "ladder"
 
-    // 2. Parse User Selections
-    // We look for options with explicit titles "Rows" and "Stitch"
-    const selectedRows = options["Rows"]
-    const selectedStitch = options["Stitch"]
+    // 2. Parse User Selections (Case Insensitive)
+    const selectedRows = getOptionValue("rows")
+    const selectedStitch = getOptionValue("stitch")
 
-    // Parse Rows (Handle "4", "4 Rows", etc.)
+    // Parse Rows
     if (selectedRows) {
-      const parsedRow = parseInt(selectedRows, 10)
-      if (!isNaN(parsedRow)) {
-        rows = parsedRow
+      // Extract number just in case the value is "4 Rows" instead of "4"
+      const match = selectedRows.toString().match(/\d+/)
+      if (match) {
+        rows = parseInt(match[0], 10)
       }
     }
 
-    // Parse Stitch (Use Mapping)
+    // Parse Stitch
     if (selectedStitch) {
+      // Check Mapping first, then fallback to lowercase
       stitch = STITCH_MAPPING[selectedStitch] || selectedStitch.toLowerCase()
     }
 
-    // 3. Metadata Override (Highest Priority)
-    // Allows you to force a config via Medusa Admin > Product > Variant > Metadata
+    // 3. Metadata Override (Backend Authority)
     if (selectedVariant?.metadata) {
       if (selectedVariant.metadata.kandi_rows) {
         rows = Number(selectedVariant.metadata.kandi_rows)
@@ -192,7 +206,7 @@ export default function ProductActions({
     const metadata = {
           is_custom: true,
           pattern_data: pattern,           
-          kandi_pattern: pattern.map(p => typeof p === 'string' ? p : p.color), // Handle object or string
+          kandi_pattern: pattern.map(p => typeof p === 'string' ? p : p.color), 
           image_url: imageUrl,             
           kandi_name: "Custom Kandi Bracelet",
           kandi_vibe: "Creative",
