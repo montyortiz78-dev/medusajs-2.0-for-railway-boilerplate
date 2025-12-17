@@ -72,6 +72,12 @@ export default function ProductActions({
       return acc
     }, {})
   }
+  // DEBUGGING: Add this right after hooks
+  console.log("ProductActions Mounted", { 
+      handle: product.handle, 
+      expected: KANDI_PRODUCT_HANDLE,
+      isMatch: product.handle === KANDI_PRODUCT_HANDLE 
+  });
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
@@ -123,7 +129,8 @@ export default function ProductActions({
 
   // === VISUALIZER UPDATE LOGIC (FIXED) ===
   useEffect(() => {
-    if (!isKandiProduct) return
+    // REMOVE THIS LINE TEMPORARILY:
+    // if (!isKandiProduct) return
 
     // Helper: Find value by checking against the Allowed Keys list
     const getOptionValue = (allowedKeys: string[]) => {
