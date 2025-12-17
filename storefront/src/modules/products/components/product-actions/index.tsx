@@ -26,8 +26,7 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
-// 1. CONFIGURATION: Explicit Mapping (Stable & Predictable)
-// Maps your Medusa Option Values to the Visualizer IDs
+// 1. CONFIGURATION: Explicit Mapping
 const STITCH_MAPPING: Record<string, string> = {
   "Ladder": "ladder",
   "Flat": "ladder", 
@@ -58,7 +57,6 @@ export default function ProductActions({
   const actionsRef = useRef<HTMLDivElement>(null)
   const inView = useIntersection(actionsRef, "0px")
 
-  // Helper to convert options array to map
   const optionsAsKeymap = (variantOptions: any) => {
     return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
       if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
@@ -68,7 +66,6 @@ export default function ProductActions({
     }, {})
   }
 
-  // Find the specific variant ID based on selected options
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
       return undefined
@@ -81,7 +78,7 @@ export default function ProductActions({
 
   // === PRE-SELECTION & DEFAULTS LOGIC ===
   useEffect(() => {
-    // If options are already fully populated, don't overwrite user choices
+    // Only run if we haven't selected everything yet
     if (Object.keys(options).length === product.options?.length) return
 
     const PREFERRED_DEFAULTS: Record<string, string> = {
@@ -97,13 +94,11 @@ export default function ProductActions({
 
     product.options?.forEach((opt) => {
       const title = opt.title ?? ""
-      // Skip if this option is already set
-      if (newOptions[title]) return
+      if (newOptions[title]) return // Already set
 
-      // 1. Try to find a matching preferred value
+      // 1. Try Preferred
       const foundPreferred = opt.values?.find((v) => {
          const pref = PREFERRED_DEFAULTS[title]
-         // Check exact match or partial match (e.g. "Small" in "Small (6.5 in)")
          return pref && v.value.includes(pref)
       })
 
@@ -111,7 +106,7 @@ export default function ProductActions({
         newOptions[title] = foundPreferred.value
         hasChanges = true
       } else if (opt.values && opt.values.length > 0) {
-        // 2. Fallback: Pick the first available option (e.g. if "Small" is OOS)
+        // 2. Fallback to First Option
         newOptions[title] = opt.values[0].value
         hasChanges = true
       }
@@ -122,40 +117,46 @@ export default function ProductActions({
     }
   }, [product.options, options])
 
-  // === VISUALIZER UPDATE LOGIC ===
+  // === VISUALIZER UPDATE LOGIC (THE FIX) ===
   useEffect(() => {
     if (!isKandiProduct) return
 
-    // Helper: Find value ignoring case (e.g. matches "Rows", "rows", "ROWS")
+    // Helper: LOOSE MATCHING (Contains vs Exact Match)
+    // This allows "Row Count" or "Number of Rows" to match "row"
     const getOptionValue = (searchKey: string) => {
-      const key = Object.keys(options).find(k => k.toLowerCase() === searchKey.toLowerCase())
+      const key = Object.keys(options).find(k => k.toLowerCase().includes(searchKey.toLowerCase()))
       return key ? options[key] : null
     }
 
-    // 1. Defaults
     let rows = 1
     let stitch = "ladder"
 
-    // 2. Parse User Selections (Case Insensitive)
-    const selectedRows = getOptionValue("rows")
-    const selectedStitch = getOptionValue("stitch")
-
-    // Parse Rows
+    // 1. Parse Rows
+    const selectedRows = getOptionValue("row") // Looks for "Rows", "Row Count", etc.
+    
     if (selectedRows) {
-      // Extract number just in case the value is "4 Rows" instead of "4"
-      const match = selectedRows.toString().match(/\d+/)
+      const valStr = selectedRows.toString().toLowerCase()
+      const match = valStr.match(/\d+/) // Find any number
+      
       if (match) {
         rows = parseInt(match[0], 10)
+      } else if (valStr.includes("double")) {
+        rows = 2
+      } else if (valStr.includes("triple")) {
+        rows = 3
+      } else if (valStr.includes("quad")) {
+        rows = 4
       }
     }
 
-    // Parse Stitch
+    // 2. Parse Stitch
+    const selectedStitch = getOptionValue("stitch")
     if (selectedStitch) {
-      // Check Mapping first, then fallback to lowercase
       stitch = STITCH_MAPPING[selectedStitch] || selectedStitch.toLowerCase()
     }
 
-    // 3. Metadata Override (Backend Authority)
+    // 3. Metadata Override
+    // WARNING: If your variant has 'kandi_rows: 1' in Medusa Admin, this WILL lock it to 1.
     if (selectedVariant?.metadata) {
       if (selectedVariant.metadata.kandi_rows) {
         rows = Number(selectedVariant.metadata.kandi_rows)
@@ -165,7 +166,13 @@ export default function ProductActions({
       }
     }
 
-    // 4. Update Context
+    // Debugging: Check your browser console to see if rows are being detected
+    console.log("Visualizer Update:", { 
+        foundRowsOption: selectedRows, 
+        parsedRows: rows, 
+        stitch 
+    })
+
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
@@ -180,17 +187,14 @@ export default function ProductActions({
     }))
   }
 
-  // Capture the 3D canvas as an image
+  // Snapshot Logic
   const captureCanvasImage = (): string => {
     try {
       const canvasContainer = document.getElementById("kandi-canvas")
       const canvas = canvasContainer?.querySelector("canvas")
-      
-      if (canvas) {
-        return canvas.toDataURL("image/jpeg", 0.5)
-      }
+      if (canvas) return canvas.toDataURL("image/jpeg", 0.5)
     } catch (e) {
-      console.error("Failed to capture 3D bracelet snapshot", e)
+      console.error("Failed to capture snapshot", e)
     }
     return ""
   }
@@ -200,7 +204,6 @@ export default function ProductActions({
     if (pattern.length === 0) return null
 
     setIsAdding(true)
-
     const imageUrl = captureCanvasImage()
 
     const metadata = {
@@ -220,22 +223,14 @@ export default function ProductActions({
       metadata
     })
 
-    if (error) {
-      console.error("Failed to add to cart:", error)
-    }
-
+    if (error) console.error("Cart Error:", error)
     setIsAdding(false)
   }
 
   const inStock = useMemo(() => {
     if (selectedVariant && !selectedVariant.manage_inventory) return true
     if (selectedVariant?.allow_backorder) return true
-    if (
-      selectedVariant?.manage_inventory &&
-      (selectedVariant?.inventory_quantity || 0) > 0
-    ) {
-      return true
-    }
+    if (selectedVariant?.manage_inventory && (selectedVariant?.inventory_quantity || 0) > 0) return true
     return false
   }, [selectedVariant])
 
@@ -255,10 +250,8 @@ export default function ProductActions({
                       current={options[option.title ?? ""]}
                       updateOption={setOptionValue}
                       title={option.title ?? ""}
-                      data-testid="product-options"
                       disabled={!!disabled || isAdding}
                     />
-                    {/* Size Guide Link */}
                     {option.title === "Size" && (
                         <button 
                             onClick={() => setShowSizeGuide(true)}
@@ -278,7 +271,6 @@ export default function ProductActions({
           )}
         </div>
 
-        {/* Custom Word Input */}
         {isKandiProduct && (
             <div className="flex flex-col gap-y-2 py-2">
                 <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
@@ -289,15 +281,11 @@ export default function ProductActions({
                     placeholder="e.g. PLUR, VIBE"
                     value={customWord}
                     onChange={(e) => {
-                        if (e.target.value.length <= 12) {
-                            setCustomWord(e.target.value.toUpperCase())
-                        }
+                        if (e.target.value.length <= 12) setCustomWord(e.target.value.toUpperCase())
                     }}
                     disabled={isAdding}
                 />
-                <span className="text-xs text-ui-fg-subtle text-right">
-                    {customWord.length} / 12 characters
-                </span>
+                <span className="text-xs text-ui-fg-subtle text-right">{customWord.length} / 12</span>
             </div>
         )}
 
@@ -311,9 +299,7 @@ export default function ProductActions({
             <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
             
             {pattern.length === 0 && (
-                <p className="text-xs text-rose-500 mt-2">
-                    * Please add at least one bead to your design.
-                </p>
+                <p className="text-xs text-rose-500 mt-2">* Please add at least one bead.</p>
             )}
         </div>
         
@@ -325,15 +311,8 @@ export default function ProductActions({
           variant="primary"
           className="w-full h-10"
           isLoading={isAdding}
-          data-testid="add-product-button"
         >
-          {!selectedVariant
-            ? "Select variant"
-            : !inStock
-            ? "Out of stock"
-            : pattern.length === 0
-            ? "Add Beads to Design"
-            : "Add to cart"}
+          {!selectedVariant ? "Select variant" : !inStock ? "Out of stock" : pattern.length === 0 ? "Add Beads to Design" : "Add to cart"}
         </Button>
         
         <MobileActions
@@ -350,16 +329,9 @@ export default function ProductActions({
       </div>
 
       <Modal isOpen={showSizeGuide} close={() => setShowSizeGuide(false)} size="large">
-         <Modal.Title>
-            Simple Sizing Guide
-         </Modal.Title>
-         <Modal.Body>
-            <div className="w-full pb-6">
-                <KandiSizingGuide />
-            </div>
-         </Modal.Body>
+         <Modal.Title>Simple Sizing Guide</Modal.Title>
+         <Modal.Body><div className="w-full pb-6"><KandiSizingGuide /></div></Modal.Body>
       </Modal>
-
     </>
   )
 }
