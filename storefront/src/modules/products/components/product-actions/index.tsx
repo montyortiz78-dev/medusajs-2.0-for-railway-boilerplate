@@ -67,13 +67,41 @@ export default function ProductActions({
     }, {})
   }
 
-  // Pre-select options if only 1 variant exists
+  // PRE-SELECTION LOGIC
   useEffect(() => {
-    if (product.variants?.length === 1) {
-      const variantOptions = optionsAsKeymap(product.variants[0].options)
-      setOptions(variantOptions ?? {})
+    // If options are already selected, do nothing
+    if (Object.keys(options).length > 0) return
+
+    // Define your preferred defaults here
+    const PREFERRED_DEFAULTS: Record<string, string> = {
+      "Size": "Small",
+      "Type": "Single Bracelet", 
+      "Rows": "1",
+      "Stitch": "Single"
     }
-  }, [product.variants])
+
+    const defaultOptions: Record<string, string> = {}
+
+    // Loop through all available Product Options (Size, Type, Rows, etc.)
+    product.options?.forEach((opt) => {
+      if (!opt.title || !opt.values || opt.values.length === 0) return
+
+      // 1. Check if our preferred value exists for this option
+      const preferredVal = PREFERRED_DEFAULTS[opt.title]
+      const hasPreferred = opt.values.some((v) => v.value === preferredVal)
+
+      if (hasPreferred) {
+        // If "Small" exists in "Size", select it
+        defaultOptions[opt.title] = preferredVal
+      } else {
+        // 2. Fallback: Select the FIRST value available (e.g. if "Small" is OOS or missing)
+        defaultOptions[opt.title] = opt.values[0].value
+      }
+    })
+
+    // Apply the defaults
+    setOptions(defaultOptions)
+  }, [product.options, product.variants])
 
   // Find the specific variant ID based on selected options
   const selectedVariant = useMemo(() => {
