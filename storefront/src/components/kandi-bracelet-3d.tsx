@@ -2,7 +2,7 @@
 
 import { useRef, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, Float } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows, Float, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 const COLOR_MAP: Record<string, string> = {
@@ -30,6 +30,17 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
   const hex = getColorHex(color);
   const isNeon = color && (color.includes('neon') || color.includes('glow'));
 
+  // UPDATED: Now points to the generic filenames
+  const textures = useTexture({
+    normalMap: '/textures/plastic/bead-normal.jpg',
+    roughnessMap: '/textures/plastic/bead-roughness.jpg',
+  });
+
+  // Tweak these settings if the beads look too "scratched"
+  textures.normalMap.repeat.set(3, 1);
+  textures.normalMap.wrapS = THREE.RepeatWrapping;
+  textures.normalMap.wrapT = THREE.RepeatWrapping;
+
   return (
     <group position={position} rotation={rotation}>
       <mesh castShadow receiveShadow>
@@ -42,10 +53,18 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
 
         <meshPhysicalMaterial 
           color={hex}
-          roughness={0.1}
+          
+          // Texture Maps
+          normalMap={textures.normalMap}
+          normalScale={new THREE.Vector2(0.4, 0.4)} // Lower = smoother, Higher = rougher
+          roughnessMap={textures.roughnessMap}
+          
+          // PBR Material Settings
+          roughness={1.0}        
           metalness={0.0}
-          clearcoat={1.0}
+          clearcoat={1.0}        // High gloss topcoat
           clearcoatRoughness={0.1}
+          
           emissive={hex}
           emissiveIntensity={isNeon ? 0.2 : 0}
         />
@@ -61,8 +80,9 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
     if (!pattern || pattern.length === 0) return { beads: [], radius: 2.2 };
 
     const normalizedPattern = pattern.map(p => {
+        // Handle both simple strings and objects
         if (typeof p === 'string') return { type: 'pony', color: p };
-        return p;
+        return { type: p.type || 'pony', color: p.color };
     });
 
     const totalBeadWidth = normalizedPattern.reduce((sum, bead) => sum + (BEAD_WIDTHS[bead.type] || 0.6) + BEAD_GAP, 0);
@@ -75,33 +95,32 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
     const totalHeight = (rows - 1) * ROW_HEIGHT;
     const startY = -totalHeight / 2;
 
-    // Detect if we should stagger the beads (Peyote/Brick stitch)
     const isStaggered = ['peyote', 'brick'].includes(stitch.toLowerCase());
 
     for (let r = 0; r < rows; r++) {
         const rowZ = startY + (r * ROW_HEIGHT); 
-        
-        // If staggered, offset every other row by half a bead (0.5)
         const patternShift = (isStaggered && r % 2 !== 0) ? 0.5 : 0;
 
         normalizedPattern.forEach((bead, i) => {
-            // Apply shift to angle calculation
             const shiftedI = i + patternShift;
             const angle = (shiftedI / normalizedPattern.length) * Math.PI * 2;
             
             const x = Math.cos(angle) * finalRadius;
             const y = Math.sin(angle) * finalRadius;
             
+            // Chaos/Jitter Logic
             const jitterX = (Math.random() - 0.5) * 0.1; 
             const jitterY = (Math.random() - 0.5) * 0.1; 
             const jitterZ = (Math.random() - 0.5) * 0.1;
+            // Random rotation twist
+            const twist = (Math.random() - 0.5) * 0.5; 
 
             allBeads.push({ 
                 ...bead, 
                 x, 
                 y, 
                 z: rowZ, 
-                rotZ: angle + Math.PI / 2, 
+                rotZ: angle + Math.PI / 2 + twist, 
                 jitterRot: [jitterX, jitterY, jitterZ] 
             });
         });
@@ -123,7 +142,7 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
 
   return (
     <group ref={groupRef}>
-      {/* Strings */}
+      {/* Strings (Elastic Cord) */}
       {range(rows).map(r => {
           const ROW_HEIGHT = 0.55;
           const totalHeight = (rows - 1) * ROW_HEIGHT;
@@ -154,8 +173,6 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
   );
 }
 
-// ... CameraRig ... (omitted for brevity, unchanged)
-
 function CameraRig({ captureMode }: { captureMode: boolean }) {
   const { camera } = useThree();
   useFrame(() => {
@@ -177,10 +194,13 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
         gl={{ preserveDrawingBuffer: true }} 
         id="kandi-canvas"
       >
-        <ambientLight intensity={0.8} />
+        <ambientLight intensity={0.5} />
         <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={1.5} castShadow />
         <pointLight position={[-10, -5, 5]} intensity={0.5} color="white" />
         
+        {/* Studio Lighting Environment */}
+        <Environment preset="city" />
+
         <Float 
             speed={captureMode ? 0 : 3} 
             rotationIntensity={captureMode ? 0 : 0.2} 
@@ -193,7 +213,6 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
         <CameraRig captureMode={captureMode} />
 
         <ContactShadows position={[0, -5, 0]} opacity={0.3} scale={15} blur={2.5} far={5} />
-        <Environment preset="city" />
         
         <OrbitControls enableZoom={false} enabled={!captureMode} />
       </Canvas>
