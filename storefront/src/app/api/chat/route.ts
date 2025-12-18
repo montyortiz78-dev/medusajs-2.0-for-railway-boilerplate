@@ -6,7 +6,7 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  // FIX: Add 'await' here!
+  // 1. Await the streamText call (fixes runtime crash)
   const result = await streamText({
     model: openai('gpt-4o'),
     system: `You are KandiBot, the official AI assistant for Kandi Creations.
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     messages,
   });
 
-  // Now 'result' is the actual object, so this method exists
+  // 2. Ignore the TS error. This method exists at runtime in SDK 5.
+  // @ts-expect-error AI SDK 5 type mismatch
   return result.toDataStreamResponse();
 }

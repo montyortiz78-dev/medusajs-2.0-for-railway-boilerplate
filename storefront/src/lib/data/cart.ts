@@ -30,14 +30,14 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
 
     try {
       const regions = await listRegions()
-      const region = regions.find((r) => 
-        r.countries?.some((c) => c.iso_2 === countryCode)
+      const region = regions?.find((r: HttpTypes.StoreRegion) => 
+        r.countries?.some((c: HttpTypes.StoreRegionCountry) => c.iso_2 === countryCode)
       )
       
       // Fallback: If no match, use the first region available
       if (region) {
         regionId = region.id
-      } else if (regions.length > 0) {
+      } else if (regions && regions.length > 0) {
         regionId = regions[0].id
       }
     } catch (e) {
@@ -342,4 +342,38 @@ export async function enrichLineItems(
 ) {
   if (!items) return []
   return items
+}
+
+export async function updateRegion(countryCode: string, currentPath: string) {
+  const cartId = getCartId()
+  
+  // Fetch regions to find the correct region_id for the new country
+  const regions = await listRegions()
+  
+  // FIX: Explicitly type 'r' and 'c'
+  const region = regions?.find((r: HttpTypes.StoreRegion) =>
+    r.countries?.some((c: HttpTypes.StoreRegionCountry) => c.iso_2 === countryCode)
+  )
+
+  if (!region) {
+    throw new Error(`Region not found for country code: ${countryCode}`)
+  }
+
+  // If a cart exists, update its region so the currency/tax adjusts
+  if (cartId) {
+    try {
+      await sdk.store.cart.update(
+        cartId,
+        { region_id: region.id },
+        {},
+        getMedusaHeaders(["cart"])
+      )
+      revalidateTag("cart")
+    } catch (e) {
+      return medusaError(e)
+    }
+  }
+
+  // Redirect user to the new country path
+  redirect(`/${countryCode}${currentPath}`)
 }
