@@ -1,11 +1,6 @@
-import { Metadata } from "next"
+import { KandiProvider } from "@lib/context/kandi-context"
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
-
-export const metadata: Metadata = {
-  title: "Create Kandi",
-  description: "Generate your own custom Phygital Kandi bracelet with AI.",
-}
 
 export default function CreateLayout({
   children,
@@ -13,12 +8,10 @@ export default function CreateLayout({
   children: React.ReactNode
 }) {
   return (
-    <>
+    <KandiProvider>
       <Nav />
-      {/* We render the children (the generator page) directly here. 
-          The page itself handles the full-screen background. */}
-      {children}
+      <main className="relative">{children}</main>
       <Footer />
-    </>
+    </KandiProvider>
   )
 }

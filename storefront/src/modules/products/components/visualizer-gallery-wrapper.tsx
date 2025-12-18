@@ -10,7 +10,8 @@ type VisualizerGalleryWrapperProps = {
 }
 
 const VisualizerGalleryWrapper = ({ images }: VisualizerGalleryWrapperProps) => {
-  const { pattern, designConfig } = useKandiContext()
+  // Pull isCapturing from context
+  const { pattern, designConfig, isCapturing } = useKandiContext()
 
   const showVisualizer = pattern.length > 0
 
@@ -20,9 +21,10 @@ const VisualizerGalleryWrapper = ({ images }: VisualizerGalleryWrapperProps) => 
          <div className="sticky top-24">
             <KandiVisualizer 
                 pattern={pattern} 
-                // CRITICAL: Must use designConfig.rows, NOT '1'
                 rows={designConfig.rows} 
                 stitch={designConfig.stitch}
+                // Pass the capture mode to trigger the camera snap
+                captureMode={isCapturing} 
             />
          </div>
       ) : (

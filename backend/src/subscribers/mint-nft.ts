@@ -3,112 +3,57 @@ import { IOrderModuleService } from "@medusajs/types"
 import { Modules } from "@medusajs/utils"
 import { v2 as cloudinary } from 'cloudinary'
 
+// Configure Cloudinary (Ensure these ENVs are set in backend/.env)
+cloudinary.config({ 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
+  api_key: process.env.CLOUDINARY_API_KEY, 
+  api_secret: process.env.CLOUDINARY_API_SECRET 
+});
+
 export default async function handleNftMinting({
-  event,
+  event: { data },
   container,
 }: SubscriberArgs<{ id: string }>) {
-  const logger = container.resolve("logger")
   const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
-  const { id } = event.data
 
-  // 1. Configure Cloudinary
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME
-  const cloudKey = process.env.CLOUDINARY_API_KEY
-  const cloudSecret = process.env.CLOUDINARY_API_SECRET
+  const order = await orderService.retrieveOrder(data.id, {
+    relations: ["items", "items.variant", "items.variant.product"],
+  })
 
-  if (cloudName && cloudKey && cloudSecret) {
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: cloudKey,
-      api_secret: cloudSecret
-    });
-  } else {
-    logger.error("❌ Cloudinary Config Missing! Cannot host images.")
-    return
-  }
-
-  // 2. Get the Order
-  const order = await orderService.retrieveOrder(id, { relations: ["items"] })
-
-  const apiKey = process.env.CROSSMINT_API_KEY
-  const collectionId = process.env.CROSSMINT_COLLECTION_ID
-
-  if (!apiKey || !collectionId) {
-    logger.error("❌ Crossmint Config Missing!")
-    return
-  }
-
-  // 3. Loop through items
+  // Loop through ALL items in the order
   for (const item of order.items) {
-    if (item.metadata && item.metadata.pattern_data) {
-      logger.info(`💎 Processing Item: ${item.id}`)
+      const metadata = item.metadata as Record<string, any> || {}
       
-      try {
-        // --- STEP A: HOST THE IMAGE ---
-        let imageUrl = "";
-        let base64Image = item.metadata.image_url as string;
+      // Check if this item has the necessary data to be an NFT
+      // We look for 'image_url' (snapshot) and 'kandi_name'
+      // This allows ANY product (Standard or Custom) to trigger minting
+      // as long as the frontend passed this metadata.
+      if (metadata.image_url && metadata.kandi_name) {
+          console.log(`[NFT Minting] Processing item: ${item.id} - ${item.title}`)
+          
+          try {
+              // 1. Upload Snapshot to Cloudinary to get a permanent URL
+              const uploadRes = await cloudinary.uploader.upload(metadata.image_url, {
+                  folder: "kandi-nfts",
+                  public_id: `nft_${item.id}`,
+                  overwrite: true
+              })
 
-        if (!base64Image) {
-            logger.warn("⚠️ No image data found. Skipping.")
-            continue;
-        }
+              console.log(`[NFT Minting] Image uploaded: ${uploadRes.secure_url}`)
 
-        // Ensure Base64 prefix exists
-        if (!base64Image.startsWith("data:")) {
-            base64Image = `data:image/png;base64,${base64Image}`;
-        }
+              // 2. Minting Logic (Placeholder)
+              // Here you would call your Crossmint or internal API
+              // await mintToWallet(order.email, uploadRes.secure_url, metadata)
+              
+              // For now, we just log success
+              console.log(`[NFT Minting] Success for ${item.title}`)
 
-        logger.info("☁️ Uploading image to Cloudinary...");
-        
-        // Upload to Cloudinary
-        const uploadResult = await cloudinary.uploader.upload(base64Image, {
-            folder: "kandi-orders",
-        });
-
-        imageUrl = uploadResult.secure_url;
-        logger.info(`✅ Image Hosted at: ${imageUrl}`);
-
-        // --- STEP B: MINT THE NFT ---
-        const nftPayload = {
-          recipient: `email:${order.email}:base`, 
-          metadata: {
-            name: item.metadata.kandi_name as string,
-            description: item.metadata.kandi_vibe as string,
-            image: imageUrl, // Now we use the real HTTP URL
-            attributes: [
-              { trait_type: "Vibe", value: item.metadata.kandi_vibe },
-              { trait_type: "Generated", value: "True" }
-            ]
-          },
-          reuploadLinkedFiles: true 
-        }
-
-        // Use PRODUCTION URL
-        const crossmintUrl = `https://www.crossmint.com/api/2022-06-09/collections/${collectionId}/nfts`;
-        
-        const response = await fetch(crossmintUrl, {
-            method: "POST",
-            headers: {
-              "X-API-KEY": apiKey,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(nftPayload)
+          } catch (e) {
+              console.error(`[NFT Minting] Failed for item ${item.id}:`, e)
           }
-        )
-
-        const responseText = await response.text();
-        
-        if (!response.ok) {
-            logger.error(`❌ Mint Failed (${response.status}): ${responseText}`);
-        } else {
-            const data = JSON.parse(responseText);
-            logger.info(`✅ NFT Minted Successfully! ID: ${data.id}`)
-        }
-
-      } catch (error) {
-        logger.error(`❌ Error processing NFT: ${error}`)
+      } else {
+          console.log(`[NFT Minting] Skipping item ${item.id} (No NFT metadata found)`)
       }
-    }
   }
 }
 

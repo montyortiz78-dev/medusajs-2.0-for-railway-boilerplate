@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useMemo, Suspense } from 'react';
+import { useRef, useMemo, Suspense, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, Float, useTexture } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows, Float, useTexture, Bounds, useBounds } from '@react-three/drei';
 import * as THREE from 'three';
 
 const COLOR_MAP: Record<string, string> = {
@@ -18,6 +18,8 @@ const getColorHex = (colorName: string) => {
     return COLOR_MAP[colorName] || '#cccccc';
 };
 
+// Base dimensions for a standard Pony Bead
+const BASE_BEAD_SIZE = 0.6; 
 const BEAD_WIDTHS: Record<string, number> = {
   "pony": 0.6, "star": 0.65, "heart": 0.55, "flower": 0.55, "skull": 0.7
 };
@@ -30,13 +32,11 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
   const hex = getColorHex(color);
   const isNeon = color && (color.includes('neon') || color.includes('glow'));
 
-  // Load PBR Textures
   const textures = useTexture({
     normalMap: '/textures/plastic/bead-normal.jpg',
     roughnessMap: '/textures/plastic/bead-roughness.jpg',
   });
 
-  // Texture configuration for plastic
   textures.normalMap.repeat.set(3, 1);
   textures.normalMap.wrapS = THREE.RepeatWrapping;
   textures.normalMap.wrapT = THREE.RepeatWrapping;
@@ -53,19 +53,13 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
 
         <meshPhysicalMaterial 
           color={hex}
-          
-          // Texture Maps
           normalMap={textures.normalMap}
-          normalScale={new THREE.Vector2(1, 1)} // Boost intensity to be visible
+          normalScale={new THREE.Vector2(1, 1)} 
           roughnessMap={textures.roughnessMap}
-          
-          // PBR Material Settings
           roughness={1.0}        
           metalness={0.0}
-          clearcoat={0.6}        // Glossy topcoat
+          clearcoat={0.6}        
           clearcoatRoughness={0.1}
-          
-          // Emission for neon
           emissive={hex}
           emissiveIntensity={isNeon ? 0.2 : 0}
         />
@@ -74,22 +68,20 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
   );
 }
 
-function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { pattern: any[], captureMode: boolean, rows?: number, stitch?: string }) {
+function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[], rows?: number, stitch?: string }) {
   const groupRef = useRef<THREE.Group>(null);
 
   const { beads, radius } = useMemo(() => {
-    // 1. Handle empty pattern
     if (!pattern || pattern.length === 0) return { beads: [], radius: 2.8 };
 
-    // 2. Normalize pattern to objects
     let normalizedPattern = pattern.map(p => {
         if (typeof p === 'string') return { type: 'pony', color: p };
         return { type: p.type || 'pony', color: p.color };
     });
 
-    // 3. FORCE MINIMUM BEAD COUNT (~24)
     const TARGET_MIN_BEADS = 24; 
     
+    // Ensure we have enough beads to form a ring
     if (normalizedPattern.length < TARGET_MIN_BEADS) {
         const repeatCount = Math.ceil(TARGET_MIN_BEADS / normalizedPattern.length);
         const newPattern = [];
@@ -99,41 +91,54 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
         normalizedPattern = newPattern.slice(0, Math.max(normalizedPattern.length * repeatCount, TARGET_MIN_BEADS));
     }
 
-    // 4. Calculate Radius based on the NEW count
+    // 1. Calculate Radius
     const totalBeadWidth = normalizedPattern.reduce((sum, bead) => sum + (BEAD_WIDTHS[bead.type] || 0.6) + BEAD_GAP, 0);
     const calculatedRadius = totalBeadWidth / (2 * Math.PI);
     const finalRadius = Math.max(calculatedRadius, 2.6); 
 
     const allBeads: any[] = [];
-    const ROW_HEIGHT = 0.55; 
     
-    const totalHeight = (rows - 1) * ROW_HEIGHT;
-    const startY = -totalHeight / 2;
+    // 2. STITCH GEOMETRY LOGIC
+    const stitchMode = stitch.toLowerCase();
+    
+    let verticalSpacing = 0.55; // Default Ladder height
+    let stagger = false;
 
-    const isStaggered = ['peyote', 'brick'].includes(stitch.toLowerCase());
+    // Peyote / Brick: Beads nest between the beads of the previous row
+    // This reduces vertical height (sin(60deg) packing) and adds a horizontal shift
+    if (stitchMode.includes('peyote') || stitchMode.includes('brick')) {
+        verticalSpacing = 0.55 * 0.85; // Tighter vertical packing (nesting)
+        stagger = true;
+    }
+
+    const totalHeight = (rows - 1) * verticalSpacing;
+    const startZ = -totalHeight / 2;
 
     for (let r = 0; r < rows; r++) {
-        const rowZ = startY + (r * ROW_HEIGHT); 
-        const patternShift = (isStaggered && r % 2 !== 0) ? 0.5 : 0;
+        const rowZ = startZ + (r * verticalSpacing); 
+        
+        // Stagger every odd row for Peyote
+        const isOddRow = r % 2 !== 0;
+        const rowPatternShift = (stagger && isOddRow) ? 0.5 : 0;
 
         normalizedPattern.forEach((bead, i) => {
-            const shiftedI = i + patternShift;
+            const shiftedI = i + rowPatternShift;
             const angle = (shiftedI / normalizedPattern.length) * Math.PI * 2;
             
             const x = Math.cos(angle) * finalRadius;
             const y = Math.sin(angle) * finalRadius;
             
-            // Chaos/Jitter Logic for Realism
-            const jitterX = (Math.random() - 0.5) * 0.1; 
-            const jitterY = (Math.random() - 0.5) * 0.1; 
-            const jitterZ = (Math.random() - 0.5) * 0.1;
-            const twist = (Math.random() - 0.5) * 0.5; 
+            // Random jitter for realism
+            const jitterX = (Math.random() - 0.5) * 0.05; 
+            const jitterY = (Math.random() - 0.5) * 0.05; 
+            const jitterZ = (Math.random() - 0.5) * 0.05;
+            const twist = (Math.random() - 0.5) * 0.3; 
 
             allBeads.push({ 
                 ...bead, 
                 x, 
                 y, 
-                z: rowZ, 
+                z: rowZ, // Uses our calculated stitch height
                 rotZ: angle + Math.PI / 2 + twist, 
                 jitterRot: [jitterX, jitterY, jitterZ] 
             });
@@ -145,22 +150,22 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
 
   useFrame((state, delta) => {
     if (groupRef.current) {
-      if (captureMode) {
-        groupRef.current.rotation.set(0, 0, 0);
-      } else {
         groupRef.current.rotation.z -= delta * 0.1;
         groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.15;
-      }
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Strings (Elastic Cord) */}
+      {/* Visual Strings connecting the beads */}
       {range(rows).map(r => {
-          const ROW_HEIGHT = 0.55;
-          const totalHeight = (rows - 1) * ROW_HEIGHT;
-          const zPos = -totalHeight / 2 + (r * ROW_HEIGHT);
+          // Recalculate spacing for strings to match beads
+          const stitchMode = stitch.toLowerCase();
+          let vSpacing = 0.55;
+          if (stitchMode.includes('peyote') || stitchMode.includes('brick')) vSpacing = 0.55 * 0.85;
+          
+          const totalHeight = (rows - 1) * vSpacing;
+          const zPos = -totalHeight / 2 + (r * vSpacing);
           
           return (
             <mesh key={`string-${r}`} position={[0, 0, zPos]}>
@@ -187,23 +192,41 @@ function BraceletRing({ pattern, captureMode, rows = 1, stitch = 'ladder' }: { p
   );
 }
 
-function CameraRig({ captureMode }: { captureMode: boolean }) {
-  const { camera } = useThree();
-  useFrame(() => {
-    if (captureMode) {
-      camera.position.set(0, 0, 9);
-      camera.lookAt(0, 0, 0);
-      camera.updateProjectionMatrix();
+// === SNAPSHOT MANAGER ===
+function SnapshotManager({ captureMode, controlsRef }: { captureMode: boolean, controlsRef: any }) {
+  const api = useBounds()
+  const { camera } = useThree()
+
+  useEffect(() => {
+    if (captureMode && controlsRef.current) {
+        const controls = controlsRef.current
+        
+        controls.object.position.set(0, -12, 8) 
+        controls.target.set(0, 0, 0)
+        controls.object.up.set(0, 0, 1) 
+        
+        controls.update()
+
+        if (api) {
+            setTimeout(() => {
+                api.refresh().fit()
+            }, 50) 
+        }
+    } else {
+        if (api) api.refresh().fit()
     }
-  });
-  return null;
+  }, [captureMode, api, camera, controlsRef])
+
+  return null
 }
 
 export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1, stitch = 'ladder' }: { pattern: any[], captureMode?: boolean, rows?: number, stitch?: string }) {
+  const controlsRef = useRef<any>(null)
+
   return (
     <div className="w-full h-[400px] cursor-grab active:cursor-grabbing">
       <Canvas 
-        camera={{ position: [0, 0, 9], fov: 45 }} 
+        camera={{ position: [0, -10, 10], fov: 45 }} 
         shadows 
         gl={{ preserveDrawingBuffer: true }} 
         id="kandi-canvas"
@@ -214,23 +237,29 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
         
         <Environment preset="city" />
 
-        <Float 
-            speed={captureMode ? 0 : 3} 
-            rotationIntensity={captureMode ? 0 : 0.2} 
-            floatIntensity={captureMode ? 0 : 0.2}
-            floatingRange={captureMode ? [0,0] : undefined}
-        >
-           {/* Suspense is REQUIRED for useTexture to work without crashing */}
-           <Suspense fallback={null}>
-              <BraceletRing pattern={pattern} captureMode={captureMode} rows={rows} stitch={stitch} />
-           </Suspense>
-        </Float>
-
-        <CameraRig captureMode={captureMode} />
+        <Suspense fallback={null}>
+           <Bounds observe margin={1.2}>
+              <Float 
+                  speed={captureMode ? 0 : 3} 
+                  rotationIntensity={captureMode ? 0 : 0.2} 
+                  floatIntensity={captureMode ? 0 : 0.2}
+                  floatingRange={captureMode ? [0,0] : undefined}
+              >
+                  <BraceletRing pattern={pattern} rows={rows} stitch={stitch} />
+              </Float>
+              
+              <SnapshotManager captureMode={captureMode} controlsRef={controlsRef} />
+           </Bounds>
+        </Suspense>
 
         <ContactShadows position={[0, -5, 0]} opacity={0.3} scale={15} blur={2.5} far={5} />
         
-        <OrbitControls enableZoom={false} enabled={!captureMode} />
+        <OrbitControls 
+            ref={controlsRef}
+            enableZoom={true} 
+            enabled={!captureMode} 
+            makeDefault 
+        />
       </Canvas>
     </div>
   );

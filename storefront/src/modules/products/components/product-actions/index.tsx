@@ -26,23 +26,16 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
-// CONFIG: Allowed Keys (Case Insensitive)
+// Config for parsing option names
 const VISUAL_CONFIG = {
-    // Only these Option Titles will trigger row changes
     ROWS_KEYS: ["rows", "row", "tiers", "layers", "row count", "number of rows"],
-    // Only these Option Titles will trigger stitch changes
     STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave"],
 }
 
 const STITCH_MAPPING: Record<string, string> = {
-  "Ladder": "ladder",
-  "Flat": "ladder", 
-  "Multi (Peyote)": "peyote",
-  "Peyote": "peyote",
-  "Brick": "brick",
-  "Flower": "flower",
-  "X-base": "x-base",
-  "Single": "ladder", 
+  "Ladder": "ladder", "Flat": "ladder", "Multi (Peyote)": "peyote",
+  "Peyote": "peyote", "Brick": "brick", "Flower": "flower",
+  "X-base": "x-base", "Single": "ladder", 
 }
 
 const KANDI_PRODUCT_HANDLE = "custom-ai-kandi"
@@ -58,7 +51,7 @@ export default function ProductActions({
   const [showSizeGuide, setShowSizeGuide] = useState(false)
 
   const countryCode = useParams().countryCode as string
-  const { pattern, setPattern, setDesignConfig } = useKandiContext()
+  const { pattern, setPattern, setDesignConfig, setIsCapturing } = useKandiContext()
 
   const isKandiProduct = product.handle === KANDI_PRODUCT_HANDLE
   const actionsRef = useRef<HTMLDivElement>(null)
@@ -72,17 +65,9 @@ export default function ProductActions({
       return acc
     }, {})
   }
-  // DEBUGGING: Add this right after hooks
-  console.log("ProductActions Mounted", { 
-      handle: product.handle, 
-      expected: KANDI_PRODUCT_HANDLE,
-      isMatch: product.handle === KANDI_PRODUCT_HANDLE 
-  });
 
   const selectedVariant = useMemo(() => {
-    if (!product.variants || product.variants.length === 0) {
-      return undefined
-    }
+    if (!product.variants || product.variants.length === 0) return undefined
     return product.variants.find((v) => {
       const variantOptions = optionsAsKeymap(v.options)
       return isEqual(variantOptions, options)
@@ -94,11 +79,8 @@ export default function ProductActions({
     if (Object.keys(options).length === product.options?.length) return
 
     const PREFERRED_DEFAULTS: Record<string, string> = {
-      "Size": "Small",
-      "Type": "Single Bracelet",
-      "Rows": "1",
-      "Stitch": "Single", 
-      "Stitch Type": "Single"
+      "Size": "Small", "Type": "Single Bracelet",
+      "Rows": "1", "Stitch": "Single", "Stitch Type": "Single"
     }
 
     const newOptions = { ...options }
@@ -122,20 +104,14 @@ export default function ProductActions({
       }
     })
 
-    if (hasChanges) {
-      setOptions(newOptions)
-    }
+    if (hasChanges) setOptions(newOptions)
   }, [product.options, options])
 
-  // === VISUALIZER UPDATE LOGIC (FIXED) ===
+  // === VISUALIZER UPDATE LOGIC ===
   useEffect(() => {
-    // REMOVE THIS LINE TEMPORARILY:
-    // if (!isKandiProduct) return
-
-    // Helper: Find value by checking against the Allowed Keys list
     const getOptionValue = (allowedKeys: string[]) => {
       const foundKey = Object.keys(options).find(key => 
-        allowedKeys.includes(key.toLowerCase())
+        allowedKeys.some(k => key.toLowerCase().includes(k))
       )
       return foundKey ? options[foundKey] : null
     }
@@ -145,20 +121,13 @@ export default function ProductActions({
 
     // 1. Parse Rows
     const selectedRowsVal = getOptionValue(VISUAL_CONFIG.ROWS_KEYS)
-    
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase()
       const match = valStr.match(/\d+/)
-      
-      if (match) {
-        rows = parseInt(match[0], 10)
-      } else if (valStr.includes("double")) {
-        rows = 2
-      } else if (valStr.includes("triple")) {
-        rows = 3
-      } else if (valStr.includes("quad")) {
-        rows = 4
-      }
+      if (match) rows = parseInt(match[0], 10)
+      else if (valStr.includes("double")) rows = 2
+      else if (valStr.includes("triple")) rows = 3
+      else if (valStr.includes("quad")) rows = 4
     }
 
     // 2. Parse Stitch
@@ -169,37 +138,22 @@ export default function ProductActions({
 
     // 3. Metadata Override
     if (selectedVariant?.metadata) {
-      if (selectedVariant.metadata.kandi_rows) {
-        rows = Number(selectedVariant.metadata.kandi_rows)
-      }
-      if (selectedVariant.metadata.kandi_stitch) {
-        stitch = String(selectedVariant.metadata.kandi_stitch)
-      }
+      if (selectedVariant.metadata.kandi_rows) rows = Number(selectedVariant.metadata.kandi_rows)
+      if (selectedVariant.metadata.kandi_stitch) stitch = String(selectedVariant.metadata.kandi_stitch)
     }
-
-    // DEBUG LOG: Look at your Console to see what is calculated
-    console.log("Visualizer Calc:", { 
-        optionMap: options,
-        foundRowsVal: selectedRowsVal, 
-        calculatedRows: rows, 
-        metaRows: selectedVariant?.metadata?.kandi_rows 
-    })
 
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
     })
 
-  }, [options, selectedVariant, isKandiProduct, setDesignConfig])
+  }, [options, selectedVariant, setDesignConfig]) 
 
   const setOptionValue = (title: string, value: string) => {
-    setOptions((prev) => ({
-      ...prev,
-      [title]: value,
-    }))
+    setOptions((prev) => ({ ...prev, [title]: value }))
   }
 
-  // Snapshot Logic
+  // === SNAPSHOT & ADD TO CART ===
   const captureCanvasImage = (): string => {
     try {
       const canvasContainer = document.getElementById("kandi-canvas")
@@ -213,17 +167,29 @@ export default function ProductActions({
 
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
-    if (pattern.length === 0) return null
+    if (isKandiProduct && pattern.length === 0) return null
 
     setIsAdding(true)
+
+    // 1. Trigger Camera Snap
+    setIsCapturing(true)
+    // 2. Wait for transition
+    await new Promise(resolve => setTimeout(resolve, 600))
+    // 3. Capture
     const imageUrl = captureCanvasImage()
+    // 4. Reset
+    setIsCapturing(false)
 
     const metadata = {
-          is_custom: true,
+          // Flag as custom only if it's the builder OR if user added beads to a standard product
+          is_custom: isKandiProduct || pattern.length > 0,
           pattern_data: pattern,           
           kandi_pattern: pattern.map(p => typeof p === 'string' ? p : p.color), 
           image_url: imageUrl,             
-          kandi_name: "Custom Kandi Bracelet",
+          
+          // FIX: USE THE ACTUAL PRODUCT TITLE
+          kandi_name: product.title, 
+          
           kandi_vibe: "Creative",
           ...(isKandiProduct && customWord.trim().length > 0 && { custom_word: customWord.trim() })
     }
@@ -246,7 +212,7 @@ export default function ProductActions({
     return false
   }, [selectedVariant])
 
-  const isValid = inStock && selectedVariant && pattern.length > 0
+  const isValid = inStock && selectedVariant && (isKandiProduct ? pattern.length > 0 : true)
 
   return (
     <>
@@ -305,12 +271,12 @@ export default function ProductActions({
             <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-ui-fg-base">Customize Design</span>
                 <span className="text-xs text-ui-fg-subtle">
-                    {pattern.length === 0 ? "(Required)" : `${pattern.length} beads`}
+                    {pattern.length === 0 ? (isKandiProduct ? "(Required)" : "(Optional)") : `${pattern.length} beads`}
                 </span>
             </div>
             <KandiManualBuilder pattern={pattern} setPattern={setPattern} />
             
-            {pattern.length === 0 && (
+            {isKandiProduct && pattern.length === 0 && (
                 <p className="text-xs text-rose-500 mt-2">* Please add at least one bead.</p>
             )}
         </div>
@@ -324,7 +290,7 @@ export default function ProductActions({
           className="w-full h-10"
           isLoading={isAdding}
         >
-          {!selectedVariant ? "Select variant" : !inStock ? "Out of stock" : pattern.length === 0 ? "Add Beads to Design" : "Add to cart"}
+          {!selectedVariant ? "Select variant" : !inStock ? "Out of stock" : (isKandiProduct && pattern.length === 0) ? "Add Beads to Design" : (isAdding ? "Adding to Cart..." : "Add to cart")}
         </Button>
         
         <MobileActions

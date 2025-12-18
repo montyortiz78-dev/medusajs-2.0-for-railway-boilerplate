@@ -4,13 +4,15 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, clx } from "@medusajs/ui";
 import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle } from "@medusajs/icons";
-import KandiVisualizer from '../../../components/kandi-visualizer';
-import KandiManualBuilder, { BeadItem } from '../../../components/kandi-manual-builder';
-import { addToCart } from '../../../lib/data/cart';
+import KandiVisualizer from '@components/kandi-visualizer';
+import KandiManualBuilder, { BeadItem } from '@components/kandi-manual-builder';
+import { addToCart } from '@lib/data/cart';
 import { getCustomKandiProduct } from './actions';
 import { HttpTypes } from "@medusajs/types";
-import KandiGuide from '../../../components/kandi-guide';
-import HeroCanvas from '../../../components/hero-canvas'; // <--- NEW: Import the background
+import KandiGuide from '@components/kandi-guide';
+import HeroCanvas from '@components/hero-canvas';
+import { useKandiContext } from "@lib/context/kandi-context"
+import { isEqual } from "lodash"
 
 // Map AI Color Names to Manual Builder Hex Codes
 const AI_COLOR_MAP: Record<string, string> = {
@@ -22,13 +24,23 @@ const AI_COLOR_MAP: Record<string, string> = {
   'red': '#FF0000', 'white': '#FFFFFF', 'black': '#000000',
 };
 
+// 1. CONFIG: Option Parsing Mappings
+const STITCH_MAPPING: Record<string, string> = {
+  "Ladder": "ladder", "Flat": "ladder", "Multi (Peyote)": "peyote",
+  "Peyote": "peyote", "Brick": "brick", "Flower": "flower",
+  "X-base": "x-base", "Single": "ladder",
+};
+const ROWS_KEYS = ["rows", "row", "tiers", "layers", "row count"];
+const STITCH_KEYS = ["stitch", "pattern", "weave", "type"];
+
 function KandiGeneratorContent() {
   // --- STATE ---
   const [mode, setMode] = useState<'ai' | 'manual'>('ai');
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
   const [vibeStory, setVibeStory] = useState('Custom Design');
-  const [pattern, setPattern] = useState<BeadItem[]>([]);
+  // Local pattern state is synced with Context below
+  // Note: KandiManualBuilder updates global context directly, so we primarily rely on context
   
   const [product, setProduct] = useState<HttpTypes.StoreProduct | null>(null);
   const [productError, setProductError] = useState<string | null>(null);
@@ -44,6 +56,9 @@ function KandiGeneratorContent() {
   const params = useParams();
   const router = useRouter();
 
+  // Use Global Context for Pattern & Visualizer Config
+  const { pattern, setPattern, designConfig, setDesignConfig } = useKandiContext();
+
   // --- INITIALIZATION ---
   useEffect(() => {
     const fetchProduct = async () => {
@@ -54,10 +69,21 @@ function KandiGeneratorContent() {
           setProduct(fetchedProduct);
           
           if (fetchedProduct.variants && fetchedProduct.variants.length > 0) {
-             const firstVariant = fetchedProduct.variants[0];
+             // Try to find default "Small" / "Single" / "1 Row" options first
+             const PREFERRED_DEFAULTS: Record<string, string> = {
+                "Size": "Small", "Type": "Single Bracelet",
+                "Rows": "1", "Stitch": "Ladder"
+             };
+             
              const defaultOpts: Record<string, string> = {};
-             firstVariant.options?.forEach(opt => {
-                 if (opt.option_id) defaultOpts[opt.option_id] = opt.value;
+             fetchedProduct.options?.forEach(opt => {
+                 const pref = PREFERRED_DEFAULTS[opt.title || ""];
+                 const found = opt.values?.find(v => pref && v.value.includes(pref));
+                 if (found) {
+                     defaultOpts[opt.id] = found.value;
+                 } else if (opt.values && opt.values.length > 0) {
+                     defaultOpts[opt.id] = opt.values[0].value;
+                 }
              });
              setOptions(defaultOpts);
           }
@@ -75,16 +101,66 @@ function KandiGeneratorContent() {
   useEffect(() => {
     if (!product || !product.variants) return;
     
+    // Find variant where every selected option matches the variant's options
     const variant = product.variants.find((v) => 
         v.options?.every((opt) => opt.option_id && options[opt.option_id] === opt.value)
     );
     setSelectedVariant(variant);
   }, [product, options]);
 
+  // --- OPTION PARSING: UPDATE 3D VISUALIZER ---
+  useEffect(() => {
+    // This logic runs whenever 'options' changes (e.g. user selects "4 Rows")
+    if (!product || !product.options) return;
+
+    // Helper: Map Option ID back to Title (e.g. "opt_123" -> "Rows")
+    const getOptionTitle = (optId: string) => product.options?.find(o => o.id === optId)?.title || "";
+
+    // Helper: Find value by matching Title against allowed keys
+    const getOptionValue = (allowedKeys: string[]) => {
+        // Iterate over current selected options
+        const foundEntry = Object.entries(options).find(([optId, value]) => {
+            const title = getOptionTitle(optId).toLowerCase();
+            return allowedKeys.some(k => title.includes(k));
+        });
+        return foundEntry ? foundEntry[1] : null;
+    };
+
+    let rows = 1;
+    let stitch = "ladder";
+
+    // A. Parse Rows
+    const selectedRowsVal = getOptionValue(ROWS_KEYS);
+    if (selectedRowsVal) {
+      const valStr = selectedRowsVal.toString().toLowerCase();
+      const match = valStr.match(/\d+/);
+      if (match) {
+        rows = parseInt(match[0], 10);
+      } else if (valStr.includes("double")) rows = 2;
+      else if (valStr.includes("triple")) rows = 3;
+      else if (valStr.includes("quad")) rows = 4;
+    }
+
+    // B. Parse Stitch
+    const selectedStitchVal = getOptionValue(STITCH_KEYS);
+    if (selectedStitchVal) {
+      stitch = STITCH_MAPPING[selectedStitchVal] || selectedStitchVal.toLowerCase();
+    }
+
+    // C. Update Global Context
+    setDesignConfig({
+      rows: Math.max(1, rows),
+      stitch: stitch,
+    });
+
+  }, [options, product, setDesignConfig]);
+
+
   // --- HANDLER: SMART SWITCHING ---
   const handleOptionChange = (optionId: string, value: string) => {
     const newOptions = { ...options, [optionId]: value };
 
+    // Check if a variant exists for this exact combination
     const exactMatch = product?.variants?.some(v => 
         v.options?.every(opt => opt.option_id && newOptions[opt.option_id] === opt.value)
     );
@@ -92,6 +168,7 @@ function KandiGeneratorContent() {
     if (exactMatch) {
         setOptions(newOptions);
     } else {
+        // If not, find the closest valid variant that has the NEW option value
         const validVariant = product?.variants?.find(v => 
             v.options?.some(opt => opt.option_id === optionId && opt.value === value)
         );
@@ -295,7 +372,13 @@ function KandiGeneratorContent() {
                 
                 <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
                     {pattern.length > 0 ? (
-                        <KandiVisualizer pattern={pattern.map(p => p.color)} captureMode={captureMode} />
+                        <KandiVisualizer 
+                            pattern={pattern} 
+                            captureMode={captureMode}
+                            // DYNAMIC PROPS
+                            rows={designConfig.rows} 
+                            stitch={designConfig.stitch}
+                        />
                     ) : (
                         <div className="text-ui-fg-muted text-center flex flex-col items-center">
                             <span className="text-4xl mb-2">📿</span>
