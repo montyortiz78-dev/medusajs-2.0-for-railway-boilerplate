@@ -1,17 +1,21 @@
-import { KandiProvider } from "@lib/context/kandi-context"
+import { Metadata } from "next"
+
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
+import { getBaseURL } from "@lib/util/env"
 
-export default function CreateLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseURL()),
+}
+
+export default async function PageLayout(props: { children: React.ReactNode }) {
   return (
-    <KandiProvider>
+    <>
+      {/* @ts-expect-error Server Component */}
       <Nav />
-      <main className="relative">{children}</main>
+      {props.children}
+      {/* @ts-expect-error Server Component */}
       <Footer />
-    </KandiProvider>
+    </>
   )
 }

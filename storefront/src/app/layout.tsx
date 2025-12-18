@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import "styles/globals.css"
 import { ThemeProvider } from "lib/providers/theme-provider"
+import KandiChatWidget from "@components/kandi-chat-widget"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
@@ -18,7 +19,11 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          <main className="relative">{props.children}</main>
+          <main className="relative">
+            {props.children}
+            {/* Add the Chat Widget here */}
+            <KandiChatWidget /> 
+          </main>
         </ThemeProvider>
       </body>
     </html>
