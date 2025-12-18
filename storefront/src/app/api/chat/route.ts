@@ -6,21 +6,13 @@ export const maxDuration = 30;
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  // 1. Await the streamText call (fixes runtime crash)
+  // 1. Await the streamText result
   const result = await streamText({
     model: openai('gpt-4o'),
-    system: `You are KandiBot, the official AI assistant for Kandi Creations.
-      
-      YOUR EXPERTISE:
-      1. Kandi Culture: You are an expert on PLUR (Peace, Love, Unity, Respect), rave culture, and the history of pony beads.
-      2. The "Phygital" Concept: Explain to users that we are the world's first Phygital Kandi Market.
-      3. Our Tools: "Kandi Visualizer" and "Manual Builder".
-      
-      TONE: Friendly, energetic, inclusive. Use emojis ✌️💖.`,
+    system: 'You are KandiBot, the official AI assistant for Kandi Creations.',
     messages,
   });
 
-  // 2. Ignore the TS error. This method exists at runtime in SDK 5.
-  // @ts-expect-error AI SDK 5 type mismatch
-  return result.toDataStreamResponse();
+  // 2. FIX: Use 'toTextStreamResponse' (The error logs confirmed this method exists)
+  return result.toTextStreamResponse();
 }
