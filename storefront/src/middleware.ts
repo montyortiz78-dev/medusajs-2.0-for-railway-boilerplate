@@ -134,5 +134,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|favicon.ico|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)"],
+  // Add "textures" to the negative lookahead list
+  matcher: ["/((?!api|_next/static|favicon.ico|textures|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)"],
 }

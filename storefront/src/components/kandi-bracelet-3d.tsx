@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, Suspense, useEffect } from 'react';
+import { useRef, useMemo, Suspense, useEffect, useLayoutEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Float, useTexture, Bounds, useBounds } from '@react-three/drei';
 import * as THREE from 'three';
@@ -37,9 +37,18 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
     roughnessMap: '/textures/plastic/bead-roughness.jpg',
   });
 
-  textures.normalMap.repeat.set(3, 1);
-  textures.normalMap.wrapS = THREE.RepeatWrapping;
-  textures.normalMap.wrapT = THREE.RepeatWrapping;
+  // FIX: Configure textures inside an effect, not the render body
+  useLayoutEffect(() => {
+    textures.normalMap.repeat.set(3, 1);
+    textures.normalMap.wrapS = THREE.RepeatWrapping;
+    textures.normalMap.wrapT = THREE.RepeatWrapping;
+    textures.normalMap.needsUpdate = true;
+
+    textures.roughnessMap.repeat.set(3, 1);
+    textures.roughnessMap.wrapS = THREE.RepeatWrapping;
+    textures.roughnessMap.wrapT = THREE.RepeatWrapping;
+    textures.roughnessMap.needsUpdate = true;
+  }, [textures]);
 
   return (
     <group position={position} rotation={rotation}>
