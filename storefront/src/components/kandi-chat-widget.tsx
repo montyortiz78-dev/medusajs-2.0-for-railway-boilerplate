@@ -10,10 +10,8 @@ export default function KandiChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
 
-  // We rely on the text protocol for stability
-  const { messages, status, sendMessage } = useChat({
-    streamProtocol: 'text',
-  } as any);
+  // FIX 1: Use 'sendMessage', not 'append' (matches your installed version)
+  const { messages, status, sendMessage } = useChat();
 
   const isLoading = status === 'streaming' || status === 'submitted';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -31,7 +29,8 @@ export default function KandiChatWidget() {
     const currentInput = input;
     setInput('');
 
-    // Cast payload to 'any' to bypass strict type checking for 'content'
+    // FIX 2: Use 'sendMessage' but pass an OBJECT (not string)
+    // This solves the "in operator" error AND the "is not a function" error.
     await sendMessage({
       role: 'user',
       content: currentInput,
@@ -40,6 +39,7 @@ export default function KandiChatWidget() {
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4 font-sans">
+      
       {isOpen && (
         <div className="w-[350px] h-[500px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-ui-border-base flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-200">
           
@@ -74,7 +74,7 @@ export default function KandiChatWidget() {
                     : "bg-white dark:bg-zinc-800 text-ui-fg-base border border-ui-border-base mr-auto rounded-bl-none"
                 )}
               >
-                {/* FIX: Cast 'm' to 'any' to access 'content' without TS error */}
+                {/* Robust Rendering */}
                 {(m as any).content ? (
                   <span>{(m as any).content}</span>
                 ) : (
@@ -120,12 +120,7 @@ export default function KandiChatWidget() {
         {isOpen ? (
           <X />
         ) : (
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            viewBox="0 0 24 24" 
-            fill="currentColor" 
-            className="w-7 h-7 group-hover:rotate-12 transition-transform"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 group-hover:rotate-12 transition-transform">
             <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.715 6.161.424 1.333.317 2.37.155 3.129a.75.75 0 001.434.353z" clipRule="evenodd" />
           </svg>
         )}
