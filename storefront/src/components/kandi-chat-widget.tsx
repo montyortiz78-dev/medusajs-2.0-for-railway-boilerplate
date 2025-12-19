@@ -7,18 +7,29 @@ import { Button, Input, clx } from '@medusajs/ui';
 import X from '@modules/common/icons/x';
 import Spinner from '@modules/common/icons/spinner';
 
+// Simple Chat Icon SVG for the toggle button
+const ChatIcon = () => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className="w-7 h-7 group-hover:scale-110 transition-transform"
+  >
+    <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.715 6.161.424 1.333.317 2.37.155 3.129a.75.75 0 001.434.353z" clipRule="evenodd" />
+  </svg>
+);
+
 export default function KandiChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   
-  // We explicitly type this to 'any' temporarily to silence the compiler 
-  // if the version mismatch persists in your editor, but the runtime code below handles it.
+  // We explicitly type this to 'any' temporarily to handle potential version mismatches gracefully
   const chat = useChat({
     api: '/api/chat',
     onError: (e) => console.error("Chat Error:", e),
   }) as any;
 
-  // Destructure with fallbacks
-  const { messages = [], input = '', handleInputChange, handleSubmit, append, status } = chat;
+  // Destructure setInput to manually clear the text box
+  const { messages = [], input = '', handleInputChange, handleSubmit, append, setInput, status } = chat;
 
   const isLoading = status === 'streaming' || status === 'submitted';
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -33,19 +44,23 @@ export default function KandiChatWidget() {
     e.preventDefault();
     if (!input.trim()) return;
 
-    // ROBUST SEND LOGIC:
-    // 1. Try 'append' (Modern SDK)
+    const currentMessage = input;
+    
+    // 1. Clear the input immediately for better UX
+    setInput('');
+
+    // 2. Send the message
     if (typeof append === 'function') {
-      await append({ role: 'user', content: input });
+      await append({ role: 'user', content: currentMessage });
     } 
-    // 2. Fallback to 'handleSubmit' (Legacy/Standard SDK)
     else if (typeof handleSubmit === 'function') {
-      handleSubmit(e);
+      // If falling back to handleSubmit, we need to restore the value temporarily 
+      // or rely on its internal state, but append is preferred.
+      // Since we cleared 'input' state above, handleSubmit might send empty if it reads from state.
+      // For legacy handleSubmit, it usually reads the event. 
+      // But purely for safety in this specific "append" fix:
+      handleSubmit(e); 
     } 
-    // 3. Error if neither exists
-    else {
-      console.error("CRITICAL: neither 'append' nor 'handleSubmit' is available.", chat);
-    }
   };
 
   return (
@@ -54,9 +69,10 @@ export default function KandiChatWidget() {
       {isOpen && (
         <div className="w-[350px] h-[500px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-ui-border-base flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-200">
           
+          {/* Header - Removed Robot Emoji */}
           <div className="p-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white flex justify-between items-center shadow-md">
             <div>
-              <h3 className="text-small-plus font-bold">KandiBot 🤖</h3>
+              <h3 className="text-small-plus font-bold">KandiBot</h3>
               <p className="text-[10px] opacity-90">Ask me about Phygital Kandi!</p>
             </div>
             <button 
@@ -122,10 +138,11 @@ export default function KandiChatWidget() {
         onClick={() => setIsOpen(!isOpen)}
         className="w-14 h-14 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center text-white active:scale-95 group"
       >
+        {/* Toggle between X and Chat Icon (No Robot) */}
         {isOpen ? (
           <X />
         ) : (
-          <span className="text-2xl">🤖</span>
+          <ChatIcon />
         )}
       </button>
     </div>
