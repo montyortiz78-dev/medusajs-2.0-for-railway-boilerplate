@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useMemo, Suspense, useEffect, useLayoutEffect } from 'react';
+import { useRef, useMemo, useLayoutEffect, Suspense, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Float, useTexture, Bounds, useBounds } from '@react-three/drei';
 import * as THREE from 'three';
@@ -34,6 +34,7 @@ function usePonyBeadGeometry() {
     const halfH = height / 2;
     const bevel = 0.06;
 
+    // Counter-Clockwise profile for solid normals
     points.push(new THREE.Vector2(holeRadius, -halfH));
     points.push(new THREE.Vector2(outerRadius - bevel, -halfH));
     points.push(new THREE.Vector2(outerRadius, -halfH + bevel));
@@ -122,13 +123,20 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
         normalizedPattern = newPattern.slice(0, Math.max(normalizedPattern.length * repeatCount, TARGET_MIN_BEADS));
     }
 
-    const stitchMode = stitch.toLowerCase();
+    const stitchMode = stitch ? stitch.toLowerCase() : 'ladder';
     
-    // --- SPACE ADJUSTMENT ---
+    // --- RADIUS MULTIPLIERS ---
     let radiusMultiplier = 0.95; 
-    if (stitchMode.includes('x-base')) radiusMultiplier = 2.15; 
-    else if (stitchMode.includes('flat') || stitchMode.includes('multi') || stitchMode.includes('peyote') || stitchMode.includes('brick')) {
+    if (stitchMode.includes('x-base')) {
+        radiusMultiplier = 2.15; 
+    } else if (stitchMode.includes('flat') || stitchMode.includes('brick')) {
         radiusMultiplier = 1.05; 
+    } else if (stitchMode.includes('ladder')) {
+        radiusMultiplier = 1.05; 
+    } else if (stitchMode.includes('multi') || stitchMode.includes('peyote')) {
+        radiusMultiplier = 0.80; 
+    } else if (stitchMode.includes('single')) {
+        radiusMultiplier = 0.80; 
     }
 
     const totalBeadWidth = normalizedPattern.reduce((sum, bead) => sum + (BEAD_WIDTHS[bead.type] || 0.6) + BEAD_GAP, 0);
@@ -138,14 +146,12 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
     const allBeads: any[] = [];
     const generatedStrings: any[] = [];
     
-    // --- FRAMED X-BASE LOGIC ---
+    // --- 1. X-BASE ---
     if (stitchMode.includes('x-base')) {
-        const X_ROW_HEIGHT = 2.2; 
-        const GRID_Y_OFFSET = 0.36; 
-        const OUTER_Y_OFFSET = 0.88; 
-        
-        const circumference = 2 * Math.PI * finalRadius;
-        const beadArc = 0.6 / circumference * Math.PI * 2; 
+        const X_ROW_HEIGHT = 1.60; 
+        const GRID_Y_OFFSET = 0.32; 
+        const OUTER_Y_OFFSET = 0.80; 
+        const beadArc = 0.6 / (2 * Math.PI * finalRadius) * Math.PI * 2; 
         const gridAngleOffset = beadArc * 0.60; 
         const TILT_ANGLE = Math.PI / 4; 
         const angleStep = (Math.PI * 2) / normalizedPattern.length;
@@ -155,32 +161,14 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             const isBottomRow = r === 0;
             const isTopRow = r === rows - 1;
 
-            // Iterate through the ring positions (i)
             for (let i = 0; i < normalizedPattern.length; i++) {
-                // *** ROW SHIFT LOGIC ***
-                // Instead of using 'i' directly, we shift by 'r'
-                // This creates a diagonal/spiral pattern instead of vertical columns
                 const patternIdx = (i + r) % normalizedPattern.length;
                 const bead = normalizedPattern[patternIdx];
-
                 const centerAngle = (i / normalizedPattern.length) * Math.PI * 2;
                 
-                // CENTER BEAD
-                allBeads.push({
-                    ...bead,
-                    x: Math.cos(centerAngle) * finalRadius,
-                    y: Math.sin(centerAngle) * finalRadius,
-                    z: rowCenterZ,
-                    rotZ: centerAngle,
-                    jitterRot: [0, 0, 0],
-                    tilt: 0
-                });
+                allBeads.push({ ...bead, x: Math.cos(centerAngle) * finalRadius, y: Math.sin(centerAngle) * finalRadius, z: rowCenterZ, rotZ: centerAngle, jitterRot: [0, 0, 0], tilt: 0 });
 
-                // Frame inherits from the SHIFTED bead
-                const frameColor = bead.color; 
-                const frameBead = { type: 'pony', color: frameColor };
-
-                // LEGS
+                const frameBead = { type: 'pony', color: bead.color };
                 const tlAngle = centerAngle - gridAngleOffset;
                 allBeads.push({ ...frameBead, x: Math.cos(tlAngle) * finalRadius, y: Math.sin(tlAngle) * finalRadius, z: rowCenterZ + GRID_Y_OFFSET, rotZ: tlAngle, jitterRot: [0,0,0], tilt: -TILT_ANGLE });
                 const trAngle = centerAngle + gridAngleOffset;
@@ -190,20 +178,53 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
                 const brAngle = centerAngle + gridAngleOffset;
                 allBeads.push({ ...frameBead, x: Math.cos(brAngle) * finalRadius, y: Math.sin(brAngle) * finalRadius, z: rowCenterZ - GRID_Y_OFFSET, rotZ: brAngle, jitterRot: [0,0,0], tilt: -TILT_ANGLE });
 
-                // CONNECTORS
                 const midAngle = centerAngle + (angleStep / 2);
                 allBeads.push({ ...frameBead, x: Math.cos(midAngle) * finalRadius, y: Math.sin(midAngle) * finalRadius, z: rowCenterZ + OUTER_Y_OFFSET, rotZ: midAngle, jitterRot: [0,0,0], tilt: 0 });
-                allBeads.push({ ...frameBead, x: Math.cos(midAngle) * finalRadius, y: Math.sin(midAngle) * finalRadius, z: rowCenterZ - OUTER_Y_OFFSET, rotZ: midAngle, jitterRot: [0,0,0], tilt: 0 });
+                if (isBottomRow) {
+                    allBeads.push({ ...frameBead, x: Math.cos(midAngle) * finalRadius, y: Math.sin(midAngle) * finalRadius, z: rowCenterZ - OUTER_Y_OFFSET, rotZ: midAngle, jitterRot: [0,0,0], tilt: 0 });
+                }
 
-                // RIM
                 if (isTopRow) allBeads.push({ ...frameBead, x: Math.cos(centerAngle) * finalRadius, y: Math.sin(centerAngle) * finalRadius, z: rowCenterZ + OUTER_Y_OFFSET, rotZ: centerAngle, jitterRot: [0,0,0], tilt: 0 });
                 if (isBottomRow) allBeads.push({ ...frameBead, x: Math.cos(centerAngle) * finalRadius, y: Math.sin(centerAngle) * finalRadius, z: rowCenterZ - OUTER_Y_OFFSET, rotZ: centerAngle, jitterRot: [0,0,0], tilt: 0 });
             }
         }
     } 
-    // --- FLAT / MULTI / PEYOTE / BRICK LOGIC ---
-    else if (stitchMode.includes('flat') || stitchMode.includes('multi') || stitchMode.includes('peyote') || stitchMode.includes('brick')) {
-        const vSpacing = 0.40; 
+    // --- 2. MULTI / PEYOTE (HORIZONTAL HOLES, STAGGERED COLUMNS) ---
+    else if (stitchMode.includes('multi') || stitchMode.includes('peyote')) {
+        const vSpacing = 0.65; 
+        const totalHeight = (rows - 1) * vSpacing;
+        const startZ = -totalHeight / 2;
+
+        for (let r = 0; r < rows; r++) {
+            const rowZ = startZ + (r * vSpacing);
+            
+            for (let i = 0; i < normalizedPattern.length; i++) {
+                const patternIdx = (i + r) % normalizedPattern.length;
+                const bead = normalizedPattern[patternIdx];
+                const angle = (i / normalizedPattern.length) * Math.PI * 2;
+                
+                // *** UPDATED STAGGER LOGIC ***
+                // Instead of row-based shift, we shift based on Column Index (i)
+                // Every other bead (odd columns) gets pushed up slightly
+                const isOddCol = i % 2 !== 0;
+                const staggerOffset = isOddCol ? (vSpacing * 0.5) : 0;
+
+                allBeads.push({ 
+                    ...bead, 
+                    x: Math.cos(angle) * finalRadius, 
+                    y: Math.sin(angle) * finalRadius, 
+                    z: rowZ + staggerOffset, // APPLY VERTICAL STAGGER
+                    rotZ: angle, 
+                    jitterRot: [(Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05],
+                    tilt: 0 // Horizontal holes
+                });
+            }
+            // NO STRING
+        }
+    }
+    // --- 3. FLAT / BRICK (VERTICAL HOLES, STAGGERED) ---
+    else if (stitchMode.includes('flat') || stitchMode.includes('brick')) {
+        const vSpacing = 0.45; 
         const totalHeight = (rows - 1) * vSpacing;
         const startZ = -totalHeight / 2;
 
@@ -212,9 +233,12 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             const isOddRow = r % 2 !== 0;
             const rowPatternShift = isOddRow ? 0.5 : 0;
 
-            normalizedPattern.forEach((bead, i) => {
+            for (let i = 0; i < normalizedPattern.length; i++) {
+                const patternIdx = (i + r) % normalizedPattern.length;
+                const bead = normalizedPattern[patternIdx];
                 const shiftedI = i + rowPatternShift;
                 const angle = (shiftedI / normalizedPattern.length) * Math.PI * 2;
+                
                 allBeads.push({ 
                     ...bead, 
                     x: Math.cos(angle) * finalRadius, 
@@ -222,21 +246,52 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
                     z: rowZ,
                     rotZ: angle, 
                     jitterRot: [(Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05],
-                    tilt: 0
+                    tilt: Math.PI / 2 // Vertical holes
                 });
-            });
-            generatedStrings.push({ z: rowZ, radius: finalRadius });
+            }
+            // NO STRING
         }
     }
-    // --- LADDER / SINGLE LOGIC ---
-    else {
-        const vSpacing = 0.48; 
+    // --- 4. SINGLE (HORIZONTAL HOLES, STRING) ---
+    else if (stitchMode.includes('single')) {
+        const vSpacing = 0.66; 
         const totalHeight = (rows - 1) * vSpacing;
         const startZ = -totalHeight / 2;
 
         for (let r = 0; r < rows; r++) {
             const rowZ = startZ + (r * vSpacing);
-            normalizedPattern.forEach((bead, i) => {
+            
+            for (let i = 0; i < normalizedPattern.length; i++) {
+                const patternIdx = i % normalizedPattern.length; 
+                const bead = normalizedPattern[patternIdx];
+                const angle = (i / normalizedPattern.length) * Math.PI * 2;
+                
+                allBeads.push({ 
+                    ...bead, 
+                    x: Math.cos(angle) * finalRadius, 
+                    y: Math.sin(angle) * finalRadius, 
+                    z: rowZ,
+                    rotZ: angle, 
+                    jitterRot: [(Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05],
+                    tilt: 0 // Horizontal holes
+                });
+            }
+            // Add String
+            generatedStrings.push({ z: rowZ, radius: finalRadius });
+        }
+    }
+    // --- 5. LADDER (DEFAULT - VERTICAL HOLES) ---
+    else if (stitchMode.includes('ladder')) {
+        const vSpacing = 0.45; 
+        const totalHeight = (rows - 1) * vSpacing;
+        const startZ = -totalHeight / 2;
+
+        for (let r = 0; r < rows; r++) {
+            const rowZ = startZ + (r * vSpacing);
+            
+            for (let i = 0; i < normalizedPattern.length; i++) {
+                const patternIdx = (i + r) % normalizedPattern.length;
+                const bead = normalizedPattern[patternIdx];
                 const angle = (i / normalizedPattern.length) * Math.PI * 2;
                 allBeads.push({ 
                     ...bead, 
@@ -245,14 +300,14 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
                     z: rowZ,
                     rotZ: angle, 
                     jitterRot: [(Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05],
-                    tilt: 0 
+                    tilt: Math.PI / 2 // Vertical holes
                 });
-            });
-            generatedStrings.push({ z: rowZ, radius: finalRadius });
+            }
+            // NO STRING
         }
     }
 
-    return { beads: allBeads, radius: finalRadius, strings: generatedStrings };
+    return { beads: allBeads, strings: generatedStrings };
   }, [pattern, rows, stitch]);
 
   useFrame((state, delta) => {

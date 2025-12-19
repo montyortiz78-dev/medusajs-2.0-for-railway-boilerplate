@@ -34,9 +34,14 @@ const VISUAL_CONFIG = {
 }
 
 const STITCH_MAPPING: Record<string, string> = {
-  "Ladder": "ladder", "Flat": "ladder", "Multi (Peyote)": "peyote",
-  "Peyote": "peyote", "Brick": "brick", "Flower": "flower",
-  "X-base": "x-base", "Single": "ladder", 
+  "Ladder": "ladder", 
+  "Flat": "flat", 
+  "Multi (Peyote)": "peyote",
+  "Peyote": "peyote", 
+  "Brick": "brick", 
+  "Flower": "flower",
+  "X-base": "x-base", 
+  "Single": "single", 
 }
 
 const KANDI_PRODUCT_HANDLE = "custom-ai-kandi"
