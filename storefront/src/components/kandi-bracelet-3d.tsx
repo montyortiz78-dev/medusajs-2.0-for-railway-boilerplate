@@ -26,50 +26,30 @@ const BEAD_GAP = 0.02;
 
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
-// --- 1. SOLID GEOMETRY (Corrected Winding Order) ---
+// --- 1. SOLID GEOMETRY (Watertight) ---
 function usePonyBeadGeometry() {
   const geometry = useMemo(() => {
     const points = [];
-    
-    // Bead Dimensions
     const holeRadius = 0.15;
     const outerRadius = 0.32;
     const height = 0.44;
     const halfH = height / 2;
-    const bevel = 0.05;
+    const bevel = 0.06;
 
-    // FIX: Draw Profile Counter-Clockwise (Bottom -> Outer -> Top)
-    // This ensures normals point OUTWARDS so the bead looks solid.
-    
-    // 1. Inner Wall Bottom (Start at hole bottom)
+    // Counter-Clockwise profile for solid normals
     points.push(new THREE.Vector2(holeRadius, -halfH));
-    
-    // 2. Bottom Face
     points.push(new THREE.Vector2(outerRadius - bevel, -halfH));
-    
-    // 3. Bottom Bevel
     points.push(new THREE.Vector2(outerRadius, -halfH + bevel));
-    
-    // 4. Outer Barrel
     points.push(new THREE.Vector2(outerRadius + 0.01, 0));
-    
-    // 5. Top Bevel
     points.push(new THREE.Vector2(outerRadius, halfH - bevel));
-    
-    // 6. Top Face
     points.push(new THREE.Vector2(outerRadius - bevel, halfH));
-    
-    // 7. Inner Wall Top
     points.push(new THREE.Vector2(holeRadius, halfH));
-    
-    // 8. Close Loop (Back to start)
     points.push(new THREE.Vector2(holeRadius, -halfH));
 
     const geom = new THREE.LatheGeometry(points, 32);
     geom.computeVertexNormals();
     return geom;
   }, []);
-
   return geometry;
 }
 
@@ -88,7 +68,6 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
     textures.normalMap.wrapS = THREE.RepeatWrapping;
     textures.normalMap.wrapT = THREE.RepeatWrapping;
     textures.normalMap.needsUpdate = true;
-
     textures.roughnessMap.repeat.set(2, 1);
     textures.roughnessMap.wrapS = THREE.RepeatWrapping;
     textures.roughnessMap.wrapT = THREE.RepeatWrapping;
@@ -98,7 +77,6 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
   return (
     <group position={position} rotation={rotation}>
       <mesh castShadow receiveShadow geometry={type === 'pony' ? ponyGeometry : undefined}>
-        {/* Fallback Geometries */}
         {type === 'star' && <octahedronGeometry args={[0.5]} />}
         {type === 'heart' && <dodecahedronGeometry args={[0.48]} />}
         {type === 'skull' && <boxGeometry args={[0.55, 0.65, 0.55]} />}
@@ -115,7 +93,7 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
           clearcoat={0} 
           emissive={hex}
           emissiveIntensity={isNeon ? 0.35 : 0}
-          side={THREE.FrontSide} // Now correctly renders the outside because normals are fixed
+          side={THREE.FrontSide}
         />
       </mesh>
     </group>
@@ -125,16 +103,16 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
 function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[], rows?: number, stitch?: string }) {
   const groupRef = useRef<THREE.Group>(null);
 
-  const { beads, radius } = useMemo(() => {
-    if (!pattern || pattern.length === 0) return { beads: [], radius: 2.8 };
+  const { beads, radius, strings } = useMemo(() => {
+    if (!pattern || pattern.length === 0) return { beads: [], radius: 2.8, strings: [] };
 
     let normalizedPattern = pattern.map(p => {
         if (typeof p === 'string') return { type: 'pony', color: p };
         return { type: p.type || 'pony', color: p.color };
     });
 
+    // Ensure we have enough beads for a ring
     const TARGET_MIN_BEADS = 24; 
-    
     if (normalizedPattern.length < TARGET_MIN_BEADS) {
         const repeatCount = Math.ceil(TARGET_MIN_BEADS / normalizedPattern.length);
         const newPattern = [];
@@ -149,51 +127,121 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
     const finalRadius = Math.max(calculatedRadius, 2.6); 
 
     const allBeads: any[] = [];
+    const generatedStrings: any[] = [];
     
+    // --- STITCH LOGIC ---
     const stitchMode = stitch.toLowerCase();
-    let verticalSpacing = 0.55; 
-    let stagger = false;
-
-    if (stitchMode.includes('peyote') || stitchMode.includes('brick')) {
-        verticalSpacing = 0.55 * 0.85; 
-        stagger = true;
-    }
-
-    const totalHeight = (rows - 1) * verticalSpacing;
-    const startZ = -totalHeight / 2;
-
-    for (let r = 0; r < rows; r++) {
-        const rowZ = startZ + (r * verticalSpacing); 
-        const isOddRow = r % 2 !== 0;
-        const rowPatternShift = (stagger && isOddRow) ? 0.5 : 0;
-
-        normalizedPattern.forEach((bead, i) => {
-            const shiftedI = i + rowPatternShift;
-            const angle = (shiftedI / normalizedPattern.length) * Math.PI * 2;
+    
+    // 1. X-BASE LOGIC
+    if (stitchMode.includes('x-base')) {
+        // X-Base is tall. 1 "Row" in X-base usually means 1 full X-height unit.
+        // We will construct the X-frame procedurally.
+        const X_HEIGHT = 1.4; // Height of one X unit
+        
+        for (let r = 0; r < rows; r++) {
+            const centerY = -((rows * X_HEIGHT) / 2) + (r * X_HEIGHT) + (X_HEIGHT / 2);
             
-            const x = Math.cos(angle) * finalRadius;
-            const y = Math.sin(angle) * finalRadius;
-            
-            const jitterX = (Math.random() - 0.5) * 0.05; 
-            const jitterY = (Math.random() - 0.5) * 0.05; 
-            const jitterZ = (Math.random() - 0.5) * 0.05;
-            const twist = (Math.random() - 0.5) * 0.15; 
+            normalizedPattern.forEach((bead, i) => {
+                const angle = (i / normalizedPattern.length) * Math.PI * 2;
+                const jitter = (Math.random() - 0.5) * 0.05;
 
-            // Alignment: Orient local Y-axis (Hole) to Ring Tangent
-            const alignmentRotation = angle; 
+                // CENTER BEAD (The user's pattern)
+                allBeads.push({
+                    ...bead,
+                    x: Math.cos(angle) * finalRadius,
+                    y: Math.sin(angle) * finalRadius,
+                    z: centerY,
+                    rotZ: angle,
+                    jitterRot: [jitter, jitter, jitter]
+                });
 
-            allBeads.push({ 
-                ...bead, 
-                x, 
-                y, 
-                z: rowZ,
-                rotZ: alignmentRotation, 
-                jitterRot: [jitterX, jitterY, jitterZ + twist] 
+                // FRAME BEADS (Forming the X legs)
+                // We place 4 beads around the center to form the X diagonals
+                // Top-Left, Top-Right, Bot-Left, Bot-Right
+                // We'll use a contrasting frame color (Black) or White if bead is Black
+                const frameColor = bead.color.toLowerCase() === 'black' ? 'white' : 'black';
+                const frameBead = { type: 'pony', color: frameColor };
+                
+                // Offset angles for the legs
+                const angleOffset = (Math.PI * 2) / normalizedPattern.length * 0.5; // Half step
+                const zOffset = 0.45; // Vertical offset
+
+                // Top Leg (Shared with row above technically, but we render simple units for now)
+                // To make a true X, these should connect. 
+                // We render beads at the corners.
+                
+                // Top-Right
+                allBeads.push({ ...frameBead, x: Math.cos(angle + angleOffset) * finalRadius, y: Math.sin(angle + angleOffset) * finalRadius, z: centerY + zOffset, rotZ: angle + angleOffset, jitterRot: [0,0,0] });
+                // Top-Left
+                allBeads.push({ ...frameBead, x: Math.cos(angle - angleOffset) * finalRadius, y: Math.sin(angle - angleOffset) * finalRadius, z: centerY + zOffset, rotZ: angle - angleOffset, jitterRot: [0,0,0] });
+                // Bot-Right
+                allBeads.push({ ...frameBead, x: Math.cos(angle + angleOffset) * finalRadius, y: Math.sin(angle + angleOffset) * finalRadius, z: centerY - zOffset, rotZ: angle + angleOffset, jitterRot: [0,0,0] });
+                // Bot-Left
+                allBeads.push({ ...frameBead, x: Math.cos(angle - angleOffset) * finalRadius, y: Math.sin(angle - angleOffset) * finalRadius, z: centerY - zOffset, rotZ: angle - angleOffset, jitterRot: [0,0,0] });
             });
-        });
+            
+            // X-Base Strings (Cross-cross)
+            generatedStrings.push({ z: centerY, radius: finalRadius });
+            generatedStrings.push({ z: centerY + 0.45, radius: finalRadius });
+            generatedStrings.push({ z: centerY - 0.45, radius: finalRadius });
+        }
+    } 
+    // 2. FLAT / MULTI / PEYOTE LOGIC
+    else if (stitchMode.includes('flat') || stitchMode.includes('multi') || stitchMode.includes('peyote') || stitchMode.includes('brick')) {
+        // TIGHT nesting spacing. Bead height is 0.44.
+        // For perfect nesting (honeycomb), vertical step is height * 0.866 (sin 60) ~ 0.38
+        // We use 0.40 to account for plastic thickness.
+        const vSpacing = 0.40; 
+        const totalHeight = (rows - 1) * vSpacing;
+        const startZ = -totalHeight / 2;
+
+        for (let r = 0; r < rows; r++) {
+            const rowZ = startZ + (r * vSpacing);
+            const isOddRow = r % 2 !== 0;
+            // Shift by exactly half a bead angular width
+            const rowPatternShift = isOddRow ? 0.5 : 0;
+
+            normalizedPattern.forEach((bead, i) => {
+                const shiftedI = i + rowPatternShift;
+                const angle = (shiftedI / normalizedPattern.length) * Math.PI * 2;
+                
+                allBeads.push({ 
+                    ...bead, 
+                    x: Math.cos(angle) * finalRadius, 
+                    y: Math.sin(angle) * finalRadius, 
+                    z: rowZ,
+                    rotZ: angle, 
+                    jitterRot: [(Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05] 
+                });
+            });
+            generatedStrings.push({ z: rowZ, radius: finalRadius });
+        }
+    }
+    // 3. LADDER / SINGLE (Stacked Grid)
+    else {
+        const vSpacing = 0.62; // Loose stacking
+        const totalHeight = (rows - 1) * vSpacing;
+        const startZ = -totalHeight / 2;
+
+        for (let r = 0; r < rows; r++) {
+            const rowZ = startZ + (r * vSpacing);
+            
+            normalizedPattern.forEach((bead, i) => {
+                const angle = (i / normalizedPattern.length) * Math.PI * 2;
+                allBeads.push({ 
+                    ...bead, 
+                    x: Math.cos(angle) * finalRadius, 
+                    y: Math.sin(angle) * finalRadius, 
+                    z: rowZ,
+                    rotZ: angle, 
+                    jitterRot: [(Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05] 
+                });
+            });
+            generatedStrings.push({ z: rowZ, radius: finalRadius });
+        }
     }
 
-    return { beads: allBeads, radius: finalRadius };
+    return { beads: allBeads, radius: finalRadius, strings: generatedStrings };
   }, [pattern, rows, stitch]);
 
   useFrame((state, delta) => {
@@ -205,26 +253,13 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
 
   return (
     <group ref={groupRef}>
-      {/* SOLID STRING */}
-      {range(rows).map(r => {
-          const stitchMode = stitch.toLowerCase();
-          let vSpacing = 0.55;
-          if (stitchMode.includes('peyote') || stitchMode.includes('brick')) vSpacing = 0.55 * 0.85;
-          
-          const totalHeight = (rows - 1) * vSpacing;
-          const zPos = -totalHeight / 2 + (r * vSpacing);
-          
-          return (
-            <mesh key={`string-${r}`} position={[0, 0, zPos]}>
-                <torusGeometry args={[radius, 0.035, 12, 100]} />
-                <meshStandardMaterial 
-                  color="#F5F5F5" 
-                  roughness={0.9} 
-                  opacity={1} 
-                />
-            </mesh>
-          )
-      })}
+      {/* Strings */}
+      {strings.map((s, i) => (
+        <mesh key={`str-${i}`} position={[0, 0, s.z]}>
+            <torusGeometry args={[s.radius, 0.035, 12, 100]} />
+            <meshStandardMaterial color="#F5F5F5" roughness={0.9} />
+        </mesh>
+      ))}
 
       {beads.map((b, i) => (
         <Bead 
@@ -232,11 +267,7 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
           type={b.type} 
           color={b.color} 
           position={[b.x, b.y, b.z]} 
-          rotation={[
-            b.jitterRot[0], 
-            b.jitterRot[1], 
-            b.rotZ + b.jitterRot[2]
-          ]} 
+          rotation={[b.jitterRot[0], b.jitterRot[1], b.rotZ + b.jitterRot[2]]} 
         />
       ))}
     </group>
@@ -277,7 +308,6 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
         <ambientLight intensity={0.8} />
         <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={1.2} castShadow />
         <pointLight position={[-10, -5, 5]} intensity={0.5} color="white" />
-        
         <Environment preset="city" />
 
         <Suspense fallback={null}>
@@ -290,7 +320,6 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
               >
                   <BraceletRing pattern={pattern} rows={rows} stitch={stitch} />
               </Float>
-              
               <SnapshotManager captureMode={captureMode} controlsRef={controlsRef} />
            </Bounds>
         </Suspense>

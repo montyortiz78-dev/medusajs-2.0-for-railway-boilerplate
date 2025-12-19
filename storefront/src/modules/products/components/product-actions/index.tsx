@@ -28,8 +28,9 @@ type ProductActionsProps = {
 
 // Config for parsing option names
 const VISUAL_CONFIG = {
-    ROWS_KEYS: ["rows", "row", "tiers", "layers", "row count", "number of rows"],
-    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave"],
+    // Expanded keys to catch more variations
+    ROWS_KEYS: ["rows", "row", "tiers", "layers", "row count", "number of rows", "height"],
+    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave", "style", "cuff type"],
 }
 
 const STITCH_MAPPING: Record<string, string> = {
@@ -51,6 +52,8 @@ export default function ProductActions({
   const [showSizeGuide, setShowSizeGuide] = useState(false)
 
   const countryCode = useParams().countryCode as string
+  
+  // Destructure setDesignConfig to update the visualizer
   const { pattern, setPattern, setDesignConfig, setIsCapturing } = useKandiContext()
 
   const isKandiProduct = product.handle === KANDI_PRODUCT_HANDLE
@@ -107,11 +110,12 @@ export default function ProductActions({
     if (hasChanges) setOptions(newOptions)
   }, [product.options, options])
 
-  // === VISUALIZER UPDATE LOGIC ===
+  // === VISUALIZER UPDATE LOGIC (ROBUST) ===
   useEffect(() => {
+    // 1. Helper to safely find keys case-insensitively
     const getOptionValue = (allowedKeys: string[]) => {
       const foundKey = Object.keys(options).find(key => 
-        allowedKeys.some(k => key.toLowerCase().includes(k))
+        allowedKeys.some(k => key.toLowerCase().includes(k.toLowerCase()))
       )
       return foundKey ? options[foundKey] : null
     }
@@ -119,29 +123,44 @@ export default function ProductActions({
     let rows = 1
     let stitch = "ladder"
 
-    // 1. Parse Rows
+    // 2. Parse Rows
     const selectedRowsVal = getOptionValue(VISUAL_CONFIG.ROWS_KEYS)
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase()
-      const match = valStr.match(/\d+/)
-      if (match) rows = parseInt(match[0], 10)
-      else if (valStr.includes("double")) rows = 2
+      // Text-based overrides
+      if (valStr.includes("double")) rows = 2
       else if (valStr.includes("triple")) rows = 3
       else if (valStr.includes("quad")) rows = 4
+      else {
+        // Numeric extraction
+        const match = valStr.match(/\d+/)
+        if (match) rows = parseInt(match[0], 10)
+      }
     }
 
-    // 2. Parse Stitch
+    // 3. Parse Stitch
     const selectedStitchVal = getOptionValue(VISUAL_CONFIG.STITCH_KEYS)
     if (selectedStitchVal) {
-      stitch = STITCH_MAPPING[selectedStitchVal] || selectedStitchVal.toLowerCase()
+      // Find matching key in STITCH_MAPPING (handling case)
+      const mappedKey = Object.keys(STITCH_MAPPING).find(
+        key => key.toLowerCase() === selectedStitchVal.toLowerCase()
+      )
+      
+      if (mappedKey) {
+        stitch = STITCH_MAPPING[mappedKey]
+      } else {
+        stitch = selectedStitchVal.toLowerCase()
+      }
     }
 
-    // 3. Metadata Override
+    // 4. Metadata Override (Overrides UI options if present on variant)
     if (selectedVariant?.metadata) {
       if (selectedVariant.metadata.kandi_rows) rows = Number(selectedVariant.metadata.kandi_rows)
       if (selectedVariant.metadata.kandi_stitch) stitch = String(selectedVariant.metadata.kandi_stitch)
     }
 
+    // 5. Update Context
+    // console.log("Updating Visualizer:", { rows, stitch }) // DEBUG
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
@@ -171,25 +190,18 @@ export default function ProductActions({
 
     setIsAdding(true)
 
-    // 1. Trigger Camera Snap
+    // Trigger Capture
     setIsCapturing(true)
-    // 2. Wait for transition
-    await new Promise(resolve => setTimeout(resolve, 600))
-    // 3. Capture
+    await new Promise(resolve => setTimeout(resolve, 600)) // Wait for float to stop
     const imageUrl = captureCanvasImage()
-    // 4. Reset
     setIsCapturing(false)
 
     const metadata = {
-          // Flag as custom only if it's the builder OR if user added beads to a standard product
           is_custom: isKandiProduct || pattern.length > 0,
           pattern_data: pattern,           
           kandi_pattern: pattern.map(p => typeof p === 'string' ? p : p.color), 
           image_url: imageUrl,             
-          
-          // FIX: USE THE ACTUAL PRODUCT TITLE
           kandi_name: product.title, 
-          
           kandi_vibe: "Creative",
           ...(isKandiProduct && customWord.trim().length > 0 && { custom_word: customWord.trim() })
     }
