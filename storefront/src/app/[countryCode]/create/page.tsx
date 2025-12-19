@@ -26,12 +26,14 @@ const AI_COLOR_MAP: Record<string, string> = {
 
 // 1. CONFIG: Option Parsing Mappings
 const STITCH_MAPPING: Record<string, string> = {
-  "Ladder": "ladder", "Flat": "ladder", "Multi (Peyote)": "peyote",
+  "Ladder": "ladder", "Flat": "flat", "Multi (Peyote)": "peyote", // Fixed Flat mapping
   "Peyote": "peyote", "Brick": "brick", "Flower": "flower",
-  "X-base": "x-base", "Single": "ladder",
+  "X-base": "x-base", "Single": "ladder", 
 };
-const ROWS_KEYS = ["rows", "row", "tiers", "layers", "row count"];
-const STITCH_KEYS = ["stitch", "pattern", "weave", "type"];
+
+// Priority keys: Earlier index = Higher priority match
+const ROWS_KEYS = ["rows", "row", "tiers", "layers", "row count", "height"];
+const STITCH_KEYS = ["stitch", "pattern", "weave", "style", "design", "cuff type", "type"];
 
 function KandiGeneratorContent() {
   // --- STATE ---
@@ -39,8 +41,6 @@ function KandiGeneratorContent() {
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
   const [vibeStory, setVibeStory] = useState('Custom Design');
-  // Local pattern state is synced with Context below
-  // Note: KandiManualBuilder updates global context directly, so we primarily rely on context
   
   const [product, setProduct] = useState<HttpTypes.StoreProduct | null>(null);
   const [productError, setProductError] = useState<string | null>(null);
@@ -52,7 +52,6 @@ function KandiGeneratorContent() {
   const [captureMode, setCaptureMode] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
 
-  const searchParams = useSearchParams();
   const params = useParams();
   const router = useRouter();
 
@@ -110,29 +109,51 @@ function KandiGeneratorContent() {
 
   // --- OPTION PARSING: UPDATE 3D VISUALIZER ---
   useEffect(() => {
-    // This logic runs whenever 'options' changes (e.g. user selects "4 Rows")
     if (!product || !product.options) return;
 
-    // Helper: Map Option ID back to Title (e.g. "opt_123" -> "Rows")
+    // Helper: Map Option ID back to Title
     const getOptionTitle = (optId: string) => product.options?.find(o => o.id === optId)?.title || "";
 
-    // Helper: Find value by matching Title against allowed keys
+    // Helper: Find value by matching Title against allowed keys (Priority-based)
     const getOptionValue = (allowedKeys: string[]) => {
-        // Iterate over current selected options
-        const foundEntry = Object.entries(options).find(([optId, value]) => {
+        const matches = Object.entries(options).map(([optId, value]) => {
             const title = getOptionTitle(optId).toLowerCase();
-            return allowedKeys.some(k => title.includes(k));
-        });
-        return foundEntry ? foundEntry[1] : null;
+            const priorityIndex = allowedKeys.findIndex(k => title.includes(k));
+            return priorityIndex !== -1 ? { value, priorityIndex } : null;
+        }).filter((m): m is { value: string, priorityIndex: number } => m !== null);
+
+        // Sort by priority (lowest index = higher priority)
+        matches.sort((a, b) => a.priorityIndex - b.priorityIndex);
+        
+        return matches.length > 0 ? matches[0].value : null;
     };
 
     let rows = 1;
     let stitch = "ladder";
 
+    // Helper to resolve stitch string to code
+    const resolveStitch = (val: string) => {
+        const valLower = val.toLowerCase();
+        // Check direct mapping
+        const mapKey = Object.keys(STITCH_MAPPING).find(k => k.toLowerCase() === valLower);
+        if (mapKey) return STITCH_MAPPING[mapKey];
+        // Check keywords
+        if (valLower.includes("x-base")) return "x-base";
+        if (valLower.includes("peyote") || valLower.includes("multi")) return "peyote";
+        if (valLower.includes("flat") || valLower.includes("brick")) return "flat"; // or brick/peyote logic
+        if (valLower.includes("flower")) return "flower";
+        return null;
+    }
+
     // A. Parse Rows
     const selectedRowsVal = getOptionValue(ROWS_KEYS);
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase();
+      
+      // Check if Row option actually implies a stitch type (e.g. "Double X-base")
+      const stitchFromRows = resolveStitch(selectedRowsVal);
+      if (stitchFromRows) stitch = stitchFromRows;
+
       const match = valStr.match(/\d+/);
       if (match) {
         rows = parseInt(match[0], 10);
@@ -141,19 +162,32 @@ function KandiGeneratorContent() {
       else if (valStr.includes("quad")) rows = 4;
     }
 
-    // B. Parse Stitch
+    // B. Parse Stitch (Overrides rows derivation if present)
     const selectedStitchVal = getOptionValue(STITCH_KEYS);
     if (selectedStitchVal) {
-      stitch = STITCH_MAPPING[selectedStitchVal] || selectedStitchVal.toLowerCase();
+        const resolved = resolveStitch(selectedStitchVal);
+        if (resolved) {
+            stitch = resolved;
+        } else {
+            // Fallback for direct value pass
+            stitch = selectedStitchVal.toLowerCase();
+        }
     }
 
-    // C. Update Global Context
+    // C. Variant Metadata Override
+    if (selectedVariant?.metadata) {
+        if (selectedVariant.metadata.kandi_rows) rows = Number(selectedVariant.metadata.kandi_rows);
+        if (selectedVariant.metadata.kandi_stitch) stitch = String(selectedVariant.metadata.kandi_stitch);
+    }
+
+    // D. Update Global Context
+    // console.log("Visualizer Update:", { rows, stitch });
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
     });
 
-  }, [options, product, setDesignConfig]);
+  }, [options, product, selectedVariant, setDesignConfig]);
 
 
   // --- HANDLER: SMART SWITCHING ---

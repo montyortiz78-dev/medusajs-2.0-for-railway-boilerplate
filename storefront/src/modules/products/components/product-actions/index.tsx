@@ -30,7 +30,7 @@ type ProductActionsProps = {
 const VISUAL_CONFIG = {
     // Expanded keys to catch more variations
     ROWS_KEYS: ["rows", "row", "tiers", "layers", "row count", "number of rows", "height"],
-    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave", "style", "cuff type"],
+    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave", "style", "cuff type", "type", "design"], // Added 'type', 'design'
 }
 
 const STITCH_MAPPING: Record<string, string> = {
@@ -123,11 +123,34 @@ export default function ProductActions({
     let rows = 1
     let stitch = "ladder"
 
+    // Helper to map values to stitch types
+    const resolveStitch = (val: string) => {
+        const valLower = val.toLowerCase()
+        const mappedKey = Object.keys(STITCH_MAPPING).find(
+            key => key.toLowerCase() === valLower
+        )
+        if (mappedKey) return STITCH_MAPPING[mappedKey]
+        
+        // Fallback checks for keywords if direct map fails
+        if (valLower.includes('x-base')) return 'x-base'
+        if (valLower.includes('peyote') || valLower.includes('multi')) return 'peyote'
+        if (valLower.includes('flower')) return 'flower'
+        
+        return null
+    }
+
     // 2. Parse Rows
     const selectedRowsVal = getOptionValue(VISUAL_CONFIG.ROWS_KEYS)
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase()
-      // Text-based overrides
+      
+      // Check if the "Rows" value is actually a stitch type (e.g. "X-base")
+      const stitchFromRows = resolveStitch(selectedRowsVal)
+      if (stitchFromRows) {
+         stitch = stitchFromRows
+      } 
+      
+      // Text-based overrides for quantity
       if (valStr.includes("double")) rows = 2
       else if (valStr.includes("triple")) rows = 3
       else if (valStr.includes("quad")) rows = 4
@@ -138,17 +161,14 @@ export default function ProductActions({
       }
     }
 
-    // 3. Parse Stitch
+    // 3. Parse Stitch (Priority override if a dedicated stitch option exists)
     const selectedStitchVal = getOptionValue(VISUAL_CONFIG.STITCH_KEYS)
     if (selectedStitchVal) {
-      // Find matching key in STITCH_MAPPING (handling case)
-      const mappedKey = Object.keys(STITCH_MAPPING).find(
-        key => key.toLowerCase() === selectedStitchVal.toLowerCase()
-      )
-      
-      if (mappedKey) {
-        stitch = STITCH_MAPPING[mappedKey]
+      const resolved = resolveStitch(selectedStitchVal)
+      if (resolved) {
+        stitch = resolved
       } else {
+        // Fallback to raw value if it's not in the map but might be handled by 3D component directly
         stitch = selectedStitchVal.toLowerCase()
       }
     }
