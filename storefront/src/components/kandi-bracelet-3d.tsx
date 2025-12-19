@@ -18,33 +18,78 @@ const getColorHex = (colorName: string) => {
     return COLOR_MAP[colorName] || '#cccccc';
 };
 
-// Base dimensions for a standard Pony Bead
-const BASE_BEAD_SIZE = 0.6; 
+// Dimensions
 const BEAD_WIDTHS: Record<string, number> = {
   "pony": 0.6, "star": 0.65, "heart": 0.55, "flower": 0.55, "skull": 0.7
 };
-
 const BEAD_GAP = 0.02;
 
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
+// --- 1. SOLID GEOMETRY (Corrected Winding Order) ---
+function usePonyBeadGeometry() {
+  const geometry = useMemo(() => {
+    const points = [];
+    
+    // Bead Dimensions
+    const holeRadius = 0.15;
+    const outerRadius = 0.32;
+    const height = 0.44;
+    const halfH = height / 2;
+    const bevel = 0.05;
+
+    // FIX: Draw Profile Counter-Clockwise (Bottom -> Outer -> Top)
+    // This ensures normals point OUTWARDS so the bead looks solid.
+    
+    // 1. Inner Wall Bottom (Start at hole bottom)
+    points.push(new THREE.Vector2(holeRadius, -halfH));
+    
+    // 2. Bottom Face
+    points.push(new THREE.Vector2(outerRadius - bevel, -halfH));
+    
+    // 3. Bottom Bevel
+    points.push(new THREE.Vector2(outerRadius, -halfH + bevel));
+    
+    // 4. Outer Barrel
+    points.push(new THREE.Vector2(outerRadius + 0.01, 0));
+    
+    // 5. Top Bevel
+    points.push(new THREE.Vector2(outerRadius, halfH - bevel));
+    
+    // 6. Top Face
+    points.push(new THREE.Vector2(outerRadius - bevel, halfH));
+    
+    // 7. Inner Wall Top
+    points.push(new THREE.Vector2(holeRadius, halfH));
+    
+    // 8. Close Loop (Back to start)
+    points.push(new THREE.Vector2(holeRadius, -halfH));
+
+    const geom = new THREE.LatheGeometry(points, 32);
+    geom.computeVertexNormals();
+    return geom;
+  }, []);
+
+  return geometry;
+}
+
 function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?: string, color?: string, position: [number, number, number], rotation: [number, number, number] }) {
   const hex = getColorHex(color);
   const isNeon = color && (color.includes('neon') || color.includes('glow'));
+  const ponyGeometry = usePonyBeadGeometry();
 
   const textures = useTexture({
     normalMap: '/textures/plastic/bead-normal.jpg',
     roughnessMap: '/textures/plastic/bead-roughness.jpg',
   });
 
-  // FIX: Configure textures inside an effect, not the render body
   useLayoutEffect(() => {
-    textures.normalMap.repeat.set(3, 1);
+    textures.normalMap.repeat.set(2, 1);
     textures.normalMap.wrapS = THREE.RepeatWrapping;
     textures.normalMap.wrapT = THREE.RepeatWrapping;
     textures.normalMap.needsUpdate = true;
 
-    textures.roughnessMap.repeat.set(3, 1);
+    textures.roughnessMap.repeat.set(2, 1);
     textures.roughnessMap.wrapS = THREE.RepeatWrapping;
     textures.roughnessMap.wrapT = THREE.RepeatWrapping;
     textures.roughnessMap.needsUpdate = true;
@@ -52,8 +97,8 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
 
   return (
     <group position={position} rotation={rotation}>
-      <mesh castShadow receiveShadow>
-        {type === 'pony' && <sphereGeometry args={[0.3, 32, 32]} />}
+      <mesh castShadow receiveShadow geometry={type === 'pony' ? ponyGeometry : undefined}>
+        {/* Fallback Geometries */}
         {type === 'star' && <octahedronGeometry args={[0.5]} />}
         {type === 'heart' && <dodecahedronGeometry args={[0.48]} />}
         {type === 'skull' && <boxGeometry args={[0.55, 0.65, 0.55]} />}
@@ -63,14 +108,14 @@ function Bead({ type = 'pony', color = '#FFFFFF', position, rotation }: { type?:
         <meshPhysicalMaterial 
           color={hex}
           normalMap={textures.normalMap}
-          normalScale={new THREE.Vector2(1, 1)} 
+          normalScale={new THREE.Vector2(0.3, 0.3)} 
           roughnessMap={textures.roughnessMap}
-          roughness={1.0}        
+          roughness={0.3} 
           metalness={0.0}
-          clearcoat={0.6}        
-          clearcoatRoughness={0.1}
+          clearcoat={0} 
           emissive={hex}
-          emissiveIntensity={isNeon ? 0.2 : 0}
+          emissiveIntensity={isNeon ? 0.35 : 0}
+          side={THREE.FrontSide} // Now correctly renders the outside because normals are fixed
         />
       </mesh>
     </group>
@@ -90,7 +135,6 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
 
     const TARGET_MIN_BEADS = 24; 
     
-    // Ensure we have enough beads to form a ring
     if (normalizedPattern.length < TARGET_MIN_BEADS) {
         const repeatCount = Math.ceil(TARGET_MIN_BEADS / normalizedPattern.length);
         const newPattern = [];
@@ -100,23 +144,18 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
         normalizedPattern = newPattern.slice(0, Math.max(normalizedPattern.length * repeatCount, TARGET_MIN_BEADS));
     }
 
-    // 1. Calculate Radius
     const totalBeadWidth = normalizedPattern.reduce((sum, bead) => sum + (BEAD_WIDTHS[bead.type] || 0.6) + BEAD_GAP, 0);
     const calculatedRadius = totalBeadWidth / (2 * Math.PI);
     const finalRadius = Math.max(calculatedRadius, 2.6); 
 
     const allBeads: any[] = [];
     
-    // 2. STITCH GEOMETRY LOGIC
     const stitchMode = stitch.toLowerCase();
-    
-    let verticalSpacing = 0.55; // Default Ladder height
+    let verticalSpacing = 0.55; 
     let stagger = false;
 
-    // Peyote / Brick: Beads nest between the beads of the previous row
-    // This reduces vertical height (sin(60deg) packing) and adds a horizontal shift
     if (stitchMode.includes('peyote') || stitchMode.includes('brick')) {
-        verticalSpacing = 0.55 * 0.85; // Tighter vertical packing (nesting)
+        verticalSpacing = 0.55 * 0.85; 
         stagger = true;
     }
 
@@ -125,8 +164,6 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
 
     for (let r = 0; r < rows; r++) {
         const rowZ = startZ + (r * verticalSpacing); 
-        
-        // Stagger every odd row for Peyote
         const isOddRow = r % 2 !== 0;
         const rowPatternShift = (stagger && isOddRow) ? 0.5 : 0;
 
@@ -137,19 +174,21 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             const x = Math.cos(angle) * finalRadius;
             const y = Math.sin(angle) * finalRadius;
             
-            // Random jitter for realism
             const jitterX = (Math.random() - 0.5) * 0.05; 
             const jitterY = (Math.random() - 0.5) * 0.05; 
             const jitterZ = (Math.random() - 0.5) * 0.05;
-            const twist = (Math.random() - 0.5) * 0.3; 
+            const twist = (Math.random() - 0.5) * 0.15; 
+
+            // Alignment: Orient local Y-axis (Hole) to Ring Tangent
+            const alignmentRotation = angle; 
 
             allBeads.push({ 
                 ...bead, 
                 x, 
                 y, 
-                z: rowZ, // Uses our calculated stitch height
-                rotZ: angle + Math.PI / 2 + twist, 
-                jitterRot: [jitterX, jitterY, jitterZ] 
+                z: rowZ,
+                rotZ: alignmentRotation, 
+                jitterRot: [jitterX, jitterY, jitterZ + twist] 
             });
         });
     }
@@ -160,15 +199,14 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
   useFrame((state, delta) => {
     if (groupRef.current) {
         groupRef.current.rotation.z -= delta * 0.1;
-        groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.15;
+        groupRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.1;
     }
   });
 
   return (
     <group ref={groupRef}>
-      {/* Visual Strings connecting the beads */}
+      {/* SOLID STRING */}
       {range(rows).map(r => {
-          // Recalculate spacing for strings to match beads
           const stitchMode = stitch.toLowerCase();
           let vSpacing = 0.55;
           if (stitchMode.includes('peyote') || stitchMode.includes('brick')) vSpacing = 0.55 * 0.85;
@@ -178,8 +216,12 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
           
           return (
             <mesh key={`string-${r}`} position={[0, 0, zPos]}>
-                <torusGeometry args={[radius, 0.04, 32, 100]} />
-                <meshStandardMaterial color="#eeeeee" transparent opacity={0.8} />
+                <torusGeometry args={[radius, 0.035, 12, 100]} />
+                <meshStandardMaterial 
+                  color="#F5F5F5" 
+                  roughness={0.9} 
+                  opacity={1} 
+                />
             </mesh>
           )
       })}
@@ -191,8 +233,8 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
           color={b.color} 
           position={[b.x, b.y, b.z]} 
           rotation={[
-            Math.PI / 2 + b.jitterRot[0], 
-            0 + b.jitterRot[1], 
+            b.jitterRot[0], 
+            b.jitterRot[1], 
             b.rotZ + b.jitterRot[2]
           ]} 
         />
@@ -201,7 +243,6 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
   );
 }
 
-// === SNAPSHOT MANAGER ===
 function SnapshotManager({ captureMode, controlsRef }: { captureMode: boolean, controlsRef: any }) {
   const api = useBounds()
   const { camera } = useThree()
@@ -209,18 +250,11 @@ function SnapshotManager({ captureMode, controlsRef }: { captureMode: boolean, c
   useEffect(() => {
     if (captureMode && controlsRef.current) {
         const controls = controlsRef.current
-        
         controls.object.position.set(0, -12, 8) 
         controls.target.set(0, 0, 0)
         controls.object.up.set(0, 0, 1) 
-        
         controls.update()
-
-        if (api) {
-            setTimeout(() => {
-                api.refresh().fit()
-            }, 50) 
-        }
+        if (api) setTimeout(() => api.refresh().fit(), 50) 
     } else {
         if (api) api.refresh().fit()
     }
@@ -240,8 +274,8 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
         gl={{ preserveDrawingBuffer: true }} 
         id="kandi-canvas"
       >
-        <ambientLight intensity={0.7} />
-        <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={1.5} castShadow />
+        <ambientLight intensity={0.8} />
+        <spotLight position={[10, 10, 10]} angle={0.3} penumbra={1} intensity={1.2} castShadow />
         <pointLight position={[-10, -5, 5]} intensity={0.5} color="white" />
         
         <Environment preset="city" />

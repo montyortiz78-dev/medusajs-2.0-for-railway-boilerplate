@@ -11,30 +11,43 @@ export async function POST(req: Request) {
 
     const result = await generateObject({
       model: openai('gpt-4o'),
+      // 1. Increase temperature (0.0 is boring, 1.0 is chaotic). 0.8 is good for creative variety.
+      temperature: 0.8, 
       schema: z.object({
         kandiName: z.string().describe("A creative name for this bracelet"),
-        vibeStory: z.string().describe("A short backstory about the vibe"),
-        // Simple string array "Color:Type"
-        rawPattern: z.array(z.string()).min(3).max(30).describe("List of beads. Format: 'Color:Type'"),
+        vibeStory: z.string().describe("A short, fun backstory about why these colors match the vibe"),
+        rawPattern: z.array(z.string()).min(12).max(30).describe("List of beads. Format: 'Color:Type'"),
       }),
+      // 2. Enhanced Prompt for Variety
       prompt: `
-        Design a Kandi bracelet pattern based on this vibe: "${vibe}".
-        
+        You are an expert Kandi artist known for unique, non-boring designs. 
+        Design a bracelet pattern based on this user vibe: "${vibe || "Random Surprise"}".
+
         RESTRICTIONS:
-        1. Use ONLY these colors: Pink, Green, Blue, Yellow, Orange, Purple, Red, White, Black.
-        2. Use ONLY "pony" for the bead type. Do NOT use special shapes like stars or skulls.
-        
-        Ensure the colors create a pleasing, repeating, or thematic pattern.
-        RETURN ONLY JSON.
+        - COLORS: Pink, Green, Blue, Yellow, Orange, Purple, Red, White, Black.
+        - TYPE: Always use "pony".
+
+        DESIGN RULES (To ensure variety):
+        1. INTERPRETATION:
+           - If the vibe is a specific object (e.g., "Bumblebee"), use literal colors (Yellow, Black).
+           - If the vibe is abstract (e.g., "Rave", "Chill"), use color psychology.
+           - If the vibe is "Random", go wild with a colorful, eclectic mix.
+
+        2. PATTERN STYLE (Do not just do A-B-A-B):
+           - Mix it up! Use complex repeating units, symmetry (A-B-C-B-A), color blocks (3 Blue, 3 Pink), or gradients.
+           - Avoid simple alternating colors unless the vibe specifically calls for it.
+
+        3. OUTPUT:
+           - Generate a pattern length of 18-30 beads.
+           - Return the rawPattern as an array of strings like "Red:pony".
       `,
     });
 
-    // Convert to object format
     const cleanPattern = result.object.rawPattern.map((item) => {
-      const [color, type] = item.split(':');
+      const [color] = item.split(':');
       return { 
         color: color ? color.trim() : "Black", 
-        type: "pony" // Force pony type
+        type: "pony" 
       };
     });
 
