@@ -33,6 +33,7 @@ export async function POST(req: Request) {
            - If the vibe is specific (e.g., "Bumblebee"), use literal colors (Yellow, Black).
            - If the vibe is abstract (e.g., "Rave", "Chill"), use color psychology.
            - If the vibe is "Random", go wild with an eclectic mix.
+           - **COLOR PREFERENCE: PRIORITIZE BRIGHT COLORS (Pink, Green, Blue, Yellow, Purple, Orange). Use Black, Gray, or Brown SPARINGLY and ONLY if the vibe explicitly demands it (e.g. "Goth", "Dark", "Space", "Halloween"). Do not use Black as a filler color.**
 
         2. PATTERN STYLE (Avoid simple A-B-A-B):
            - Use complex repeating units (e.g., A-A-B-C-A-A).
@@ -50,7 +51,8 @@ export async function POST(req: Request) {
     const cleanPattern = result.object.rawPattern.map((item) => {
       // Robust splitting to handle "Red:pony" or just "Red"
       const parts = item.split(':');
-      const colorName = parts[0] ? parts[0].trim() : "Black";
+      // FIX: Changed default fallback from "Black" to "Pink" to avoid accidental dark beads
+      const colorName = parts[0] ? parts[0].trim() : "Pink";
       
       return { 
         color: colorName, 

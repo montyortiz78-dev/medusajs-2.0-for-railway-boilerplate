@@ -4,7 +4,8 @@ import { useState, useEffect, Suspense, useMemo, Fragment } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, Button, clx } from "@medusajs/ui";
 import { Dialog, Transition } from "@headlessui/react";
-import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle } from "@medusajs/icons";
+// FIX: Replaced 'Ruler' with 'Tag'
+import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle, Tag } from "@medusajs/icons";
 import useToggleState from "@lib/hooks/use-toggle-state";
 
 import KandiVisualizer from '@components/kandi-visualizer';
@@ -12,12 +13,11 @@ import KandiManualBuilder, { BeadItem } from '@components/kandi-manual-builder';
 import { addToCart } from '@lib/data/cart';
 import { getCustomKandiProduct } from './actions';
 import { HttpTypes } from "@medusajs/types";
-import KandiGuide from '@components/kandi-guide';
+import KandiSizingGuide from '@components/kandi-sizing-guide';
 import HeroCanvas from '@components/hero-canvas';
 import { useKandiContext } from "@lib/context/kandi-context"
 import { isEqual } from "lodash"
 
-// Reuse the OptionSelect from product pages for consistency
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 
 // Map AI Color Names to Manual Builder Hex Codes
@@ -42,11 +42,56 @@ const STITCH_MAPPING: Record<string, string> = {
   "Single": "single", 
 }
 
-// Priority keys: Earlier index = Higher priority match
+// Priority keys
 const ROWS_KEYS = ["rows", "row", "tiers", "layers", "row count", "height"];
 const STITCH_KEYS = ["stitch", "pattern", "weave", "style", "design", "cuff type", "type"];
 
-// --- NEW COMPONENT: Mobile Sticky Actions ---
+// --- NEW COMPONENT: Size Guide Modal ---
+const SizeGuideModal = ({ isOpen, close }: { isOpen: boolean, close: () => void }) => {
+    return (
+        <Transition appear show={isOpen} as={Fragment}>
+            <Dialog as="div" className="relative z-[100]" onClose={close}>
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0"
+                    enterTo="opacity-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                >
+                    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 backdrop-blur-sm" />
+                </Transition.Child>
+
+                <div className="fixed inset-0 overflow-y-auto">
+                    <div className="flex min-h-full items-center justify-center p-4 text-center">
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95"
+                        >
+                            <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-ui-bg-base p-6 text-left align-middle shadow-xl transition-all">
+                                <div className="flex justify-between items-center mb-6">
+                                    <Dialog.Title as="h3" className="text-xl font-bold text-ui-fg-base flex items-center gap-2">
+                                        {/* FIX: Used Tag icon here */}
+                                        <Tag className="text-pink-500"/> Size Guide
+                                    </Dialog.Title>
+                                    <button onClick={close} className="text-ui-fg-subtle hover:text-ui-fg-base">✕</button>
+                                </div>
+                                <KandiSizingGuide />
+                            </Dialog.Panel>
+                        </Transition.Child>
+                    </div>
+                </div>
+            </Dialog>
+        </Transition>
+    )
+}
+
 const MobileCreateBar = ({
     product,
     selectedVariant,
@@ -74,7 +119,6 @@ const MobileCreateBar = ({
         }).format(selectedVariant.calculated_price.calculated_amount ?? 0);
     }, [selectedVariant]);
 
-    // If pattern is empty, we force user to design first
     const isDesignReady = patternLength > 0;
     const isValid = selectedVariant && isDesignReady;
 
@@ -94,12 +138,10 @@ const MobileCreateBar = ({
                      </div>
                      
                      <div className="grid grid-cols-2 gap-x-4">
-                        {/* Option 1: Select Options (Opens Modal) */}
                         <Button variant="secondary" onClick={open} className="w-full">
                             {selectedVariant ? "Edit Options" : "Select Options"}
                         </Button>
 
-                        {/* Option 2: Add to Cart */}
                         <Button 
                             onClick={handleAddToStash}
                             disabled={!isValid || isAdding}
@@ -113,7 +155,6 @@ const MobileCreateBar = ({
                 </div>
             </div>
 
-            {/* Options Modal */}
             <Transition appear show={state} as={Fragment}>
                 <Dialog as="div" className="relative z-[75]" onClose={close}>
                     <Transition.Child
@@ -173,7 +214,6 @@ const MobileCreateBar = ({
 
 
 function KandiGeneratorContent() {
-  // --- STATE ---
   const [mode, setMode] = useState<'ai' | 'manual'>('ai');
   const [vibe, setVibe] = useState('');
   const [kandiName, setKandiName] = useState('My Custom Kandi');
@@ -189,13 +229,12 @@ function KandiGeneratorContent() {
   const [captureMode, setCaptureMode] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
 
+  const sizeGuideState = useToggleState();
+
   const params = useParams();
   const router = useRouter();
-
-  // Use Global Context for Pattern & Visualizer Config
   const { pattern, setPattern, designConfig, setDesignConfig } = useKandiContext();
 
-  // --- INITIALIZATION ---
   useEffect(() => {
     const fetchProduct = async () => {
       const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-ai-kandi';
@@ -205,7 +244,6 @@ function KandiGeneratorContent() {
           setProduct(fetchedProduct);
           
           if (fetchedProduct.variants && fetchedProduct.variants.length > 0) {
-             // Try to find default "Small" / "Single" / "1 Row" options first
              const PREFERRED_DEFAULTS: Record<string, string> = {
                 "Size": "Small", "Type": "Single Bracelet",
                 "Rows": "1", "Stitch": "Ladder"
@@ -233,25 +271,20 @@ function KandiGeneratorContent() {
     fetchProduct();
   }, []);
 
-  // --- RESOLVE VARIANT ---
   useEffect(() => {
     if (!product || !product.variants) return;
     
-    // Find variant where every selected option matches the variant's options
     const variant = product.variants.find((v) => 
         v.options?.every((opt) => opt.option_id && options[opt.option_id] === opt.value)
     );
     setSelectedVariant(variant);
   }, [product, options]);
 
-  // --- OPTION PARSING: UPDATE 3D VISUALIZER ---
   useEffect(() => {
     if (!product || !product.options) return;
 
-    // Helper: Map Option ID back to Title
     const getOptionTitle = (optId: string) => product.options?.find(o => o.id === optId)?.title || "";
 
-    // Helper: Find value by matching Title against allowed keys (Priority-based)
     const getOptionValue = (allowedKeys: string[]) => {
         const matches = Object.entries(options).map(([optId, value]) => {
             const title = getOptionTitle(optId).toLowerCase();
@@ -260,7 +293,6 @@ function KandiGeneratorContent() {
         }).filter((m): m is { value: string, priorityIndex: number } => m !== null);
 
         matches.sort((a, b) => a.priorityIndex - b.priorityIndex);
-        
         return matches.length > 0 ? matches[0].value : null;
     };
 
@@ -278,7 +310,6 @@ function KandiGeneratorContent() {
         return null;
     }
 
-    // A. Parse Rows
     const selectedRowsVal = getOptionValue(ROWS_KEYS);
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase();
@@ -293,7 +324,6 @@ function KandiGeneratorContent() {
       else if (valStr.includes("quad")) rows = 4;
     }
 
-    // B. Parse Stitch
     const selectedStitchVal = getOptionValue(STITCH_KEYS);
     if (selectedStitchVal) {
         const resolved = resolveStitch(selectedStitchVal);
@@ -304,13 +334,11 @@ function KandiGeneratorContent() {
         }
     }
 
-    // C. Metadata Override
     if (selectedVariant?.metadata) {
         if (selectedVariant.metadata.kandi_rows) rows = Number(selectedVariant.metadata.kandi_rows);
         if (selectedVariant.metadata.kandi_stitch) stitch = String(selectedVariant.metadata.kandi_stitch);
     }
 
-    // D. Update Global Context
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
@@ -319,11 +347,9 @@ function KandiGeneratorContent() {
   }, [options, product, selectedVariant, setDesignConfig]);
 
 
-  // --- HANDLER: SMART SWITCHING ---
   const handleOptionChange = (optionId: string, value: string) => {
     const newOptions = { ...options, [optionId]: value };
 
-    // Check exact match
     const exactMatch = product?.variants?.some(v => 
         v.options?.every(opt => opt.option_id && newOptions[opt.option_id] === opt.value)
     );
@@ -331,7 +357,6 @@ function KandiGeneratorContent() {
     if (exactMatch) {
         setOptions(newOptions);
     } else {
-        // Auto-fix other options to find nearest valid variant
         const validVariant = product?.variants?.find(v => 
             v.options?.some(opt => opt.option_id === optionId && opt.value === value)
         );
@@ -507,7 +532,6 @@ function KandiGeneratorContent() {
                     )}
                 </div>
 
-                {/* DESKTOP ONLY ACTIONS */}
                 <div className="hidden lg:flex justify-end gap-4">
                     {mode === 'ai' && hasGenerated && (
                         <button onClick={handleAiGenerate} className="py-3 px-6 rounded-full bg-ui-bg-component border border-ui-border-base hover:bg-ui-bg-component-hover font-bold text-sm transition-colors text-ui-fg-base shadow-sm">
@@ -532,9 +556,19 @@ function KandiGeneratorContent() {
             <div className="flex flex-col gap-6 order-3 lg:col-start-1">
                 {product && product.options && product.options.length > 0 && (
                 <div className="bg-white/60 dark:bg-zinc-900/60 p-6 rounded-3xl border border-ui-border-base shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                        <CheckCircle className="text-green-500"/> Finalize
-                    </h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            <CheckCircle className="text-green-500"/> Finalize
+                        </h3>
+                        <button 
+                            onClick={sizeGuideState.open}
+                            className="text-sm font-medium text-pink-500 hover:text-pink-600 flex items-center gap-1 transition-colors"
+                        >
+                            {/* FIX: Used Tag icon here */}
+                            <Tag /> Size Guide
+                        </button>
+                    </div>
+
                     <div className="space-y-4">
                         {product.options.map((option) => (
                         <div key={option.id} className="space-y-2">
@@ -573,11 +607,6 @@ function KandiGeneratorContent() {
                 )}
             </div>
 
-            {/* GROUP D: GUIDE */}
-            <div className="flex flex-col gap-6 order-4 lg:col-start-1">
-                <KandiGuide />
-            </div>
-
         </div>
 
         {/* Disclaimer Footer */}
@@ -591,7 +620,6 @@ function KandiGeneratorContent() {
             </p>
         </div>
         
-        {/* NEW: MOBILE STICKY BAR */}
         <MobileCreateBar 
             product={product}
             selectedVariant={selectedVariant}
@@ -601,6 +629,8 @@ function KandiGeneratorContent() {
             isAdding={isAdding}
             patternLength={pattern.length}
         />
+
+        <SizeGuideModal isOpen={sizeGuideState.state} close={sizeGuideState.close} />
 
       </section>
     </div>
