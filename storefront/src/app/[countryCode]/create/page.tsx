@@ -26,10 +26,15 @@ const AI_COLOR_MAP: Record<string, string> = {
 
 // 1. CONFIG: Option Parsing Mappings
 const STITCH_MAPPING: Record<string, string> = {
-  "Ladder": "ladder", "Flat": "flat", "Multi (Peyote)": "peyote", // Fixed Flat mapping
-  "Peyote": "peyote", "Brick": "brick", "Flower": "flower",
-  "X-base": "x-base", "Single": "ladder", 
-};
+  "Ladder": "ladder", 
+  "Flat": "flat", 
+  "Multi (Peyote)": "peyote",
+  "Peyote": "peyote", 
+  "Brick": "brick", 
+  "Flower": "flower",
+  "X-base": "x-base", 
+  "Single": "single", 
+}
 
 // Priority keys: Earlier index = Higher priority match
 const ROWS_KEYS = ["rows", "row", "tiers", "layers", "row count", "height"];
@@ -271,6 +276,13 @@ function KandiGeneratorContent() {
     }
   };
 
+  // [ADD THIS BLOCK] ---------------------------------------------------------
+  // Prepare pattern for Visualizer: Remove ghost beads and IDs to match Product Page format
+  const visualizerPattern = pattern
+    .filter((p) => !p.isGhost)
+    .map((p) => ({ color: p.color }));
+  // --------------------------------------------------------------------------
+
   return (
     <div className="min-h-screen text-ui-fg-base font-sans transition-colors duration-300">
       
@@ -407,7 +419,7 @@ function KandiGeneratorContent() {
                 <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
                     {pattern.length > 0 ? (
                         <KandiVisualizer 
-                            pattern={pattern} 
+                            pattern={visualizerPattern}
                             captureMode={captureMode}
                             // DYNAMIC PROPS
                             rows={designConfig.rows} 
