@@ -1,19 +1,19 @@
 'use client';
 
-// Ensure this import is exactly '@ai-sdk/react'
 import { useChat } from '@ai-sdk/react'; 
 import { useState, useRef, useEffect } from 'react';
 import { Button, Input, clx } from '@medusajs/ui';
 import X from '@modules/common/icons/x';
 import Spinner from '@modules/common/icons/spinner';
+// FIX: Import usePathname to detect current route
+import { usePathname } from 'next/navigation';
 
-// Simple Chat Icon SVG for the toggle button
 const ChatIcon = () => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     viewBox="0 0 24 24" 
     fill="currentColor" 
-    className="w-7 h-7 group-hover:scale-110 transition-transform"
+    className="w-5 h-5 small:w-7 small:h-7 group-hover:scale-110 transition-transform"
   >
     <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.715 6.161.424 1.333.317 2.37.155 3.129a.75.75 0 001.434.353z" clipRule="evenodd" />
   </svg>
@@ -21,18 +21,21 @@ const ChatIcon = () => (
 
 export default function KandiChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
   
-  // We explicitly type this to 'any' temporarily to handle potential version mismatches gracefully
   const chat = useChat({
     api: '/api/chat',
     onError: (e) => console.error("Chat Error:", e),
   }) as any;
 
-  // Destructure setInput to manually clear the text box
   const { messages = [], input = '', handleInputChange, handleSubmit, append, setInput, status } = chat;
 
   const isLoading = status === 'streaming' || status === 'submitted';
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // FIX: Logic to determine if we need to move the icon up
+  // We move it up on "/products/*" and "/create" because those have sticky bottom bars
+  const hasStickyBottomBar = pathname.includes('/products/') || pathname.includes('/create');
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -45,31 +48,22 @@ export default function KandiChatWidget() {
     if (!input.trim()) return;
 
     const currentMessage = input;
-    
-    // 1. Clear the input immediately for better UX
     setInput('');
 
-    // 2. Send the message
     if (typeof append === 'function') {
       await append({ role: 'user', content: currentMessage });
     } 
     else if (typeof handleSubmit === 'function') {
-      // If falling back to handleSubmit, we need to restore the value temporarily 
-      // or rely on its internal state, but append is preferred.
-      // Since we cleared 'input' state above, handleSubmit might send empty if it reads from state.
-      // For legacy handleSubmit, it usually reads the event. 
-      // But purely for safety in this specific "append" fix:
       handleSubmit(e); 
     } 
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4 font-sans">
+    <div className="fixed bottom-0 right-0 z-[9999] pointer-events-none p-4 small:p-6 flex flex-col items-end gap-4 font-sans">
       
       {isOpen && (
-        <div className="w-[350px] h-[500px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-ui-border-base flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-200">
+        <div className="pointer-events-auto w-full h-[80vh] small:w-[350px] small:h-[500px] fixed bottom-0 left-0 right-0 small:relative small:bottom-auto small:left-auto small:right-auto bg-white dark:bg-zinc-900 rounded-t-2xl small:rounded-2xl shadow-2xl border-t small:border border-ui-border-base flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-10 duration-200">
           
-          {/* Header - Removed Robot Emoji */}
           <div className="p-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white flex justify-between items-center shadow-md">
             <div>
               <h3 className="text-small-plus font-bold">KandiBot</h3>
@@ -101,7 +95,6 @@ export default function KandiChatWidget() {
                     : "bg-white dark:bg-zinc-800 text-ui-fg-base border border-ui-border-base mr-auto rounded-bl-none"
                 )}
               >
-                {/* Robust content rendering */}
                 {m.content || (m.parts && m.parts.map((p: any) => p.text).join(''))}
               </div>
             ))}
@@ -115,7 +108,7 @@ export default function KandiChatWidget() {
             )}
           </div>
 
-          <form onSubmit={onSubmit} className="p-3 border-t border-ui-border-base bg-white dark:bg-zinc-900 flex gap-2">
+          <form onSubmit={onSubmit} className="p-3 border-t border-ui-border-base bg-white dark:bg-zinc-900 flex gap-2 pb-6 small:pb-3">
             <Input
               value={input}
               onChange={handleInputChange}
@@ -134,13 +127,20 @@ export default function KandiChatWidget() {
         </div>
       )}
 
+      {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center text-white active:scale-95 group"
+        className={clx(
+            "pointer-events-auto bg-gradient-to-tr from-pink-500 to-purple-600 rounded-full shadow-lg hover:scale-110 transition-transform flex items-center justify-center text-white active:scale-95 group",
+            // FIX: Conditional margin bottom. 
+            // - If sticky bar exists (products/create): mb-32 (128px)
+            // - If normal page: mb-4 (16px)
+            "w-10 h-10 small:w-14 small:h-14 small:mb-0",
+            hasStickyBottomBar ? "mb-24" : "mb-4"
+        )}
       >
-        {/* Toggle between X and Chat Icon (No Robot) */}
         {isOpen ? (
-          <X />
+          <X className="w-4 h-4 small:w-6 small:h-6" />
         ) : (
           <ChatIcon />
         )}

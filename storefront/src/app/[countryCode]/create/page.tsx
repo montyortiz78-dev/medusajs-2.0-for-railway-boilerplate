@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo, Fragment } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
-import { Input, Label, clx } from "@medusajs/ui";
+import { Input, Label, Button, clx } from "@medusajs/ui";
+import { Dialog, Transition } from "@headlessui/react";
 import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle } from "@medusajs/icons";
+import useToggleState from "@lib/hooks/use-toggle-state";
+
 import KandiVisualizer from '@components/kandi-visualizer';
 import KandiManualBuilder, { BeadItem } from '@components/kandi-manual-builder';
 import { addToCart } from '@lib/data/cart';
@@ -13,6 +16,9 @@ import KandiGuide from '@components/kandi-guide';
 import HeroCanvas from '@components/hero-canvas';
 import { useKandiContext } from "@lib/context/kandi-context"
 import { isEqual } from "lodash"
+
+// Reuse the OptionSelect from product pages for consistency
+import OptionSelect from "@modules/products/components/product-actions/option-select"
 
 // Map AI Color Names to Manual Builder Hex Codes
 const AI_COLOR_MAP: Record<string, string> = {
@@ -39,6 +45,132 @@ const STITCH_MAPPING: Record<string, string> = {
 // Priority keys: Earlier index = Higher priority match
 const ROWS_KEYS = ["rows", "row", "tiers", "layers", "row count", "height"];
 const STITCH_KEYS = ["stitch", "pattern", "weave", "style", "design", "cuff type", "type"];
+
+// --- NEW COMPONENT: Mobile Sticky Actions ---
+const MobileCreateBar = ({
+    product,
+    selectedVariant,
+    options,
+    handleOptionChange,
+    handleAddToStash,
+    isAdding,
+    patternLength
+}: {
+    product: HttpTypes.StoreProduct | null,
+    selectedVariant?: HttpTypes.StoreProductVariant,
+    options: Record<string, string>,
+    handleOptionChange: (id: string, val: string) => void,
+    handleAddToStash: () => void,
+    isAdding: boolean,
+    patternLength: number
+}) => {
+    const { state, open, close } = useToggleState();
+
+    const selectedPrice = useMemo(() => {
+        if (!selectedVariant?.calculated_price) return null;
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: selectedVariant.calculated_price.currency_code ?? "USD",
+        }).format(selectedVariant.calculated_price.calculated_amount ?? 0);
+    }, [selectedVariant]);
+
+    // If pattern is empty, we force user to design first
+    const isDesignReady = patternLength > 0;
+    const isValid = selectedVariant && isDesignReady;
+
+    if (!product) return null;
+
+    return (
+        <>
+            <div className="fixed bottom-0 inset-x-0 z-[50] bg-ui-bg-base border-t border-ui-border-base p-4 lg:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                <div className="flex flex-col gap-y-4">
+                     <div className="flex items-center justify-between">
+                        <span className="text-base-semi truncate max-w-[200px]">
+                            {selectedVariant?.title === "Default Variant" ? product.title : (selectedVariant?.title || product.title)}
+                        </span>
+                        <span className="text-base-semi text-ui-fg-interactive">
+                            {selectedPrice || "-"}
+                        </span>
+                     </div>
+                     
+                     <div className="grid grid-cols-2 gap-x-4">
+                        {/* Option 1: Select Options (Opens Modal) */}
+                        <Button variant="secondary" onClick={open} className="w-full">
+                            {selectedVariant ? "Edit Options" : "Select Options"}
+                        </Button>
+
+                        {/* Option 2: Add to Cart */}
+                        <Button 
+                            onClick={handleAddToStash}
+                            disabled={!isValid || isAdding}
+                            isLoading={isAdding}
+                            variant="primary"
+                            className="w-full"
+                        >
+                            {!isDesignReady ? "Add Beads" : (!selectedVariant ? "Select Variant" : "Add to Stash")}
+                        </Button>
+                     </div>
+                </div>
+            </div>
+
+            {/* Options Modal */}
+            <Transition appear show={state} as={Fragment}>
+                <Dialog as="div" className="relative z-[75]" onClose={close}>
+                    <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                    >
+                        <div className="fixed inset-0 bg-gray-900 bg-opacity-75 backdrop-blur-sm" />
+                    </Transition.Child>
+
+                    <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4 text-center">
+                            <Transition.Child
+                                as={Fragment}
+                                enter="ease-out duration-300"
+                                enterFrom="opacity-0 scale-95"
+                                enterTo="opacity-100 scale-100"
+                                leave="ease-in duration-200"
+                                leaveFrom="opacity-100 scale-100"
+                                leaveTo="opacity-0 scale-95"
+                            >
+                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-ui-bg-base p-6 text-left align-middle shadow-xl transition-all">
+                                    <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-ui-fg-base mb-4">
+                                        Customize Options
+                                    </Dialog.Title>
+                                    
+                                    <div className="flex flex-col gap-y-4">
+                                        {product.options?.map((option) => (
+                                            <div key={option.id}>
+                                                <OptionSelect
+                                                    option={option}
+                                                    current={options[option.id]}
+                                                    updateOption={(_, val) => handleOptionChange(option.id, val)}
+                                                    title={option.title ?? ""}
+                                                    disabled={isAdding}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    <div className="mt-6">
+                                        <Button onClick={close} className="w-full">Done</Button>
+                                    </div>
+                                </Dialog.Panel>
+                            </Transition.Child>
+                        </div>
+                    </div>
+                </Dialog>
+            </Transition>
+        </>
+    );
+};
+
 
 function KandiGeneratorContent() {
   // --- STATE ---
@@ -127,7 +259,6 @@ function KandiGeneratorContent() {
             return priorityIndex !== -1 ? { value, priorityIndex } : null;
         }).filter((m): m is { value: string, priorityIndex: number } => m !== null);
 
-        // Sort by priority (lowest index = higher priority)
         matches.sort((a, b) => a.priorityIndex - b.priorityIndex);
         
         return matches.length > 0 ? matches[0].value : null;
@@ -136,16 +267,13 @@ function KandiGeneratorContent() {
     let rows = 1;
     let stitch = "ladder";
 
-    // Helper to resolve stitch string to code
     const resolveStitch = (val: string) => {
         const valLower = val.toLowerCase();
-        // Check direct mapping
         const mapKey = Object.keys(STITCH_MAPPING).find(k => k.toLowerCase() === valLower);
         if (mapKey) return STITCH_MAPPING[mapKey];
-        // Check keywords
         if (valLower.includes("x-base")) return "x-base";
         if (valLower.includes("peyote") || valLower.includes("multi")) return "peyote";
-        if (valLower.includes("flat") || valLower.includes("brick")) return "flat"; // or brick/peyote logic
+        if (valLower.includes("flat") || valLower.includes("brick")) return "flat"; 
         if (valLower.includes("flower")) return "flower";
         return null;
     }
@@ -154,8 +282,6 @@ function KandiGeneratorContent() {
     const selectedRowsVal = getOptionValue(ROWS_KEYS);
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase();
-      
-      // Check if Row option actually implies a stitch type (e.g. "Double X-base")
       const stitchFromRows = resolveStitch(selectedRowsVal);
       if (stitchFromRows) stitch = stitchFromRows;
 
@@ -167,26 +293,24 @@ function KandiGeneratorContent() {
       else if (valStr.includes("quad")) rows = 4;
     }
 
-    // B. Parse Stitch (Overrides rows derivation if present)
+    // B. Parse Stitch
     const selectedStitchVal = getOptionValue(STITCH_KEYS);
     if (selectedStitchVal) {
         const resolved = resolveStitch(selectedStitchVal);
         if (resolved) {
             stitch = resolved;
         } else {
-            // Fallback for direct value pass
             stitch = selectedStitchVal.toLowerCase();
         }
     }
 
-    // C. Variant Metadata Override
+    // C. Metadata Override
     if (selectedVariant?.metadata) {
         if (selectedVariant.metadata.kandi_rows) rows = Number(selectedVariant.metadata.kandi_rows);
         if (selectedVariant.metadata.kandi_stitch) stitch = String(selectedVariant.metadata.kandi_stitch);
     }
 
     // D. Update Global Context
-    // console.log("Visualizer Update:", { rows, stitch });
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
@@ -199,7 +323,7 @@ function KandiGeneratorContent() {
   const handleOptionChange = (optionId: string, value: string) => {
     const newOptions = { ...options, [optionId]: value };
 
-    // Check if a variant exists for this exact combination
+    // Check exact match
     const exactMatch = product?.variants?.some(v => 
         v.options?.every(opt => opt.option_id && newOptions[opt.option_id] === opt.value)
     );
@@ -207,7 +331,7 @@ function KandiGeneratorContent() {
     if (exactMatch) {
         setOptions(newOptions);
     } else {
-        // If not, find the closest valid variant that has the NEW option value
+        // Auto-fix other options to find nearest valid variant
         const validVariant = product?.variants?.find(v => 
             v.options?.some(opt => opt.option_id === optionId && opt.value === value)
         );
@@ -276,20 +400,16 @@ function KandiGeneratorContent() {
     }
   };
 
-  // [ADD THIS BLOCK] ---------------------------------------------------------
-  // Prepare pattern for Visualizer: Remove ghost beads and IDs to match Product Page format
   const visualizerPattern = pattern
     .filter((p) => !p.isGhost)
     .map((p) => ({ color: p.color }));
-  // --------------------------------------------------------------------------
 
   return (
     <div className="min-h-screen text-ui-fg-base font-sans transition-colors duration-300">
       
-      {/* 1. BACKGROUND LAYER */}
       <HeroCanvas />
 
-      {/* 2. HERO SECTION (Intro) */}
+      {/* Intro */}
       <section className="relative z-10 flex flex-col items-center justify-center min-h-[65vh] px-4 text-center animate-in fade-in slide-in-from-top-8 duration-1000">
           <div className="max-w-3xl space-y-6">
             <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 tracking-tighter drop-shadow-sm">
@@ -310,19 +430,18 @@ function KandiGeneratorContent() {
             </div>
           </div>
 
-          {/* Scroll Hint */}
           <div className="absolute bottom-10 animate-bounce opacity-50">
              <ArrowDownCircle className="w-8 h-8 text-ui-fg-muted" />
           </div>
       </section>
       
-      {/* 3. CREATE SECTION (Tool) */}
-      <section className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-24 flex flex-col items-center">
+      {/* Tool Section */}
+      <section className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-[140px] lg:pb-24 flex flex-col items-center">
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-            {/* LEFT COLUMN: CONTROLS */}
-            <div className="flex flex-col gap-6">
-                {/* Mode Switcher */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full items-start">
+            
+            {/* GROUP A: GENERATOR CONTROLS */}
+            <div className="flex flex-col gap-6 order-1 lg:col-start-1">
                 <div className="flex bg-ui-bg-subtle p-1 rounded-full border border-ui-border-base self-center lg:self-start shadow-md backdrop-blur-md">
                     <button onClick={() => setMode('ai')} className={clx("px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all", mode === 'ai' ? "bg-ui-bg-base shadow-sm text-ui-fg-base" : "text-ui-fg-subtle hover:text-ui-fg-base")}>
                         <Sparkles className={mode === 'ai' ? "text-pink-500" : ""} /> Vibe with AI
@@ -363,7 +482,54 @@ function KandiGeneratorContent() {
                     <ExclamationCircle /> <span className="text-sm font-medium">{productError}</span>
                 </div>
                 )}
+            </div>
 
+            {/* GROUP B: VISUALIZER */}
+            <div className="flex flex-col gap-6 order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24">
+                <div className="text-center lg:text-left backdrop-blur-sm p-4 rounded-2xl border border-transparent hover:border-ui-border-base transition-colors">
+                    <h2 className="text-4xl font-bold text-ui-fg-base mb-2">{kandiName}</h2>
+                    <p className="text-ui-fg-subtle italic">"{mode === 'ai' ? vibeStory : 'Custom Design'}"</p>
+                </div>
+                
+                <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
+                    {pattern.length > 0 ? (
+                        <KandiVisualizer 
+                            pattern={visualizerPattern}
+                            captureMode={captureMode}
+                            rows={designConfig.rows} 
+                            stitch={designConfig.stitch}
+                        />
+                    ) : (
+                        <div className="text-ui-fg-muted text-center flex flex-col items-center">
+                            <span className="text-4xl mb-2">📿</span>
+                            <p>Add beads to see preview</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* DESKTOP ONLY ACTIONS */}
+                <div className="hidden lg:flex justify-end gap-4">
+                    {mode === 'ai' && hasGenerated && (
+                        <button onClick={handleAiGenerate} className="py-3 px-6 rounded-full bg-ui-bg-component border border-ui-border-base hover:bg-ui-bg-component-hover font-bold text-sm transition-colors text-ui-fg-base shadow-sm">
+                        Remix ↺
+                    </button>
+                    )}
+                    <button 
+                    onClick={handleAddToStash}
+                    disabled={isAdding || pattern.length === 0 || !selectedVariant}
+                    className="py-3 px-8 rounded-full bg-ui-fg-base text-ui-bg-base hover:opacity-90 font-bold text-sm transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                    {isAdding ? "Adding..." : (
+                        selectedVariant?.calculated_price?.calculated_amount 
+                        ? `Add to Stash (${selectedVariant.calculated_price.calculated_amount} ${selectedVariant.calculated_price.currency_code})`
+                        : "Select Options"
+                    )}
+                    </button>
+                </div>
+            </div>
+
+            {/* GROUP C: VARIANT SELECTION (Options) */}
+            <div className="flex flex-col gap-6 order-3 lg:col-start-1">
                 {product && product.options && product.options.length > 0 && (
                 <div className="bg-white/60 dark:bg-zinc-900/60 p-6 rounded-3xl border border-ui-border-base shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -405,53 +571,13 @@ function KandiGeneratorContent() {
                     </div>
                 </div>
                 )}
+            </div>
 
+            {/* GROUP D: GUIDE */}
+            <div className="flex flex-col gap-6 order-4 lg:col-start-1">
                 <KandiGuide />
             </div>
 
-            {/* RIGHT COLUMN: VISUALIZER */}
-            <div className="flex flex-col gap-6 sticky top-24">
-                <div className="text-center lg:text-left backdrop-blur-sm p-4 rounded-2xl border border-transparent hover:border-ui-border-base transition-colors">
-                    <h2 className="text-4xl font-bold text-ui-fg-base mb-2">{kandiName}</h2>
-                    <p className="text-ui-fg-subtle italic">"{mode === 'ai' ? vibeStory : 'Custom Design'}"</p>
-                </div>
-                
-                <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
-                    {pattern.length > 0 ? (
-                        <KandiVisualizer 
-                            pattern={visualizerPattern}
-                            captureMode={captureMode}
-                            // DYNAMIC PROPS
-                            rows={designConfig.rows} 
-                            stitch={designConfig.stitch}
-                        />
-                    ) : (
-                        <div className="text-ui-fg-muted text-center flex flex-col items-center">
-                            <span className="text-4xl mb-2">📿</span>
-                            <p>Add beads to see preview</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex justify-center lg:justify-end gap-4">
-                    {mode === 'ai' && hasGenerated && (
-                        <button onClick={handleAiGenerate} className="py-3 px-6 rounded-full bg-ui-bg-component border border-ui-border-base hover:bg-ui-bg-component-hover font-bold text-sm transition-colors text-ui-fg-base shadow-sm">
-                        Remix ↺
-                    </button>
-                    )}
-                    <button 
-                    onClick={handleAddToStash}
-                    disabled={isAdding || pattern.length === 0 || !selectedVariant}
-                    className="py-3 px-8 rounded-full bg-ui-fg-base text-ui-bg-base hover:opacity-90 font-bold text-sm transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed w-full lg:w-auto"
-                    >
-                    {isAdding ? "Adding..." : (
-                        selectedVariant?.calculated_price?.calculated_amount 
-                        ? `Add to Stash (${selectedVariant.calculated_price.calculated_amount} ${selectedVariant.calculated_price.currency_code})`
-                        : "Select Options"
-                    )}
-                    </button>
-                </div>
-            </div>
         </div>
 
         {/* Disclaimer Footer */}
@@ -464,6 +590,17 @@ function KandiGeneratorContent() {
                 By purchasing, you agree to these minor artistic variations.
             </p>
         </div>
+        
+        {/* NEW: MOBILE STICKY BAR */}
+        <MobileCreateBar 
+            product={product}
+            selectedVariant={selectedVariant}
+            options={options}
+            handleOptionChange={handleOptionChange}
+            handleAddToStash={handleAddToStash}
+            isAdding={isAdding}
+            patternLength={pattern.length}
+        />
 
       </section>
     </div>

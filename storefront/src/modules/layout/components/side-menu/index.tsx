@@ -45,13 +45,22 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                 leaveFrom="opacity-100 backdrop-blur-2xl"
                 leaveTo="opacity-0"
               >
-                <Popover.Panel className="flex flex-col absolute w-full pr-4 sm:pr-0 sm:w-1/3 2xl:w-1/4 sm:min-w-min h-[calc(100vh-1rem)] z-30 inset-x-0 text-sm text-ui-fg-on-color m-2 backdrop-blur-2xl">
+                {/* FIX: Changed absolute to fixed to ensure it covers the screen properly on mobile.
+                  Adjusted z-index to 50 to match/exceed header.
+                  Changed width logic to prevent w-full + margin overflow.
+                */}
+                <Popover.Panel className="flex flex-col fixed top-0 left-0 w-full sm:w-1/3 2xl:w-1/4 h-[100dvh] z-[100] text-sm text-ui-fg-on-color p-2 backdrop-blur-2xl">
                   <div
                     data-testid="nav-menu-popup"
-                    className="flex flex-col h-full bg-[rgba(3,7,18,0.5)] rounded-rounded justify-between p-6"
+                    className="flex flex-col h-full bg-[rgba(3,7,18,0.95)] dark:bg-[rgba(3,7,18,0.8)] rounded-rounded justify-between p-6 border border-white/10 shadow-2xl"
                   >
                     <div className="flex justify-end" id="xmark">
-                      <button data-testid="close-menu-button" onClick={close}>
+                      {/* Increased touch target size for mobile */}
+                      <button 
+                        data-testid="close-menu-button" 
+                        onClick={close}
+                        className="p-2 -mr-2 text-ui-fg-muted hover:text-white transition-colors"
+                      >
                         <XMark />
                       </button>
                     </div>
@@ -61,7 +70,7 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                           <li key={name}>
                             <LocalizedClientLink
                               href={href}
-                              className="text-3xl leading-10 hover:text-ui-fg-disabled"
+                              className="text-3xl leading-10 hover:text-kandi-pink transition-colors"
                               onClick={close}
                               data-testid={`${name.toLowerCase()}-link`}
                             >
@@ -73,7 +82,7 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                     </ul>
                     <div className="flex flex-col gap-y-6">
                       <div
-                        className="flex justify-between"
+                        className="flex justify-between items-center p-2 rounded-md hover:bg-white/5 transition-colors"
                         onMouseEnter={toggleState.open}
                         onMouseLeave={toggleState.close}
                       >
@@ -90,9 +99,8 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
                           )}
                         />
                       </div>
-                      <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
-                        reserved.
+                      <Text className="flex justify-between txt-compact-small text-ui-fg-muted">
+                        © {new Date().getFullYear()} Kandi Creations
                       </Text>
                     </div>
                   </div>

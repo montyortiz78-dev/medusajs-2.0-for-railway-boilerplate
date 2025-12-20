@@ -14,10 +14,11 @@ export default async function Footer() {
       <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-pink-500/50 to-transparent" />
 
       <div className="content-container flex flex-col w-full">
-        <div className="flex flex-col gap-y-6 xsmall:flex-row items-start justify-between py-20">
+        {/* FIX: Reduced padding on mobile (py-10) vs desktop (py-20) */}
+        <div className="flex flex-col gap-y-10 xsmall:flex-row items-start justify-between py-10 small:py-20">
           
           {/* Brand Section */}
-          <div className="max-w-sm">
+          <div className="max-w-full xsmall:max-w-sm">
             <LocalizedClientLink
               href="/"
               className="txt-compact-xlarge-plus text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600 uppercase font-black hover:text-ui-fg-base"
@@ -31,7 +32,7 @@ export default async function Footer() {
           </div>
 
           {/* Links Section */}
-          <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
+          <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3 w-full xsmall:w-auto">
             {product_categories && product_categories?.length > 0 && (
               <div className="flex flex-col gap-y-2">
                 <span className="txt-small-plus txt-ui-fg-base font-bold">Categories</span>

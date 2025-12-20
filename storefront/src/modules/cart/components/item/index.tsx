@@ -67,12 +67,11 @@ const Item = ({ item, type = "full" }: ItemProps) => {
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
-      <Table.Cell className="!pl-0 p-4 w-24">
+      {/* FIX: Reduced width and padding for mobile */}
+      <Table.Cell className="!pl-0 p-2 small:p-4 w-16 small:w-24 align-top">
         <LocalizedClientLink
-          href={productLink} // <--- USE THE NEW LINK VARIABLE HERE
-          className={clx("flex", {
-             // ... classes
-          })}
+          href={productLink} 
+          className={clx("flex aspect-square w-full rounded-lg overflow-hidden")}
         >
           <Thumbnail
             thumbnail={customImage || item.variant?.product?.thumbnail}
@@ -82,37 +81,36 @@ const Item = ({ item, type = "full" }: ItemProps) => {
         </LocalizedClientLink>
       </Table.Cell>
 
-      <Table.Cell className="text-left">
+      <Table.Cell className="text-left p-2 small:p-4 align-top">
         <Text
-          className="txt-medium-plus text-ui-fg-base"
+          className="txt-medium-plus text-ui-fg-base break-words line-clamp-2"
           data-testid="product-title"
         >
-            {/* Wrap the title in the link too for better UX */}
             <LocalizedClientLink href={productLink}>
                 {kandiName || item.product_title}
             </LocalizedClientLink>
         </Text>
         
         {kandiVibe && (
-            <Text className="txt-small text-ui-fg-subtle italic truncate max-w-[200px]">
+            <Text className="txt-small text-ui-fg-subtle italic truncate max-w-[120px] small:max-w-[200px]">
                 "{kandiVibe}"
             </Text>
         )}
 
-        {/* HIDE VARIANT TEXT IF KANDI */}
         {!kandiName && (
             <LineItemOptions variant={item.variant} data-testid="product-variant" />
         )}
       </Table.Cell>
 
       {type === "full" && (
-        <Table.Cell>
-          <div className="flex gap-2 items-center w-28">
+        <Table.Cell className="p-2 small:p-4 align-top">
+          {/* FIX: Flex column on mobile to stack controls, row on desktop */}
+          <div className="flex flex-col-reverse items-start small:flex-row gap-2 small:items-center w-full small:w-28">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-14 h-10 p-4"
+              className="w-12 h-9 p-2 small:w-14 small:h-10 small:p-4 text-small-regular"
               data-testid="product-select-button"
             >
               {Array.from(
@@ -134,12 +132,12 @@ const Item = ({ item, type = "full" }: ItemProps) => {
       )}
 
       {type === "full" && (
-        <Table.Cell className="hidden small:table-cell">
+        <Table.Cell className="hidden small:table-cell p-4 align-top">
           <LineItemUnitPrice item={item} style="tight" />
         </Table.Cell>
       )}
 
-      <Table.Cell className="!pr-0">
+      <Table.Cell className="!pr-0 p-2 small:p-4 align-top">
         <span
           className={clx("!pr-0", {
             "flex flex-col items-end h-full justify-center": type === "preview",

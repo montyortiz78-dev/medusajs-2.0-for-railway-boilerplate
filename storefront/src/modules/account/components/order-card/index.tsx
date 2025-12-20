@@ -26,11 +26,12 @@ const OrderCard = ({ order }: OrderCardProps) => {
   }, [order])
 
   return (
-    <div className="glass p-6 rounded-xl flex flex-col border border-ui-border-base" data-testid="order-card">
-      <div className="uppercase text-large-semi mb-1 text-ui-fg-base">
+    <div className="glass p-4 small:p-6 rounded-xl flex flex-col border border-ui-border-base" data-testid="order-card">
+      <div className="uppercase text-large-semi mb-2 text-ui-fg-base">
         #<span data-testid="order-display-id">{order.display_id}</span>
       </div>
-      <div className="flex items-center divide-x divide-ui-border-base text-small-regular text-ui-fg-subtle">
+      {/* FIX: Added flex-wrap and gap-y-1 to handle mobile wrapping */}
+      <div className="flex flex-wrap items-center divide-x divide-ui-border-base text-small-regular text-ui-fg-subtle gap-y-1">
         <span className="pr-2" data-testid="order-created-at">
           {new Date(order.created_at).toDateString()}
         </span>
@@ -55,7 +56,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
               <Thumbnail thumbnail={i.thumbnail} images={[]} size="full" />
               <div className="flex items-center text-small-regular text-ui-fg-subtle">
                 <span
-                  className="text-ui-fg-base font-semibold"
+                  className="text-ui-fg-base font-semibold line-clamp-1"
                   data-testid="item-title"
                 >
                   {i.title}
@@ -67,7 +68,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
           )
         })}
         {numberOfProducts > 4 && (
-          <div className="w-full h-full flex flex-col items-center justify-center">
+          <div className="w-full h-full flex flex-col items-center justify-center bg-ui-bg-subtle rounded-md p-2">
             <span className="text-small-regular text-ui-fg-base">
               + {numberOfLines - 4}
             </span>
@@ -77,7 +78,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
       </div>
       <div className="flex justify-end">
         <LocalizedClientLink href={`/account/orders/details/${order.id}`}>
-          <Button data-testid="order-details-link" variant="secondary" className="font-bold">
+          <Button data-testid="order-details-link" variant="secondary" className="font-bold w-full small:w-auto">
             See details
           </Button>
         </LocalizedClientLink>

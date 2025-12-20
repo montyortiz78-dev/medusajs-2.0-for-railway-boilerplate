@@ -1,6 +1,8 @@
 import React, { Suspense } from "react"
 
-import ProductActions from "@modules/products/components/product-actions"
+import ImageGallery from "@modules/products/components/image-gallery"
+// Note: PartComponent is ProductActions
+import PartComponent from "@modules/products/components/product-actions"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
@@ -9,8 +11,6 @@ import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-relat
 import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import { HttpTypes } from "@medusajs/types"
-import { KandiProvider } from "@lib/context/kandi-context"
-import VisualizerGalleryWrapper from "@modules/products/components/visualizer-gallery-wrapper"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -28,43 +28,41 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   }
 
   return (
-    <KandiProvider>
+    <>
       <div
         className="content-container flex flex-col small:flex-row small:items-start py-6 relative"
         data-testid="product-container"
       >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+        <div className="flex flex-col small:sticky small:top-48 w-full small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
           <ProductTabs product={product} />
         </div>
         <div className="block w-full relative">
-          {/* Replaced ImageGallery with the Wrapper that handles Visualizer switching */}
-          <VisualizerGalleryWrapper images={product?.images} />
+          <ImageGallery images={product?.images || []} />
         </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
+        <div className="flex flex-col small:sticky small:top-48 w-full small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />
           <Suspense
             fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
+              // FIX: Replaced invalid component usage with a simple skeleton div
+              <div className="w-full flex flex-col gap-y-4 px-4 py-8 bg-ui-bg-subtle/20 rounded-lg animate-pulse h-[300px]">
+                  <div className="h-6 w-3/4 bg-ui-bg-subtle rounded" />
+                  <div className="h-10 w-full bg-ui-bg-subtle rounded" />
+                  <div className="h-10 w-full bg-ui-bg-subtle rounded" />
+              </div>
             }
           >
             <ProductActionsWrapper id={product.id} region={region} />
           </Suspense>
         </div>
       </div>
-      <div
-        className="content-container my-16 small:my-32"
-        data-testid="related-products-container"
-      >
+      
+      <div className="content-container my-16 small:my-32 pb-[120px] small:pb-0">
         <Suspense fallback={<SkeletonRelatedProducts />}>
           <RelatedProducts product={product} countryCode={countryCode} />
         </Suspense>
       </div>
-    </KandiProvider>
+    </>
   )
 }
 

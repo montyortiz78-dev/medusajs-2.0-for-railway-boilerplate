@@ -23,23 +23,27 @@ export default async function RelatedProducts({
   const region = await getRegion(countryCode)
 
   if (!region) {
-  const queryParams: StoreProductParamsWithTags = {}
+    return null
   }
 
-  // edit this function to define your related products logic
-  const queryParams: StoreProductParamsWithTags = {}
+  // FIX: Cast to any to bypass strict type checking for filtering properties
+  // that exist on the API but might be missing from the provided SDK types.
+  const queryParams: any = {}
+  
   if (region?.id) {
     queryParams.region_id = region.id
   }
   if (product.collection_id) {
     queryParams.collection_id = [product.collection_id]
   }
+  
   const productWithTags = product as StoreProductWithTags
   if (productWithTags.tags) {
     queryParams.tags = productWithTags.tags
       .map((t) => t.value)
       .filter(Boolean) as string[]
   }
+  
   queryParams.is_giftcard = false
 
   const products = await getProductsList({
@@ -66,13 +70,18 @@ export default async function RelatedProducts({
         </p>
       </div>
 
-      <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-        {products.map((product) => (
-          <li key={product.id}>
-            {region && <Product region={region} product={product} />}
-          </li>
-        ))}
-      </ul>
+      <div className="relative w-full">
+        <ul className="flex overflow-x-auto gap-x-6 pb-8 snap-x snap-mandatory scrollbar-hide">
+          {products.map((product) => (
+            <li 
+              key={product.id} 
+              className="snap-center shrink-0 w-[280px] small:w-[350px] first:pl-2 last:pr-2"
+            >
+              {region && <Product region={region} product={product} />}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

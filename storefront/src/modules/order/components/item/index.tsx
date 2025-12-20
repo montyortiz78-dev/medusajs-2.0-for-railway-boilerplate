@@ -16,8 +16,9 @@ const Item = ({ item }: ItemProps) => {
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
-      <Table.Cell className="!pl-0 p-4 w-24">
-        <div className="flex w-16">
+      {/* FIX: Tighter cell for thumbnail */}
+      <Table.Cell className="!pl-0 p-2 w-16 small:p-4 small:w-24 align-top">
+        <div className="flex w-full aspect-square rounded-lg overflow-hidden">
           <Thumbnail 
             thumbnail={customImage || item.thumbnail} 
             size="square" 
@@ -25,16 +26,16 @@ const Item = ({ item }: ItemProps) => {
         </div>
       </Table.Cell>
 
-      <Table.Cell className="text-left">
+      <Table.Cell className="text-left p-2 small:p-4 align-top">
         <Text
-          className="txt-medium-plus text-ui-fg-base"
+          className="txt-medium-plus text-ui-fg-base line-clamp-2"
           data-testid="product-name"
         >
           {kandiName || item.title}
         </Text>
         
         {kandiVibe && (
-            <Text className="txt-small text-ui-fg-subtle italic">
+            <Text className="txt-small text-ui-fg-subtle italic truncate max-w-[150px]">
                 "{kandiVibe}"
             </Text>
         )}
@@ -45,8 +46,8 @@ const Item = ({ item }: ItemProps) => {
         )}
       </Table.Cell>
 
-      <Table.Cell className="!pr-0">
-        <span className="!pr-0 flex flex-col items-end h-full justify-center">
+      <Table.Cell className="!pr-0 p-2 small:p-4 align-top">
+        <span className="!pr-0 flex flex-col items-end h-full justify-start">
           <span className="flex gap-x-1 ">
             <Text className="text-ui-fg-muted">
               <span data-testid="product-quantity">{item.quantity}</span>x{" "}
