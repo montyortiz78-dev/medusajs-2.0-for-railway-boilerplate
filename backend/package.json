@@ -21,10 +21,10 @@
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
   },
   "dependencies": {
+    "@easypost/api": "^7.5.5",
     "@medusajs/admin-sdk": "2.10.2",
     "@medusajs/cli": "2.10.2",
     "@medusajs/dashboard": "2.10.2",
-    "next": "^15.1.11",
     "@medusajs/draft-order": "^2.10.2",
     "@medusajs/framework": "2.10.2",
     "@medusajs/icons": "^2.11.3",
@@ -47,9 +47,9 @@
     "medusa-plugin-algolia": "^0.2.21",
     "medusajs-launch-utils": "0.0.18",
     "minio": "^8.0.3",
+    "next": "^15.1.11",
     "pg": "^8.13.1",
     "resend": "4.0.1",
-    "shippo": "^2.15.0",
     "ulid": "^2.3.0"
   },
   "devDependencies": {

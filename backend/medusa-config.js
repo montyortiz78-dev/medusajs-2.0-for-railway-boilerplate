@@ -21,7 +21,6 @@ import {
   MINIO_BUCKET,
   MEILISEARCH_HOST,
   MEILISEARCH_ADMIN_KEY,
-  // --- NEW: Cloudinary Constants ---
   CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET
@@ -58,8 +57,6 @@ const medusaConfig = {
       resolve: '@medusajs/file',
       options: {
         providers: [
-          // 1. Cloudinary (Custom Local Module)
-          // Uses the code you created in src/modules/cloudinary-file
           ...(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET ? [{
             resolve: './src/modules/cloudinary-file', 
             id: 'cloudinary',
@@ -70,7 +67,6 @@ const medusaConfig = {
               secure: true,
             }
           }] : 
-          // 2. MinIO (Fallback)
           (MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
             resolve: './src/modules/minio-file',
             id: 'minio',
@@ -81,7 +77,6 @@ const medusaConfig = {
               bucket: MINIO_BUCKET,
             }
           }] : 
-          // 3. Local (Development/Default)
           [{
             resolve: '@medusajs/file-local',
             id: 'local',
@@ -162,10 +157,11 @@ const medusaConfig = {
             options: {}
           },
           {
-            resolve: './src/modules/fulfillment-providers/usps-provider',
-            id: 'usps',
+            // CHANGED: Point to new EasyPost provider
+            resolve: './src/modules/fulfillment-providers/easypost-provider',
+            id: 'easypost',
             options: {
-              api_key: process.env.SHIPPO_API_KEY,
+              api_key: process.env.EASYPOST_API_KEY,
             }
           }
         ]
