@@ -340,28 +340,40 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
   );
 }
 
-function SnapshotManager({ captureMode, controlsRef }: { captureMode: boolean, controlsRef: any }) {
-  const api = useBounds()
-  const { camera } = useThree()
+// Updated SnapshotManager to listen for config changes
+function SnapshotManager({ captureMode, controlsRef, pattern, rows, stitch }: { captureMode: boolean, controlsRef: any, pattern: any[], rows: number, stitch: string }) {
+  const api = useBounds();
+  const { camera } = useThree();
+
+  // Create a stable hash of the pattern to avoid unnecessary re-fits on array reference changes
+  // This ensures we only refit if the actual content of the pattern changes
+  const patternHash = useMemo(() => JSON.stringify(pattern), [pattern]);
 
   useEffect(() => {
     if (captureMode && controlsRef.current) {
-        const controls = controlsRef.current
-        controls.object.position.set(0, -12, 8) 
-        controls.target.set(0, 0, 0)
-        controls.object.up.set(0, 0, 1) 
-        controls.update()
-        if (api) setTimeout(() => api.refresh().fit(), 50) 
+        const controls = controlsRef.current;
+        // Standardize Camera Angle for Snapshot
+        controls.object.position.set(0, -12, 8);
+        controls.target.set(0, 0, 0);
+        controls.object.up.set(0, 0, 1);
+        controls.update();
+        
+        if (api) {
+            // Slight delay to ensure geometry update is registered by Bounds
+            setTimeout(() => api.refresh().fit(), 50);
+        }
     } else {
-        if (api) api.refresh().fit()
+        // Interactive Mode: Refit whenever the design configuration changes
+        // This ensures the bracelet is always nicely centered regardless of size
+        if (api) api.refresh().fit();
     }
-  }, [captureMode, api, camera, controlsRef])
+  }, [captureMode, api, camera, controlsRef, patternHash, rows, stitch]);
 
-  return null
+  return null;
 }
 
 export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1, stitch = 'ladder' }: { pattern: any[], captureMode?: boolean, rows?: number, stitch?: string }) {
-  const controlsRef = useRef<any>(null)
+  const controlsRef = useRef<any>(null);
 
   return (
     <div className="w-full h-[400px] cursor-grab active:cursor-grabbing">
@@ -386,7 +398,13 @@ export default function KandiBracelet3D({ pattern, captureMode = false, rows = 1
               >
                   <BraceletRing pattern={pattern} rows={rows} stitch={stitch} />
               </Float>
-              <SnapshotManager captureMode={captureMode} controlsRef={controlsRef} />
+              <SnapshotManager 
+                  captureMode={captureMode} 
+                  controlsRef={controlsRef} 
+                  pattern={pattern}
+                  rows={rows}
+                  stitch={stitch}
+              />
            </Bounds>
         </Suspense>
 
