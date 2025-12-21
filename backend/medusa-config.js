@@ -164,6 +164,7 @@ const medusaConfig = {
               api_key: process.env.EASYPOST_API_KEY,
             }
           }
+          // ❌ REMOVE the 'usps' block if it still exists here
         ]
       }
     }
