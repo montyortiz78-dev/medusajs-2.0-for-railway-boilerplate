@@ -33,17 +33,30 @@ const Login = ({ setCurrentView }: Props) => {
             required
             data-testid="email-input"
           />
-          <Input
-            label="Password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            data-testid="password-input"
-          />
+          <div className="flex flex-col w-full gap-y-2 relative">
+            <Input
+              label="Password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              data-testid="password-input"
+            />
+            {/* Added Forgot Password Button */}
+            <button
+              onClick={() => setCurrentView(LOGIN_VIEW.FORGOT_PASSWORD)}
+              className="text-small-regular text-ui-fg-base underline absolute right-0 -bottom-6"
+              type="button"
+              data-testid="forgot-password-button"
+            >
+              Forgot password?
+            </button>
+          </div>
         </div>
+        
         <ErrorMessage error={message} data-testid="login-error-message" />
-        <SubmitButton data-testid="sign-in-button" className="w-full mt-6">
+        
+        <SubmitButton data-testid="sign-in-button" className="w-full mt-10"> 
           Sign in
         </SubmitButton>
       </form>

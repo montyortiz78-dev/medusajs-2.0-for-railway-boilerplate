@@ -137,6 +137,9 @@ importers:
       three:
         specifier: ^0.181.2
         version: 0.181.2
+      three-stdlib:
+        specifier: ^2.36.1
+        version: 2.36.1(three@0.181.2)
       webpack:
         specifier: ^5
         version: 5.104.1
