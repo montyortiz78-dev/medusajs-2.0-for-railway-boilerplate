@@ -14,20 +14,16 @@ export interface ForgotPasswordTemplateData {
 export const ForgotPasswordTemplate = ({ 
   username, 
   resetLink,
-  emailOptions 
 }: ForgotPasswordTemplateData) => {
   return (
     <Base>
       <Container>
         <Section className="mb-4">
-          <Heading className="text-2xl font-bold text-gray-900">Reset your password</Heading>
-          <Text className="text-gray-600 mb-4">
-            Hi {username},
-          </Text>
+          <Heading className="text-2xl font-bold text-gray-900">Reset Password</Heading>
+          <Text className="text-gray-600 mb-4">Hi {username},</Text>
           <Text className="text-gray-600 mb-6">
-            Someone recently requested a password change for your account. If this was you, you can set a new password here:
+            Someone requested a password change. Click below to reset it:
           </Text>
-          
           <Section className="text-center my-8">
             <Link 
               href={resetLink} 
@@ -36,13 +32,6 @@ export const ForgotPasswordTemplate = ({
               Reset Password
             </Link>
           </Section>
-
-          <Text className="text-gray-600 mt-6">
-            If you don't want to change your password or didn't request this, just ignore and delete this message.
-          </Text>
-          <Text className="text-gray-600 mt-2">
-            To keep your account secure, please don't forward this email to anyone.
-          </Text>
         </Section>
       </Container>
     </Base>

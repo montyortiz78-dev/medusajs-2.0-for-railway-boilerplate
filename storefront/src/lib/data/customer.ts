@@ -108,9 +108,12 @@ export async function resetPassword(_currentState: unknown, formData: FormData) 
   const email = formData.get("email") as string
 
   try {
-    // Placeholder: This relies on the backend subscriber listening to auth events
-    // Assuming the event is triggered, we return null to indicate "success" to the UI.
-    return null 
+    // Calls the custom API route
+    await sdk.client.fetch("/store/reset-password", {
+      method: "POST",
+      body: { email },
+    })
+    return null
   } catch (error: any) {
     return error.toString()
   }

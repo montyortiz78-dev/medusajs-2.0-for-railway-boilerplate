@@ -10,16 +10,16 @@ export default async function resetPasswordSubscriber({
     Modules.NOTIFICATION
   )
 
-  // You might need to construct the URL based on your frontend URL environment variable
+  // Use STORE_CORS to get the frontend URL dynamically
   const frontendUrl = process.env.STORE_CORS?.split(",")[0] || "http://localhost:8000"
   const resetLink = `${frontendUrl}/reset-password?token=${data.token}&email=${data.email}`
 
   await notificationModuleService.createNotifications({
     to: data.email,
     channel: "email",
-    template: "forgot-password", // Matches the key in templates/index.tsx
+    template: "forgot-password", // Must match key in templates/index.tsx
     data: {
-      username: data.email.split("@")[0], // Or fetch the customer name if available
+      username: data.email.split("@")[0],
       resetLink,
       emailOptions: {
         subject: "Reset your password",
@@ -29,5 +29,5 @@ export default async function resetPasswordSubscriber({
 }
 
 export const config: SubscriberConfig = {
-  event: "auth.password_reset", // Ensure this matches the event emitted by your auth flow
+  event: "auth.password_reset",
 }

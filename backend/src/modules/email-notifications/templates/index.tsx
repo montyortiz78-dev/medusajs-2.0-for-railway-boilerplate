@@ -8,7 +8,7 @@ import { ForgotPasswordTemplate, FORGOT_PASSWORD, isForgotPasswordData } from '.
 export const EmailTemplates = {
   INVITE_USER,
   ORDER_PLACED,
-  FORGOT_PASSWORD, // 2. Add to export object
+  FORGOT_PASSWORD,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -33,7 +33,6 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <OrderPlacedTemplate {...data} />
 
-    // 3. Add Case for Forgot Password
     case EmailTemplates.FORGOT_PASSWORD:
       if (!isForgotPasswordData(data)) {
         throw new MedusaError(

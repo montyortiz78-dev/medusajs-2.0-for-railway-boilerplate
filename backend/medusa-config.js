@@ -19,14 +19,33 @@ import {
   MINIO_ACCESS_KEY,
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
-  MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY,
   CLOUDINARY_CLOUD_NAME,
   CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
+
+// --- DEBUG: Verify Env Vars on Startup ---
+// Check your Railway logs to see if these are true or false
+console.log("Medusa Config Startup Check:", {
+  NODE_ENV: process.env.NODE_ENV,
+  Resend_Key_Exists: !!RESEND_API_KEY,
+  Resend_From_Exists: !!RESEND_FROM_EMAIL,
+  Store_Cors: STORE_CORS
+});
+
+// --- HELPER: Handle Local Module Paths (Src vs Dist) ---
+// In production (Railway), code usually runs from 'dist'. 
+// We try to resolve to 'dist' first if we are in production to avoid "Cannot find module" errors.
+const isProduction = process.env.NODE_ENV === 'production';
+const resolveLocalModule = (path) => {
+  if (isProduction) {
+    // If path starts with ./src, replace with ./dist
+    return path.replace('./src', './dist');
+  }
+  return path;
+};
 
 const medusaConfig = {
   projectConfig: {
@@ -52,13 +71,14 @@ const medusaConfig = {
     disable: SHOULD_DISABLE_ADMIN,
   },
   modules: [
+    // --- FILE MODULE ---
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
       options: {
         providers: [
           ...(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET ? [{
-            resolve: './src/modules/cloudinary-file', 
+            resolve: resolveLocalModule('./src/modules/cloudinary-file'), 
             id: 'cloudinary',
             options: {
               cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -68,7 +88,7 @@ const medusaConfig = {
             }
           }] : 
           (MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
-            resolve: './src/modules/minio-file',
+            resolve: resolveLocalModule('./src/modules/minio-file'),
             id: 'minio',
             options: {
               endPoint: MINIO_ENDPOINT,
@@ -88,6 +108,8 @@ const medusaConfig = {
         ]
       }
     },
+    
+    // --- REDIS / EVENT BUS ---
     ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
@@ -104,11 +126,25 @@ const medusaConfig = {
         }
       }
     }] : []),
-    ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL || RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
+
+    // --- NOTIFICATION MODULE (Fixed) ---
+    {
       key: Modules.NOTIFICATION,
       resolve: '@medusajs/notification',
       options: {
         providers: [
+          // Resend Provider
+          ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
+            resolve: resolveLocalModule('./src/modules/email-notifications'),
+            id: 'resend',
+            options: {
+              channels: ['email'],
+              api_key: RESEND_API_KEY,
+              from: RESEND_FROM_EMAIL,
+            },
+          }] : []),
+          
+          // SendGrid Provider
           ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL ? [{
             resolve: '@medusajs/notification-sendgrid',
             id: 'sendgrid',
@@ -118,18 +154,11 @@ const medusaConfig = {
               from: SENDGRID_FROM_EMAIL,
             }
           }] : []),
-          ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
-            resolve: './src/modules/email-notifications',
-            id: 'resend',
-            options: {
-              channels: ['email'],
-              api_key: RESEND_API_KEY,
-              from: RESEND_FROM_EMAIL,
-            },
-          }] : []),
         ]
       }
-    }] : []),
+    },
+
+    // --- PAYMENT MODULE ---
     ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
@@ -146,6 +175,8 @@ const medusaConfig = {
         ],
       },
     }] : []),
+
+    // --- FULFILLMENT MODULE ---
     {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',
@@ -157,14 +188,12 @@ const medusaConfig = {
             options: {}
           },
           {
-            // CHANGED: Point to new EasyPost provider
-            resolve: './src/modules/fulfillment-providers/easypost-provider',
+            resolve: resolveLocalModule('./src/modules/fulfillment-providers/easypost-provider'),
             id: 'easypost',
             options: {
               api_key: process.env.EASYPOST_API_KEY,
             }
           }
-          // ❌ REMOVE the 'usps' block if it still exists here
         ]
       }
     }
