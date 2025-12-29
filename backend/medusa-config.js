@@ -26,26 +26,12 @@ import {
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
-// --- DEBUG: Verify Env Vars on Startup ---
-// Check your Railway logs to see if these are true or false
+// --- DEBUG: Confirm Env Vars are loaded in Railway ---
 console.log("Medusa Config Startup Check:", {
   NODE_ENV: process.env.NODE_ENV,
   Resend_Key_Exists: !!RESEND_API_KEY,
   Resend_From_Exists: !!RESEND_FROM_EMAIL,
-  Store_Cors: STORE_CORS
 });
-
-// --- HELPER: Handle Local Module Paths (Src vs Dist) ---
-// In production (Railway), code usually runs from 'dist'. 
-// We try to resolve to 'dist' first if we are in production to avoid "Cannot find module" errors.
-const isProduction = process.env.NODE_ENV === 'production';
-const resolveLocalModule = (path) => {
-  if (isProduction) {
-    // If path starts with ./src, replace with ./dist
-    return path.replace('./src', './dist');
-  }
-  return path;
-};
 
 const medusaConfig = {
   projectConfig: {
@@ -78,7 +64,7 @@ const medusaConfig = {
       options: {
         providers: [
           ...(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET ? [{
-            resolve: resolveLocalModule('./src/modules/cloudinary-file'), 
+            resolve: './src/modules/cloudinary-file', 
             id: 'cloudinary',
             options: {
               cloud_name: CLOUDINARY_CLOUD_NAME,
@@ -88,7 +74,7 @@ const medusaConfig = {
             }
           }] : 
           (MINIO_ENDPOINT && MINIO_ACCESS_KEY && MINIO_SECRET_KEY ? [{
-            resolve: resolveLocalModule('./src/modules/minio-file'),
+            resolve: './src/modules/minio-file',
             id: 'minio',
             options: {
               endPoint: MINIO_ENDPOINT,
@@ -127,15 +113,15 @@ const medusaConfig = {
       }
     }] : []),
 
-    // --- NOTIFICATION MODULE (Fixed) ---
+    // --- NOTIFICATION MODULE ---
     {
       key: Modules.NOTIFICATION,
       resolve: '@medusajs/notification',
       options: {
         providers: [
-          // Resend Provider
+          // Resend Provider (Using ./src path works in Medusa v2 builds)
           ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
-            resolve: resolveLocalModule('./src/modules/email-notifications'),
+            resolve: './src/modules/email-notifications',
             id: 'resend',
             options: {
               channels: ['email'],
@@ -188,7 +174,7 @@ const medusaConfig = {
             options: {}
           },
           {
-            resolve: resolveLocalModule('./src/modules/fulfillment-providers/easypost-provider'),
+            resolve: './src/modules/fulfillment-providers/easypost-provider',
             id: 'easypost',
             options: {
               api_key: process.env.EASYPOST_API_KEY,
