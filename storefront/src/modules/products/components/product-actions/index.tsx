@@ -28,9 +28,8 @@ type ProductActionsProps = {
 
 // Config for parsing option names
 const VISUAL_CONFIG = {
-    // Expanded keys to catch more variations
     ROWS_KEYS: ["rows", "row", "tiers", "layers", "row count", "number of rows", "height"],
-    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave", "style", "cuff type", "type", "design"], // Added 'type', 'design'
+    STITCH_KEYS: ["stitch", "stitch type", "pattern", "weave", "style", "cuff type", "type", "design"],
 }
 
 const STITCH_MAPPING: Record<string, string> = {
@@ -45,6 +44,7 @@ const STITCH_MAPPING: Record<string, string> = {
 }
 
 const KANDI_PRODUCT_HANDLE = "custom-ai-kandi"
+const WORD_BRACELET_HANDLE = "express-yourself-word-bracelets"
 
 export default function ProductActions({
   product,
@@ -53,15 +53,26 @@ export default function ProductActions({
 }: ProductActionsProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
-  const [customWord, setCustomWord] = useState("")
   const [showSizeGuide, setShowSizeGuide] = useState(false)
 
   const countryCode = useParams().countryCode as string
   
-  // Destructure setDesignConfig to update the visualizer
-  const { pattern, setPattern, setDesignConfig, setIsCapturing } = useKandiContext()
+  // --- FIX 1: DESTRUCTURE customWord FROM CONTEXT (Remove local useState) ---
+  const { 
+    pattern, 
+    setPattern, 
+    setDesignConfig, 
+    setIsCapturing,
+    customWord,       // <--- Get from Global Context
+    setCustomWord     // <--- Get Global Setter
+  } = useKandiContext()
 
   const isKandiProduct = product.handle === KANDI_PRODUCT_HANDLE
+  const isWordBracelet = product.handle === WORD_BRACELET_HANDLE
+  const showCustomInterface = isKandiProduct || isWordBracelet
+  const maxWordChars = isWordBracelet ? 10 : 12
+  const isWordRequired = isWordBracelet 
+
   const actionsRef = useRef<HTMLDivElement>(null)
   const inView = useIntersection(actionsRef, "0px")
 
@@ -115,9 +126,8 @@ export default function ProductActions({
     if (hasChanges) setOptions(newOptions)
   }, [product.options, options])
 
-  // === VISUALIZER UPDATE LOGIC (ROBUST) ===
+  // === VISUALIZER UPDATE LOGIC ===
   useEffect(() => {
-    // 1. Helper to safely find keys case-insensitively
     const getOptionValue = (allowedKeys: string[]) => {
       const foundKey = Object.keys(options).find(key => 
         allowedKeys.some(k => key.toLowerCase().includes(k.toLowerCase()))
@@ -128,7 +138,6 @@ export default function ProductActions({
     let rows = 1
     let stitch = "ladder"
 
-    // Helper to map values to stitch types
     const resolveStitch = (val: string) => {
         const valLower = val.toLowerCase()
         const mappedKey = Object.keys(STITCH_MAPPING).find(
@@ -136,7 +145,6 @@ export default function ProductActions({
         )
         if (mappedKey) return STITCH_MAPPING[mappedKey]
         
-        // Fallback checks for keywords if direct map fails
         if (valLower.includes('x-base')) return 'x-base'
         if (valLower.includes('peyote') || valLower.includes('multi')) return 'peyote'
         if (valLower.includes('flower')) return 'flower'
@@ -144,48 +152,33 @@ export default function ProductActions({
         return null
     }
 
-    // 2. Parse Rows
     const selectedRowsVal = getOptionValue(VISUAL_CONFIG.ROWS_KEYS)
     if (selectedRowsVal) {
       const valStr = selectedRowsVal.toString().toLowerCase()
-      
-      // Check if the "Rows" value is actually a stitch type (e.g. "X-base")
       const stitchFromRows = resolveStitch(selectedRowsVal)
-      if (stitchFromRows) {
-         stitch = stitchFromRows
-      } 
+      if (stitchFromRows) stitch = stitchFromRows
       
-      // Text-based overrides for quantity
       if (valStr.includes("double")) rows = 2
       else if (valStr.includes("triple")) rows = 3
       else if (valStr.includes("quad")) rows = 4
       else {
-        // Numeric extraction
         const match = valStr.match(/\d+/)
         if (match) rows = parseInt(match[0], 10)
       }
     }
 
-    // 3. Parse Stitch (Priority override if a dedicated stitch option exists)
     const selectedStitchVal = getOptionValue(VISUAL_CONFIG.STITCH_KEYS)
     if (selectedStitchVal) {
       const resolved = resolveStitch(selectedStitchVal)
-      if (resolved) {
-        stitch = resolved
-      } else {
-        // Fallback to raw value if it's not in the map but might be handled by 3D component directly
-        stitch = selectedStitchVal.toLowerCase()
-      }
+      if (resolved) stitch = resolved
+      else stitch = selectedStitchVal.toLowerCase()
     }
 
-    // 4. Metadata Override (Overrides UI options if present on variant)
     if (selectedVariant?.metadata) {
       if (selectedVariant.metadata.kandi_rows) rows = Number(selectedVariant.metadata.kandi_rows)
       if (selectedVariant.metadata.kandi_stitch) stitch = String(selectedVariant.metadata.kandi_stitch)
     }
 
-    // 5. Update Context
-    // console.log("Updating Visualizer:", { rows, stitch }) // DEBUG
     setDesignConfig({
       rows: Math.max(1, rows),
       stitch: stitch,
@@ -197,7 +190,6 @@ export default function ProductActions({
     setOptions((prev) => ({ ...prev, [title]: value }))
   }
 
-  // === SNAPSHOT & ADD TO CART ===
   const captureCanvasImage = (): string => {
     try {
       const canvasContainer = document.getElementById("kandi-canvas")
@@ -212,23 +204,23 @@ export default function ProductActions({
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return null
     if (isKandiProduct && pattern.length === 0) return null
+    if (isWordBracelet && customWord.trim().length === 0) return null
 
     setIsAdding(true)
 
-    // Trigger Capture
     setIsCapturing(true)
-    await new Promise(resolve => setTimeout(resolve, 600)) // Wait for float to stop
+    await new Promise(resolve => setTimeout(resolve, 600)) 
     const imageUrl = captureCanvasImage()
     setIsCapturing(false)
 
     const metadata = {
-          is_custom: isKandiProduct || pattern.length > 0,
+          is_custom: showCustomInterface || pattern.length > 0,
           pattern_data: pattern,           
           kandi_pattern: pattern.map(p => typeof p === 'string' ? p : p.color), 
           image_url: imageUrl,             
           kandi_name: product.title, 
           kandi_vibe: "Creative",
-          ...(isKandiProduct && customWord.trim().length > 0 && { custom_word: customWord.trim() })
+          ...(customWord.trim().length > 0 && { custom_word: customWord.trim() })
     }
 
     const error = await addToCart({
@@ -249,7 +241,12 @@ export default function ProductActions({
     return false
   }, [selectedVariant])
 
-  const isValid = inStock && selectedVariant && (isKandiProduct ? pattern.length > 0 : true)
+  const isValid = useMemo(() => {
+     if (!inStock || !selectedVariant) return false
+     if (isKandiProduct && pattern.length === 0) return false
+     if (isWordBracelet && customWord.trim().length === 0) return false
+     return true
+  }, [inStock, selectedVariant, isKandiProduct, pattern, isWordBracelet, customWord])
 
   return (
     <>
@@ -286,21 +283,35 @@ export default function ProductActions({
           )}
         </div>
 
-        {isKandiProduct && (
+        {showCustomInterface && (
             <div className="flex flex-col gap-y-2 py-2">
-                <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
-                    Your Word (Optional)
-                </Label>
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="custom-word-input" className="text-sm font-medium text-ui-fg-base">
+                        {isWordRequired ? "Your Word (Required)" : "Your Word (Optional)"}
+                    </Label>
+                    <span className={clx("text-xs", 
+                        customWord.length === maxWordChars ? "text-rose-500 font-bold" : "text-ui-fg-subtle"
+                    )}>
+                        {customWord.length} / {maxWordChars}
+                    </span>
+                </div>
                 <Input
                     id="custom-word-input"
-                    placeholder="e.g. PLUR, VIBE"
+                    placeholder={isWordBracelet ? "e.g. BESTIE" : "e.g. PLUR"}
                     value={customWord}
                     onChange={(e) => {
-                        if (e.target.value.length <= 12) setCustomWord(e.target.value.toUpperCase())
+                        if (e.target.value.length <= maxWordChars) {
+                            setCustomWord(e.target.value.toUpperCase())
+                        }
                     }}
                     disabled={isAdding}
+                    className={clx(
+                        isWordRequired && customWord.length === 0 && "border-ui-border-error"
+                    )}
                 />
-                <span className="text-xs text-ui-fg-subtle text-right">{customWord.length} / 12</span>
+                {isWordRequired && customWord.length === 0 && (
+                     <p className="text-xs text-ui-fg-muted">Enter the text you want on your bracelet.</p>
+                )}
             </div>
         )}
 
@@ -327,7 +338,16 @@ export default function ProductActions({
           className="w-full h-10"
           isLoading={isAdding}
         >
-          {!selectedVariant ? "Select variant" : !inStock ? "Out of stock" : (isKandiProduct && pattern.length === 0) ? "Add Beads to Design" : (isAdding ? "Adding to Cart..." : "Add to cart")}
+          {!selectedVariant 
+             ? "Select variant" 
+             : !inStock 
+                ? "Out of stock" 
+                : (isWordBracelet && customWord.trim().length === 0)
+                   ? "Enter Your Word"
+                   : (isKandiProduct && pattern.length === 0) 
+                      ? "Add Beads to Design" 
+                      : (isAdding ? "Adding to Cart..." : "Add to cart")
+          }
         </Button>
         
         <MobileActions

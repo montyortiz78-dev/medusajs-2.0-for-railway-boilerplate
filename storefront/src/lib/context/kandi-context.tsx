@@ -1,7 +1,6 @@
 "use client"
 
 import React, { createContext, useContext, useState } from "react"
-import { create } from "zustand"
 
 interface DesignConfig {
   rows: number
@@ -13,9 +12,11 @@ interface KandiContextType {
   setPattern: (pattern: any[]) => void
   designConfig: DesignConfig
   setDesignConfig: (config: DesignConfig) => void
-  // NEW: Global Capture State
   isCapturing: boolean
   setIsCapturing: (val: boolean) => void
+  // NEW: Add Custom Word to Context
+  customWord: string
+  setCustomWord: (word: string) => void
 }
 
 const KandiContext = createContext<KandiContextType | null>(null)
@@ -30,7 +31,8 @@ export const useKandiContext = () => {
 
 export const KandiProvider = ({ children }: { children: React.ReactNode }) => {
   const [pattern, setPattern] = useState<any[]>([])
-  const [isCapturing, setIsCapturing] = useState(false) // <--- NEW STATE
+  const [isCapturing, setIsCapturing] = useState(false)
+  const [customWord, setCustomWord] = useState("") // <--- Initialize State
   
   const [designConfig, setDesignConfig] = useState<DesignConfig>({
     rows: 1,
@@ -45,7 +47,9 @@ export const KandiProvider = ({ children }: { children: React.ReactNode }) => {
         designConfig, 
         setDesignConfig,
         isCapturing, 
-        setIsCapturing
+        setIsCapturing,
+        customWord,      // <--- Expose value
+        setCustomWord    // <--- Expose setter
       }}
     >
       {children}
