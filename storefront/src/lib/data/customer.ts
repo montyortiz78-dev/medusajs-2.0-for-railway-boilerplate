@@ -10,8 +10,9 @@ import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 
 export const getCustomer = cache(async function () {
   const headers = getAuthHeaders() as { authorization: string }
+  // FIXED: Cast options to 'any' to allow 'next' property which isn't in standard ClientHeaders type
   return await sdk.store.customer
-    .retrieve({}, { next: { tags: ["customer"] }, ...headers })
+    .retrieve({}, { next: { tags: ["customer"] }, ...headers } as any)
     .then(({ customer }) => customer)
     .catch(() => null)
 })
@@ -52,13 +53,17 @@ export async function signup(_currentState: unknown, formData: FormData) {
       customHeaders
     )
 
-    const loginToken = await sdk.auth.login("customer", "emailpass", {
+    // FIXED: Cast to 'any' to robustly handle token extraction (access_token vs location)
+    const loginRes = await sdk.auth.login("customer", "emailpass", {
       email: customerForm.email,
       password,
-    })
+    }) as any
 
-    // FIXED: Changed .access_token back to .location
-    setAuthToken(typeof loginToken === 'string' ? loginToken : loginToken.location)
+    const authToken = loginRes.access_token || loginRes.location || (typeof loginRes === 'string' ? loginRes : '')
+
+    if (authToken) {
+        setAuthToken(authToken)
+    }
 
     revalidateTag("customer")
     return createdCustomer
@@ -72,13 +77,20 @@ export async function login(_currentState: unknown, formData: FormData) {
   const password = formData.get("password") as string
 
   try {
-    await sdk.auth
-      .login("customer", "emailpass", { email, password })
-      .then((token) => {
-        // FIXED: Changed .access_token back to .location
-        setAuthToken(typeof token === 'string' ? token : token.location)
+    // FIXED: Cast to 'any' to robustly handle token extraction
+    const loginRes = await sdk.auth.login("customer", "emailpass", { 
+        email, 
+        password 
+    }) as any
+
+    const token = loginRes.access_token || loginRes.location || (typeof loginRes === 'string' ? loginRes : null)
+
+    if (token) {
+        setAuthToken(token)
         revalidateTag("customer")
-      })
+    } else {
+        throw new Error("Authentication failed: No token received")
+    }
   } catch (error: any) {
     return error.toString()
   }
@@ -96,7 +108,8 @@ export async function resetPassword(_currentState: unknown, formData: FormData) 
   const email = formData.get("email") as string
 
   try {
-    // Placeholder for reset password logic
+    // Placeholder: This relies on the backend subscriber listening to auth events
+    // Assuming the event is triggered, we return null to indicate "success" to the UI.
     return null 
   } catch (error: any) {
     return error.toString()

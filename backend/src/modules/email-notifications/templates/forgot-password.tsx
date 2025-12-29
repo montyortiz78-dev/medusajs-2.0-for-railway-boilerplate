@@ -1,0 +1,54 @@
+import { Text, Heading, Link, Section, Container } from "@react-email/components"
+import { Base } from "./base"
+
+export const FORGOT_PASSWORD = "forgot-password"
+
+export interface ForgotPasswordTemplateData {
+  username: string
+  resetLink: string
+  emailOptions?: {
+    subject?: string
+  }
+}
+
+export const ForgotPasswordTemplate = ({ 
+  username, 
+  resetLink,
+  emailOptions 
+}: ForgotPasswordTemplateData) => {
+  return (
+    <Base>
+      <Container>
+        <Section className="mb-4">
+          <Heading className="text-2xl font-bold text-gray-900">Reset your password</Heading>
+          <Text className="text-gray-600 mb-4">
+            Hi {username},
+          </Text>
+          <Text className="text-gray-600 mb-6">
+            Someone recently requested a password change for your account. If this was you, you can set a new password here:
+          </Text>
+          
+          <Section className="text-center my-8">
+            <Link 
+              href={resetLink} 
+              className="bg-blue-600 text-white font-bold py-3 px-6 rounded-md no-underline inline-block"
+            >
+              Reset Password
+            </Link>
+          </Section>
+
+          <Text className="text-gray-600 mt-6">
+            If you don't want to change your password or didn't request this, just ignore and delete this message.
+          </Text>
+          <Text className="text-gray-600 mt-2">
+            To keep your account secure, please don't forward this email to anyone.
+          </Text>
+        </Section>
+      </Container>
+    </Base>
+  )
+}
+
+export const isForgotPasswordData = (data: any): data is ForgotPasswordTemplateData => {
+  return typeof data.resetLink === "string" && typeof data.username === "string"
+}
