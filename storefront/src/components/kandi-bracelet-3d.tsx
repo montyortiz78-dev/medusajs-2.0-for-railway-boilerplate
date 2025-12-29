@@ -19,8 +19,7 @@ const getColorHex = (colorName: string) => {
     return COLOR_MAP[colorName] || '#cccccc';
 };
 
-// Dimensions 
-// UPDATED: Increased 'letter' width to 0.52 to prevent squishing (0.52 * 0.8 = 0.416 space > 0.50 bead)
+// Dimensions - Letter bead optimized for realism
 const BEAD_WIDTHS: Record<string, number> = {
   "pony": 0.6, "star": 0.65, "heart": 0.55, "flower": 0.55, "skull": 0.7, "letter": 0.52
 };
@@ -68,8 +67,8 @@ function useLetterTexture(letter: string) {
         ctx.fillRect(0, 0, size, size);
         
         ctx.translate(size / 2, size / 2);
-        ctx.scale(-1, 1); 
-        ctx.rotate(Math.PI / 2); 
+        ctx.scale(-1, 1); // Flip Horizontal
+        ctx.rotate(Math.PI / 2); // Rotate +90 deg
 
         ctx.fillStyle = '#000000';
         ctx.font = 'bold 140px Arial, sans-serif'; 
@@ -85,10 +84,9 @@ function useLetterTexture(letter: string) {
   }, [letter]);
 }
 
-// --- UPDATED GEOMETRY: Reduced to 0.40 ---
+// --- GEOMETRY: Rounded Box (0.40 Size) ---
 function useRoundedBoxGeometry() {
     return useMemo(() => {
-        // Reduced size to 0.40 for "even smaller" look
         return new RoundedBoxGeometry(0.40, 0.40, 0.40, 4, 0.08);
     }, []);
 }
@@ -212,7 +210,7 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder', customWord = "" }:
     const stitchMode = stitch ? stitch.toLowerCase() : 'ladder';
     
     let radiusMultiplier = 0.95; 
-    if (stitchMode.includes('x-base')) radiusMultiplier = 2.15; 
+    if (stitchMode.includes('x-base')) radiusMultiplier = 2.15; // X-Base needs much wider radius
     else if (stitchMode.includes('flower')) radiusMultiplier = 0.85; 
     else if (stitchMode.includes('flat') || stitchMode.includes('brick')) radiusMultiplier = 1.05; 
     else if (stitchMode.includes('ladder')) radiusMultiplier = 1.05; 
@@ -225,20 +223,61 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder', customWord = "" }:
     const allBeads: any[] = [];
     const generatedStrings: any[] = [];
     
+    // --- 1. X-BASE STITCH (Restored) ---
     if (stitchMode.includes('x-base')) {
         const X_ROW_HEIGHT = 1.60; 
         const GRID_Y_OFFSET = 0.32; 
+        const OUTER_Y_OFFSET = 0.80; 
+        const beadArc = 0.6 / (2 * Math.PI * finalRadius) * Math.PI * 2; 
+        const gridAngleOffset = beadArc * 0.60; 
+        const TILT_ANGLE = Math.PI / 4; 
+        const angleStep = (Math.PI * 2) / fullSequence.length;
+
         for (let r = 0; r < rows; r++) {
             const rowCenterZ = -((rows * X_ROW_HEIGHT) / 2) + (r * X_ROW_HEIGHT) + (X_ROW_HEIGHT / 2);
+            const isBottomRow = r === 0;
+            const isTopRow = r === rows - 1;
+
             for (let i = 0; i < fullSequence.length; i++) {
                 const patternIdx = (i + r) % fullSequence.length;
                 const bead = fullSequence[patternIdx];
                 const centerAngle = (i / fullSequence.length) * Math.PI * 2;
                 
+                // Center Row Bead (The main bead in the X center)
                 allBeads.push({ ...bead, x: Math.cos(centerAngle) * finalRadius, y: Math.sin(centerAngle) * finalRadius, z: rowCenterZ, rotZ: centerAngle, jitterRot: [0, 0, 0], tilt: 0 });
+
+                // Frame Beads (The legs of the X)
+                // If main bead is a Letter, frames should be white ponies to match aesthetic
+                const frameColor = bead.type === 'letter' ? 'white' : bead.color;
+                const frameBead = { type: 'pony', color: frameColor };
+
+                // Top-Left and Top-Right Legs
+                const tlAngle = centerAngle - gridAngleOffset;
+                allBeads.push({ ...frameBead, x: Math.cos(tlAngle) * finalRadius, y: Math.sin(tlAngle) * finalRadius, z: rowCenterZ + GRID_Y_OFFSET, rotZ: tlAngle, jitterRot: [0,0,0], tilt: -TILT_ANGLE });
+                const trAngle = centerAngle + gridAngleOffset;
+                allBeads.push({ ...frameBead, x: Math.cos(trAngle) * finalRadius, y: Math.sin(trAngle) * finalRadius, z: rowCenterZ + GRID_Y_OFFSET, rotZ: trAngle, jitterRot: [0,0,0], tilt: TILT_ANGLE });
+                
+                // Bottom-Left and Bottom-Right Legs
+                const blAngle = centerAngle - gridAngleOffset;
+                allBeads.push({ ...frameBead, x: Math.cos(blAngle) * finalRadius, y: Math.sin(blAngle) * finalRadius, z: rowCenterZ - GRID_Y_OFFSET, rotZ: blAngle, jitterRot: [0,0,0], tilt: TILT_ANGLE });
+                const brAngle = centerAngle + gridAngleOffset;
+                allBeads.push({ ...frameBead, x: Math.cos(brAngle) * finalRadius, y: Math.sin(brAngle) * finalRadius, z: rowCenterZ - GRID_Y_OFFSET, rotZ: brAngle, jitterRot: [0,0,0], tilt: -TILT_ANGLE });
+
+                // Outer Connectors (Between Xs)
+                const midAngle = centerAngle + (angleStep / 2);
+                allBeads.push({ ...frameBead, x: Math.cos(midAngle) * finalRadius, y: Math.sin(midAngle) * finalRadius, z: rowCenterZ + OUTER_Y_OFFSET, rotZ: midAngle, jitterRot: [0,0,0], tilt: 0 });
+                if (isBottomRow) {
+                    allBeads.push({ ...frameBead, x: Math.cos(midAngle) * finalRadius, y: Math.sin(midAngle) * finalRadius, z: rowCenterZ - OUTER_Y_OFFSET, rotZ: midAngle, jitterRot: [0,0,0], tilt: 0 });
+                }
+
+                // Top/Bottom Rim Beads (if applicable)
+                if (isTopRow) allBeads.push({ ...frameBead, x: Math.cos(centerAngle) * finalRadius, y: Math.sin(centerAngle) * finalRadius, z: rowCenterZ + OUTER_Y_OFFSET, rotZ: centerAngle, jitterRot: [0,0,0], tilt: 0 });
+                if (isBottomRow) allBeads.push({ ...frameBead, x: Math.cos(centerAngle) * finalRadius, y: Math.sin(centerAngle) * finalRadius, z: rowCenterZ - OUTER_Y_OFFSET, rotZ: centerAngle, jitterRot: [0,0,0], tilt: 0 });
             }
         }
-    } else if (stitchMode.includes('flower')) {
+    } 
+   // --- 2. FLOWER STITCH ---
+    else if (stitchMode.includes('flower')) {
         const ROW_HEIGHT = 0.60; 
         const flowerBeadWidth = BEAD_WIDTHS['pony'] || 0.6;
         const nestingFactor = 0.72; 
@@ -291,7 +330,9 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder', customWord = "" }:
             }
         }
         return { beads: allBeads, radius: actualRadius, strings: [] };
-    } else {
+    } 
+    // --- 3. STANDARD STITCHES (Ladder, Single, Peyote) ---
+    else {
         const vSpacing = stitchMode.includes('single') ? 0.66 : 0.45; 
         const totalHeight = (rows - 1) * vSpacing;
         const startZ = -totalHeight / 2;
