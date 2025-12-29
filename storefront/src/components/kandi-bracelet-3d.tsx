@@ -129,6 +129,8 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
     let radiusMultiplier = 0.95; 
     if (stitchMode.includes('x-base')) {
         radiusMultiplier = 2.15; 
+    } else if (stitchMode.includes('flower')) {
+        radiusMultiplier = 0.85; // Slightly wider cuff for flower mesh
     } else if (stitchMode.includes('flat') || stitchMode.includes('brick')) {
         radiusMultiplier = 1.05; 
     } else if (stitchMode.includes('ladder')) {
@@ -189,7 +191,71 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             }
         }
     } 
-    // --- 2. MULTI / PEYOTE (HORIZONTAL HOLES, STAGGERED COLUMNS) ---
+   // --- 2. FLOWER STITCH (DISTINCT 2-3-2 COLUMNS) ---
+    else if (stitchMode.includes('flower')) {
+        const ROW_HEIGHT = 0.65;
+        const numFlowers = normalizedPattern.length;
+        
+        // CHANGE: Generate 3 columns per flower (Left Leg, Center, Right Leg)
+        // This ensures the pattern is 2-3-2, 2-3-2 (distinct flowers)
+        const totalCols = numFlowers * 3; 
+        
+        // Recalculate radius for the denser grid
+        const flowerBeadWidth = BEAD_WIDTHS['pony'] || 0.6;
+        // Nesting factor 0.85 assumes beads sit partially inside the gap of the neighbor column
+        const totalCircumference = totalCols * (flowerBeadWidth + BEAD_GAP) * 0.74;
+        const actualRadius = Math.max(totalCircumference / (2 * Math.PI), 1.5);
+
+        for (let col = 0; col < totalCols; col++) {
+            const angle = (col / totalCols) * Math.PI * 2;
+            
+            // Map column back to the pattern index (3 columns per pattern color)
+            const patternIdx = Math.floor(col / 3) % numFlowers;
+            const mainBead = normalizedPattern[patternIdx];
+            const petalColor = mainBead.color;
+
+            // Determine which part of the 2-3-2 sequence we are in
+            const sequenceStep = col % 3; 
+            
+            // Logic: Step 1 is the Center (3 beads). Steps 0 & 2 are Legs (2 beads).
+            const isCenterCol = sequenceStep === 1;
+            const colBeadCount = isCenterCol ? 3 : 2;
+
+            for (let r = 0; r < colBeadCount; r++) {
+                let zPos = 0;
+                let beadColor = petalColor; 
+
+                if (isCenterCol) {
+                    // --- 3 BEADS (CENTER CORE) ---
+                    // Positions: Top, Middle, Bottom
+                    zPos = (r - 1) * ROW_HEIGHT; 
+                    
+                    // The middle bead (index 1) is the Flower Center
+                    if (r === 1) {
+                        beadColor = 'white';
+                    }
+                } else {
+                    // --- 2 BEADS (LEGS/CONNECTORS) ---
+                    // Positions: Top-Mid, Bottom-Mid (Staggered to sit in the "valleys" of the center col)
+                    zPos = (r - 0.5) * ROW_HEIGHT;
+                }
+
+                allBeads.push({
+                    type: 'pony',
+                    color: beadColor,
+                    x: Math.cos(angle) * actualRadius,
+                    y: Math.sin(angle) * actualRadius,
+                    z: zPos,
+                    rotZ: angle,
+                    // Minimal jitter for flowers to keep the geometric shape clear
+                    jitterRot: [(Math.random()-0.5)*0.02, (Math.random()-0.5)*0.02, (Math.random()-0.5)*0.02],
+                    tilt: 0 // Horizontal holes
+                });
+            }
+        }
+        return { beads: allBeads, radius: actualRadius, strings: [] };
+    }
+    // --- 3. MULTI / PEYOTE (HORIZONTAL HOLES, STAGGERED COLUMNS) ---
     else if (stitchMode.includes('multi') || stitchMode.includes('peyote')) {
         const vSpacing = 0.65; 
         const totalHeight = (rows - 1) * vSpacing;
@@ -222,7 +288,7 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             // NO STRING
         }
     }
-    // --- 3. FLAT / BRICK (VERTICAL HOLES, STAGGERED) ---
+    // --- 4. FLAT / BRICK (VERTICAL HOLES, STAGGERED) ---
     else if (stitchMode.includes('flat') || stitchMode.includes('brick')) {
         const vSpacing = 0.45; 
         const totalHeight = (rows - 1) * vSpacing;
@@ -252,7 +318,7 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             // NO STRING
         }
     }
-    // --- 4. SINGLE (HORIZONTAL HOLES, STRING) ---
+    // --- 5. SINGLE (HORIZONTAL HOLES, STRING) ---
     else if (stitchMode.includes('single')) {
         const vSpacing = 0.66; 
         const totalHeight = (rows - 1) * vSpacing;
@@ -280,7 +346,7 @@ function BraceletRing({ pattern, rows = 1, stitch = 'ladder' }: { pattern: any[]
             generatedStrings.push({ z: rowZ, radius: finalRadius });
         }
     }
-    // --- 5. LADDER (DEFAULT - VERTICAL HOLES) ---
+    // --- 6. LADDER (DEFAULT - VERTICAL HOLES) ---
     else if (stitchMode.includes('ladder')) {
         const vSpacing = 0.45; 
         const totalHeight = (rows - 1) * vSpacing;
