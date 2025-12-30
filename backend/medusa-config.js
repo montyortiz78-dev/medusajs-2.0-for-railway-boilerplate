@@ -58,7 +58,7 @@ const medusaConfig = {
       storeCors: STORE_CORS,
       jwtSecret: JWT_SECRET,
       cookieSecret: COOKIE_SECRET,
-      // 👇 THIS IS THE CRITICAL FIX FOR 401 ERRORS 👇
+      trustProxy: true,
       authCookieOptions: {
         sameSite: "none",
         secure: true,
