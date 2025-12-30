@@ -73,11 +73,10 @@ export async function signup(_currentState: unknown, formData: FormData) {
 }
 
 export async function login(_currentState: unknown, formData: FormData) {
-  const email = formData.get("email") as string
+  const email = (formData.get("email") as string).toLowerCase() 
   const password = formData.get("password") as string
 
   try {
-    // FIXED: Cast to 'any' to robustly handle token extraction
     const loginRes = await sdk.auth.login("customer", "emailpass", { 
         email, 
         password 
