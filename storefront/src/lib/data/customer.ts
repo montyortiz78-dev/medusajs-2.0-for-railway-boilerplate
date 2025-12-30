@@ -124,6 +124,28 @@ export async function resetPassword(_currentState: unknown, formData: FormData) 
   }
 }
 
+export async function updatePassword(_currentState: unknown, formData: FormData) {
+  const email = formData.get("email") as string
+  const token = formData.get("token") as string
+  const password = formData.get("password") as string
+
+  try {
+    const res = await sdk.client.fetch("/store/update-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: { email, token, password },
+    }) as { success: boolean; message?: string }
+
+    if (!res.success) {
+      return res.message || "Failed to reset password"
+    }
+    
+    return null
+  } catch (error: any) {
+    return error.message || error.toString()
+  }
+}
+
 export const addCustomerAddress = async (
   _currentState: unknown,
   formData: FormData
