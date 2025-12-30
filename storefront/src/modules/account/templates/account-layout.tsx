@@ -1,41 +1,30 @@
+import { getCustomer } from "@lib/data/customer"
+import AccountNav from "../components/account-nav"
+import UnderlineLink from "@modules/common/components/interactive-link" // Check this import path
 import React from "react"
 
-import UnderlineLink from "@modules/common/components/interactive-link"
+const AccountLayout = async ({ customer, children }: { customer: any | null, children: React.ReactNode }) => {
+  // If no customer is passed as prop, try to fetch it
+  const user = customer || await getCustomer().catch(() => null)
 
-import AccountNav from "../components/account-nav"
-import { HttpTypes } from "@medusajs/types"
+  if (!user) {
+    return (
+      <div className="flex-1 content-container h-full max-w-5xl mx-auto bg-white flex flex-col items-center justify-center p-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Account Not Found</h2>
+        <p className="mb-6 text-gray-600">You need to be logged in to view this page.</p>
+        <UnderlineLink href="/account/login">Log in</UnderlineLink>
+      </div>
+    )
+  }
 
-interface AccountLayoutProps {
-  customer: HttpTypes.StoreCustomer | null
-  children: React.ReactNode
-}
-
-const AccountLayout: React.FC<AccountLayoutProps> = ({
-  customer,
-  children,
-}) => {
   return (
     <div className="flex-1 small:py-12" data-testid="account-page">
-      {/* GLASS CONTAINER using dynamic variables from globals.css */}
-      <div className="flex-1 content-container h-full max-w-5xl mx-auto glass rounded-xl flex flex-col transition-colors duration-300">
+      <div className="flex-1 content-container h-full max-w-5xl mx-auto bg-white flex flex-col">
         <div className="grid grid-cols-1  small:grid-cols-[240px_1fr] py-12">
-          <div>{customer && <AccountNav customer={customer} />}</div>
+          <div>
+            <AccountNav customer={user} />
+          </div>
           <div className="flex-1">{children}</div>
-        </div>
-        {/* Subtle Border - Changed from border-white/10 to ui-border-base */}
-        <div className="flex flex-col small:flex-row items-end justify-between small:border-t border-ui-border-base py-12 gap-8">
-          <div>
-            <h3 className="text-xl-semi mb-4 text-ui-fg-base">Got questions?</h3>
-            <span className="txt-medium text-ui-fg-subtle">
-              You can find frequently asked questions and answers on our
-              customer service page.
-            </span>
-          </div>
-          <div>
-            <UnderlineLink href="/customer-service">
-              Customer Service
-            </UnderlineLink>
-          </div>
         </div>
       </div>
     </div>
