@@ -100,7 +100,11 @@ const medusaConfig = {
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
       options: {
-        redisUrl: REDIS_URL
+        redisUrl: REDIS_URL,
+        // ADD THIS: Redis options to fix Railway internal network timeout
+        redisOptions: {
+          family: 6,
+        }
       }
     },
     {
@@ -109,6 +113,10 @@ const medusaConfig = {
       options: {
         redis: {
           url: REDIS_URL,
+          // ADD THIS: Apply the same fix here
+          options: {
+            family: 6,
+          }
         }
       }
     }] : []),
