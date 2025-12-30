@@ -2,7 +2,9 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework";
 import { Modules } from "@medusajs/framework/utils";
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
-  const { email, token, password } = req.body as any;
+  const body = req.body as any;
+  const email = body.email?.toLowerCase(); 
+  const { token, password } = body;
 
   if (!email || !token || !password) {
     return res.status(400).json({ success: false, message: "Missing data" });
@@ -21,11 +23,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const storedToken = customer.metadata?.reset_token;
   const storedExpiry = customer.metadata?.reset_token_expiry as number;
 
+  // Validate Token
   if (!storedToken || storedToken !== token || Date.now() > storedExpiry) {
     return res.status(400).json({ success: false, message: "Invalid or expired token" });
   }
 
-  // 2. Clear Token
+  // 2. Clear Token (Prevent Re-use)
   await customerService.updateCustomers(customer.id, {
     metadata: {
       ...customer.metadata,
@@ -34,8 +37,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
   });
 
-  // 3. Find the Auth Identity via Provider Identity
-  // We cast to 'any' to access listProviderIdentities which might not be in the high-level interface types yet
+  // 3. Find Auth Identity using Provider Service
+  // We use 'any' casting here because TypeScript definitions might be strict regarding the filter props
   const authServiceAny = authService as any;
   
   const providerIdentities = await authServiceAny.listProviderIdentities({
@@ -43,13 +46,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     provider: "emailpass"
   });
 
-  // 4. Delete Old Identity (if exists)
+  // 4. Delete Old Identity (if found)
   if (providerIdentities.length > 0) {
-    await authService.deleteAuthIdentities([providerIdentities[0].auth_identity_id]);
+    // We map to the Auth Identity ID, not the Provider Identity ID
+    const authIdentityIds = providerIdentities.map((p: any) => p.auth_identity_id);
+    await authService.deleteAuthIdentities(authIdentityIds);
   }
 
   // 5. Create New Identity with New Password
-  // We link it back to the customer using app_metadata
   await authService.createAuthIdentities([{
     entity_id: email,
     provider: "emailpass",
