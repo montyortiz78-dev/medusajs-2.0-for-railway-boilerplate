@@ -73,27 +73,42 @@ export async function signup(_currentState: unknown, formData: FormData) {
 }
 
 export async function login(_currentState: unknown, formData: FormData) {
-  const email = (formData.get("email") as string).toLowerCase().trim(); // Add trim()
-  const password = formData.get("password") as string;
+  const email = (formData.get("email") as string).toLowerCase().trim()
+  const password = formData.get("password") as string
 
-  console.log("Attempting login for:", email); // Add logging
+  console.log("LOGIN DEBUG: Attempting login for:", email)
+
+  let loggedIn = false
 
   try {
-    const loginRes = await sdk.auth.login("customer", "emailpass", { 
-        email, 
-        password 
-    }) as any;
+    const loginRes = await sdk.auth.login("customer", "emailpass", {
+      email,
+      password,
+    }) as any
 
-    const token = loginRes.access_token || loginRes.location || (typeof loginRes === 'string' ? loginRes : null)
+    console.log("LOGIN DEBUG: Response received")
+
+    const token = loginRes.access_token || loginRes.token || (typeof loginRes === 'string' ? loginRes : null)
 
     if (token) {
-        setAuthToken(token)
-        revalidateTag("customer")
+      console.log("LOGIN DEBUG: Token found, setting cookie...")
+      setAuthToken(token)
+      revalidateTag("customer")
+      loggedIn = true
     } else {
-        throw new Error("Authentication failed: No token received")
+      console.error("LOGIN DEBUG: No token in response", loginRes)
+      throw new Error("Authentication failed: No token received")
     }
   } catch (error: any) {
+    console.error("LOGIN DEBUG: Error caught", error.toString())
+    // Important: Allow Next.js redirects to throw
+    if (error.message && error.message.includes("NEXT_REDIRECT")) {
+      throw error
+    }
     return error.toString()
+  }
+  if (loggedIn) {
+    redirect("/account")
   }
 }
 
