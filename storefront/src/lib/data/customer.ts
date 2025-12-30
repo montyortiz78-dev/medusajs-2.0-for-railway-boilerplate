@@ -73,14 +73,16 @@ export async function signup(_currentState: unknown, formData: FormData) {
 }
 
 export async function login(_currentState: unknown, formData: FormData) {
-  const email = (formData.get("email") as string).toLowerCase() 
-  const password = formData.get("password") as string
+  const email = (formData.get("email") as string).toLowerCase().trim(); // Add trim()
+  const password = formData.get("password") as string;
+
+  console.log("Attempting login for:", email); // Add logging
 
   try {
     const loginRes = await sdk.auth.login("customer", "emailpass", { 
         email, 
         password 
-    }) as any
+    }) as any;
 
     const token = loginRes.access_token || loginRes.location || (typeof loginRes === 'string' ? loginRes : null)
 
