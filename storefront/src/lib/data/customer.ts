@@ -13,7 +13,6 @@ export const getCustomer = cache(async function () {
 
   // Only log if headers are actually missing to reduce noise
   if (!headers.authorization) {
-    // This is expected when a user is not logged in, so we can suppress it or keep it as debug
     // console.log("ℹ️ getCustomer: No Auth Token found (User likely guest).")
   }
 
@@ -71,7 +70,13 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     }) as any
 
-    const authToken = loginRes.access_token || loginRes.token
+    // Handle string vs object token response
+    let authToken = ""
+    if (typeof loginRes === "string") {
+        authToken = loginRes
+    } else {
+        authToken = loginRes.access_token || loginRes.token
+    }
 
     if (authToken) {
         setAuthToken(authToken)
@@ -97,23 +102,29 @@ export async function login(_currentState: unknown, formData: FormData) {
         password 
     }) as any
 
-    // --- NEW DEBUGGING LOGIC ---
-    // Often Medusa returns { message: "Invalid credentials" } instead of throwing
-    if (loginRes.message) {
-      console.error("LOGIN FAILED (API Message):", loginRes.message)
-      throw new Error(loginRes.message)
-    }
+    let token: string | undefined
 
-    // Check for token
-    const token = loginRes.access_token || loginRes.token
+    // 1. Handle if API returns raw token string (Your current case)
+    if (typeof loginRes === "string") {
+        console.log("LOGIN DEBUG: Received raw string token.")
+        token = loginRes
+    } 
+    // 2. Handle if API returns object (Standard case)
+    else if (typeof loginRes === "object") {
+        if (loginRes.message) {
+             console.error("LOGIN FAILED (API Message):", loginRes.message)
+             throw new Error(loginRes.message)
+        }
+        token = loginRes.access_token || loginRes.token
+    }
 
     if (token) {
         setAuthToken(token)
         revalidateTag("customer")
         loggedIn = true
-        console.log("LOGIN DEBUG: Success. Redirecting...")
+        console.log("LOGIN DEBUG: Success. Token set.")
     } else {
-        console.error("LOGIN DEBUG: Full Response:", JSON.stringify(loginRes))
+        console.error("LOGIN DEBUG: Full Response (Unknown Format):", JSON.stringify(loginRes))
         throw new Error("Authentication failed: No token received in response")
     }
   } catch (error: any) {
@@ -173,19 +184,7 @@ export async function updatePassword(_currentState: unknown, formData: FormData)
 
 export const addCustomerAddress = async (_currentState: unknown, formData: FormData) => {
   const headers = getAuthHeaders() as { authorization: string }
-  const address = {
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
-    company: formData.get("company") as string,
-    address_1: formData.get("address_1") as string,
-    address_2: formData.get("address_2") as string,
-    city: formData.get("city") as string,
-    postal_code: formData.get("postal_code") as string,
-    province: formData.get("province") as string,
-    country_code: formData.get("country_code") as string,
-    phone: formData.get("phone") as string,
-  }
-
+  
   return sdk.store.customer.createAddress({
       first_name: formData.get("first_name") as string,
       last_name: formData.get("last_name") as string,
@@ -197,7 +196,7 @@ export const addCustomerAddress = async (_currentState: unknown, formData: FormD
       province: formData.get("province") as string,
       country_code: formData.get("country_code") as string,
       phone: formData.get("phone") as string,
-    }, {}, headers).then(({customer}) => {
+  }, {}, headers).then(({customer}) => {
       revalidateTag("customer")
       return { success: true, error: null }
   }).catch(err => ({ success: false, error: err.toString() }))
