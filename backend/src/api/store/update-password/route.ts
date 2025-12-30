@@ -24,7 +24,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const storedExpiry = customer.metadata?.reset_token_expiry as number;
 
   // Validate Token
-  if (!storedToken || storedToken !== token || Date.now() > storedExpiry) {
+  if (!storedToken || storedToken !== token || (storedExpiry && Date.now() > storedExpiry)) {
     return res.status(400).json({ success: false, message: "Invalid or expired token" });
   }
 
@@ -37,8 +37,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
   });
 
-  // 3. Find Auth Identity using Provider Service
-  // We use 'any' casting here because TypeScript definitions might be strict regarding the filter props
+  // 3. Find existing Auth Identity
+  // We use the provider service to look up the correct identity ID for this email
   const authServiceAny = authService as any;
   
   const providerIdentities = await authServiceAny.listProviderIdentities({
@@ -46,22 +46,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     provider: "emailpass"
   });
 
-  // 4. Delete Old Identity (if found)
-  if (providerIdentities.length > 0) {
-    // We map to the Auth Identity ID, not the Provider Identity ID
-    const authIdentityIds = providerIdentities.map((p: any) => p.auth_identity_id);
-    await authService.deleteAuthIdentities(authIdentityIds);
+  if (providerIdentities.length === 0) {
+    return res.status(400).json({ success: false, message: "User identity not found" });
   }
 
-  // 5. Create New Identity with New Password
-  await authService.createAuthIdentities([{
-    entity_id: email,
-    provider: "emailpass",
+  // 4. Update Password (The Lightweight Fix)
+  // Instead of Delete+Create, we update the existing record.
+  // We cast to 'any' to bypass the strict DTO check that was failing previously.
+  const authIdentityId = providerIdentities[0].auth_identity_id;
+
+  await authService.updateAuthIdentities([{
+    id: authIdentityId,
     provider_metadata: {
       password: password 
-    },
-    app_metadata: {
-        customer_id: customer.id 
     }
   }] as any);
 
