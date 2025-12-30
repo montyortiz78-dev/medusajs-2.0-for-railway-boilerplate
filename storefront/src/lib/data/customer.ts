@@ -108,14 +108,19 @@ export async function resetPassword(_currentState: unknown, formData: FormData) 
   const email = formData.get("email") as string
 
   try {
-    // Calls the custom API route
+    // Ensure the backend route matches exactly '/store/reset-password'
     await sdk.client.fetch("/store/reset-password", {
       method: "POST",
-      body: { email },
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: { email }, // SDK stringifies this automatically
     })
-    return null
+    return null // Return null on success so the UI can update
   } catch (error: any) {
-    return error.toString()
+    console.error("Reset Password Error:", error)
+    // Return a friendly error message
+    return "Something went wrong. Please try again."
   }
 }
 

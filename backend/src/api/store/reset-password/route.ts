@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework";
 import { Modules } from "@medusajs/framework/utils";
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  // 1. Safe parsing of body
   const { email } = req.body as { email: string };
   
   if (!email) {
@@ -10,11 +11,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const eventBus = req.scope.resolve(Modules.EVENT_BUS);
 
-  // In production, generate a real token here via Auth module if needed.
-  // For now, we mock it to get the email flow working.
+  // Mock token for now (In production, integrate with Auth module token generation)
   const token = "mock-token-" + Date.now(); 
 
-  // Emit event for the subscriber
   await eventBus.emit({
     name: "auth.password_reset",
     data: { 
@@ -24,5 +23,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
   });
 
-  res.sendStatus(200);
+  // FIX: Send JSON response, not just status
+  // Previous code: res.sendStatus(200); -> caused "OK" text error
+  res.status(200).json({ success: true, message: "Reset link sent" });
 }
