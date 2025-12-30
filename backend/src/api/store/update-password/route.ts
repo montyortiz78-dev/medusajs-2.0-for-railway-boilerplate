@@ -11,7 +11,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const customerService = req.scope.resolve(Modules.CUSTOMER);
   const authService = req.scope.resolve(Modules.AUTH);
 
-  // 1. Verify Token
+  // 1. Verify Customer & Token
   const customers = await customerService.listCustomers({ email }, { take: 1 });
   if (!customers.length) {
     return res.status(400).json({ success: false, message: "Invalid request" });
@@ -34,23 +34,30 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
   });
 
-  // 3. Update Password
-  // FIX: Cast to 'any' to avoid strict type error on 'entity_id'
-  const identities = await authService.listAuthIdentities({
+  // 3. Find the Auth Identity via Provider Identity
+  // We cast to 'any' to access listProviderIdentities which might not be in the high-level interface types yet
+  const authServiceAny = authService as any;
+  
+  const providerIdentities = await authServiceAny.listProviderIdentities({
     entity_id: email,
     provider: "emailpass"
-  } as any);
+  });
 
-  if (identities.length > 0) {
-    await authService.deleteAuthIdentities([identities[0].id]);
+  // 4. Delete Old Identity (if exists)
+  if (providerIdentities.length > 0) {
+    await authService.deleteAuthIdentities([providerIdentities[0].auth_identity_id]);
   }
 
-  // FIX: Cast to 'any' to allow passing entity_id and provider_metadata
+  // 5. Create New Identity with New Password
+  // We link it back to the customer using app_metadata
   await authService.createAuthIdentities([{
     entity_id: email,
     provider: "emailpass",
     provider_metadata: {
       password: password 
+    },
+    app_metadata: {
+        customer_id: customer.id 
     }
   }] as any);
 
