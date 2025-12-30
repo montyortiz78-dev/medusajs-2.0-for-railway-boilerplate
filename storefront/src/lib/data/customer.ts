@@ -4,25 +4,27 @@ import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
-import { redirect } from "next/navigation" // Required for the fix
+import { redirect } from "next/navigation"
 import { cache } from "react"
 import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 
 export const getCustomer = cache(async function () {
   const headers = getAuthHeaders() as { authorization: string }
 
-  // --- DEBUG LOGS ---
+  // Only log if headers are actually missing to reduce noise
   if (!headers.authorization) {
-    console.error("❌ getCustomer: No Auth Token found. Cookie missing?")
-  } else {
-    console.log("✅ getCustomer: Token attached. Length:", headers.authorization.length)
+    // This is expected when a user is not logged in, so we can suppress it or keep it as debug
+    // console.log("ℹ️ getCustomer: No Auth Token found (User likely guest).")
   }
 
   return await sdk.store.customer
     .retrieve({}, { next: { tags: ["customer"] }, ...headers } as any)
     .then(({ customer }) => customer)
     .catch((err) => {
-      console.error("❌ getCustomer: API Failed", err.message)
+      // Suppress 401 errors as they are expected for guests
+      if (err.message !== "Unauthorized") {
+         console.error("❌ getCustomer: API Failed", err.message)
+      }
       return null
     })
 })
@@ -63,6 +65,7 @@ export async function signup(_currentState: unknown, formData: FormData) {
       customHeaders
     )
 
+    // Log the user in immediately after signup
     const loginRes = await sdk.auth.login("customer", "emailpass", {
       email: customerForm.email,
       password,
@@ -94,6 +97,14 @@ export async function login(_currentState: unknown, formData: FormData) {
         password 
     }) as any
 
+    // --- NEW DEBUGGING LOGIC ---
+    // Often Medusa returns { message: "Invalid credentials" } instead of throwing
+    if (loginRes.message) {
+      console.error("LOGIN FAILED (API Message):", loginRes.message)
+      throw new Error(loginRes.message)
+    }
+
+    // Check for token
     const token = loginRes.access_token || loginRes.token
 
     if (token) {
@@ -102,16 +113,18 @@ export async function login(_currentState: unknown, formData: FormData) {
         loggedIn = true
         console.log("LOGIN DEBUG: Success. Redirecting...")
     } else {
-        throw new Error("Authentication failed: No token received")
+        console.error("LOGIN DEBUG: Full Response:", JSON.stringify(loginRes))
+        throw new Error("Authentication failed: No token received in response")
     }
   } catch (error: any) {
     console.error("LOGIN DEBUG ERROR:", error.toString())
     // Allow redirect to throw
-    if (error.message && error.message.includes("NEXT_REDIRECT")) throw error
-    return error.toString()
+    if (error.message && (error.message.includes("NEXT_REDIRECT") || error.digest?.includes("NEXT_REDIRECT"))) {
+        throw error
+    }
+    return error.message || error.toString()
   }
 
-  // Force redirect to ensure browser sends the new cookie
   if (loggedIn) {
     redirect("/account")
   }
@@ -174,60 +187,45 @@ export const addCustomerAddress = async (_currentState: unknown, formData: FormD
   }
 
   return sdk.store.customer.createAddress({
-        // ... map fields
-        first_name: formData.get("first_name") as string,
-        last_name: formData.get("last_name") as string,
-        company: formData.get("company") as string,
-        address_1: formData.get("address_1") as string,
-        address_2: formData.get("address_2") as string,
-        city: formData.get("city") as string,
-        postal_code: formData.get("postal_code") as string,
-        province: formData.get("province") as string,
-        country_code: formData.get("country_code") as string,
-        phone: formData.get("phone") as string,
+      first_name: formData.get("first_name") as string,
+      last_name: formData.get("last_name") as string,
+      company: formData.get("company") as string,
+      address_1: formData.get("address_1") as string,
+      address_2: formData.get("address_2") as string,
+      city: formData.get("city") as string,
+      postal_code: formData.get("postal_code") as string,
+      province: formData.get("province") as string,
+      country_code: formData.get("country_code") as string,
+      phone: formData.get("phone") as string,
     }, {}, headers).then(({customer}) => {
-        revalidateTag("customer")
-        return { success: true, error: null }
-    }).catch(err => ({ success: false, error: err.toString() }))
+      revalidateTag("customer")
+      return { success: true, error: null }
+  }).catch(err => ({ success: false, error: err.toString() }))
 }
 
 export const deleteCustomerAddress = async (addressId: string) => {
   const headers = getAuthHeaders() as { authorization: string }
-    await sdk.store.customer.deleteAddress(addressId, headers)
-    revalidateTag("customer")
-    return { success: true, error: null }
+  await sdk.store.customer.deleteAddress(addressId, headers)
+  revalidateTag("customer")
+  return { success: true, error: null }
 }
 
 export const updateCustomerAddress = async (currentState: any, formData: FormData) => {
   const headers = getAuthHeaders() as { authorization: string }
-    const addressId = currentState.addressId as string
-
-  const address = {
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
-    company: formData.get("company") as string,
-    address_1: formData.get("address_1") as string,
-    address_2: formData.get("address_2") as string,
-    city: formData.get("city") as string,
-    postal_code: formData.get("postal_code") as string,
-    province: formData.get("province") as string,
-    country_code: formData.get("country_code") as string,
-    phone: formData.get("phone") as string,
-  }
-
+  const addressId = currentState.addressId as string
   return sdk.store.customer.updateAddress(addressId, {
-        first_name: formData.get("first_name") as string,
-        last_name: formData.get("last_name") as string,
-        company: formData.get("company") as string,
-        address_1: formData.get("address_1") as string,
-        address_2: formData.get("address_2") as string,
-        city: formData.get("city") as string,
-        postal_code: formData.get("postal_code") as string,
-        province: formData.get("province") as string,
-        country_code: formData.get("country_code") as string,
-        phone: formData.get("phone") as string,
-    }, {}, headers).then(() => {
-        revalidateTag("customer")
-        return { success: true, error: null }
-    }).catch(err => ({ success: false, error: err.toString() }))
+      first_name: formData.get("first_name") as string,
+      last_name: formData.get("last_name") as string,
+      company: formData.get("company") as string,
+      address_1: formData.get("address_1") as string,
+      address_2: formData.get("address_2") as string,
+      city: formData.get("city") as string,
+      postal_code: formData.get("postal_code") as string,
+      province: formData.get("province") as string,
+      country_code: formData.get("country_code") as string,
+      phone: formData.get("phone") as string,
+  }, {}, headers).then(() => {
+      revalidateTag("customer")
+      return { success: true, error: null }
+  }).catch(err => ({ success: false, error: err.toString() }))
 }
