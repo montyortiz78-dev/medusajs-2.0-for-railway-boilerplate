@@ -34,15 +34,12 @@ console.log("Medusa Config Startup Check:", {
   Redis_URL_Start: REDIS_URL?.substring(0, 8), // Debug protocol
 });
 
-// --- SMART REDIS CONFIG ---
-// Define options once to use across all Redis modules.
-// This preserves your 'family: 6' fix but adds SSL support if the URL requires it.
+// Smart Redis with Heartbeat
 const redisOptions = {
   family: 6,
-  ...(REDIS_URL?.startsWith("rediss://") ? {
-    tls: {
-      rejectUnauthorized: false,
-    }
+  keepAlive: 10000, // <--- Fixes ETIMEDOUT errors
+  ...(process.env.REDIS_URL?.startsWith("rediss://") ? {
+    tls: { rejectUnauthorized: false }
   } : {})
 };
 
@@ -50,30 +47,21 @@ const medusaConfig = {
   projectConfig: {
     databaseUrl: DATABASE_URL,
     databaseLogging: false,
-    redisUrl: REDIS_URL,
-    workerMode: WORKER_MODE,
+    redisUrl: process.env.REDIS_URL,
+    redisOptions: redisOptions, // Apply here
     http: {
       adminCors: ADMIN_CORS,
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
-      jwtSecret: JWT_SECRET,
-      cookieSecret: COOKIE_SECRET,
-      trustProxy: true,
+      jwtSecret: process.env.JWT_SECRET,
+      cookieSecret: process.env.COOKIE_SECRET,
+      trustProxy: true, // <--- Trust Railway Load Balancer
       authCookieOptions: {
-        sameSite: "none",
+        sameSite: "none", // <--- Allow cross-site cookie
         secure: true,
         httpOnly: true,
       },
     },
-    build: {
-      rollupOptions: {
-        external: ["@medusajs/dashboard"]
-      }
-    }
-  },
-  admin: {
-    backendUrl: "https://backend-production-622a.up.railway.app",
-    disable: SHOULD_DISABLE_ADMIN,
   },
   modules: [
     // --- FILE MODULE ---
@@ -119,8 +107,8 @@ const medusaConfig = {
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
       options: {
-        redisUrl: REDIS_URL,
-        redisOptions: redisOptions // Updated to use smart config
+        redisUrl: process.env.REDIS_URL,
+        redisOptions: redisOptions
       }
     },
     {
@@ -128,8 +116,8 @@ const medusaConfig = {
       resolve: '@medusajs/workflow-engine-redis',
       options: {
         redis: {
-          url: REDIS_URL,
-          options: redisOptions // Updated to use smart config
+          url: process.env.REDIS_URL,
+          options: redisOptions
         }
       }
     },
@@ -137,8 +125,8 @@ const medusaConfig = {
       key: Modules.CACHE,
       resolve: '@medusajs/cache-redis',
       options: {
-        redisUrl: REDIS_URL,
-        redisOptions: redisOptions // Added Cache module just in case
+        redisUrl: process.env.REDIS_URL,
+        redisOptions: redisOptions
       }
     }] : []),
 

@@ -25,7 +25,7 @@ export const setAuthToken = (token: string) => {
   cookies().set("_medusa_jwt", token, {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "lax", // Critical fix: Changed from 'strict' to 'lax' for redirects
     secure: process.env.NODE_ENV === "production",
   })
 }
@@ -35,7 +35,7 @@ export const removeAuthToken = () => {
 }
 
 export const getAuthHeaders = () => {
-  const token = getAuthToken()
+  const token = cookies().get("_medusa_jwt")?.value
 
   if (token) {
     return { authorization: `Bearer ${token}` }
