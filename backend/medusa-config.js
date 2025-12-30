@@ -31,7 +31,20 @@ console.log("Medusa Config Startup Check:", {
   NODE_ENV: process.env.NODE_ENV,
   Resend_Key_Exists: !!RESEND_API_KEY,
   Resend_From_Exists: !!RESEND_FROM_EMAIL,
+  Redis_URL_Start: REDIS_URL?.substring(0, 8), // Debug protocol
 });
+
+// --- SMART REDIS CONFIG ---
+// Define options once to use across all Redis modules.
+// This preserves your 'family: 6' fix but adds SSL support if the URL requires it.
+const redisOptions = {
+  family: 6,
+  ...(REDIS_URL?.startsWith("rediss://") ? {
+    tls: {
+      rejectUnauthorized: false,
+    }
+  } : {})
+};
 
 const medusaConfig = {
   projectConfig: {
@@ -44,7 +57,13 @@ const medusaConfig = {
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       jwtSecret: JWT_SECRET,
-      cookieSecret: COOKIE_SECRET
+      cookieSecret: COOKIE_SECRET,
+      // 👇 THIS IS THE CRITICAL FIX FOR 401 ERRORS 👇
+      authCookieOptions: {
+        sameSite: "none",
+        secure: true,
+        httpOnly: true,
+      },
     },
     build: {
       rollupOptions: {
@@ -101,10 +120,7 @@ const medusaConfig = {
       resolve: '@medusajs/event-bus-redis',
       options: {
         redisUrl: REDIS_URL,
-        // ADD THIS: Redis options to fix Railway internal network timeout
-        redisOptions: {
-          family: 6,
-        }
+        redisOptions: redisOptions // Updated to use smart config
       }
     },
     {
@@ -113,11 +129,16 @@ const medusaConfig = {
       options: {
         redis: {
           url: REDIS_URL,
-          // ADD THIS: Apply the same fix here
-          options: {
-            family: 6,
-          }
+          options: redisOptions // Updated to use smart config
         }
+      }
+    },
+    {
+      key: Modules.CACHE,
+      resolve: '@medusajs/cache-redis',
+      options: {
+        redisUrl: REDIS_URL,
+        redisOptions: redisOptions // Added Cache module just in case
       }
     }] : []),
 
@@ -127,7 +148,7 @@ const medusaConfig = {
       resolve: '@medusajs/notification',
       options: {
         providers: [
-          // Resend Provider (Using ./src path works in Medusa v2 builds)
+          // Resend Provider
           ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
             resolve: './src/modules/email-notifications',
             id: 'resend',
