@@ -61,7 +61,6 @@ export const removeAuthToken = () => {
 export const getAuthHeaders = () => {
   try {
     const token = cookies().get("_medusa_jwt")?.value
-    // CRITICAL FIX: Get the Publishable Key from env
     const pubKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 
     const headers: Record<string, string> = {}
@@ -70,11 +69,12 @@ export const getAuthHeaders = () => {
       headers["authorization"] = `Bearer ${token}`
     }
 
-    // CRITICAL FIX: Explicitly set the header so Medusa knows the Sales Channel
+    // FIX: Only add header if key exists and is not empty
     if (pubKey) {
        headers["x-publishable-api-key"] = pubKey
     } else {
-       console.warn("⚠️ getAuthHeaders: NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is missing from env!")
+       // Log this specifically so it shows up in Vercel Function Logs
+       console.error("CRITICAL: NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is undefined in Vercel Environment!")
     }
     
     return headers
