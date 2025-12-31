@@ -27,15 +27,20 @@ export const listOrders = cache(async function (
 ) {
   const headers = getAuthHeaders()
 
-  if (headers.authorization) {
-    console.log("✅ listOrders: Auth Token & PK present. Fetching orders...")
+  // --- DEBUGGING: CHECK BOTH TOKEN AND KEY ---
+  const hasToken = !!headers.authorization
+  const hasKey = !!headers["x-publishable-api-key"]
+  
+  if (hasToken && hasKey) {
+    console.log("✅ listOrders: Auth Token & API Key present. Fetching orders...")
   } else {
-    console.warn("⚠️ listOrders: No Auth Token found.")
+    console.error("⚠️ listOrders: MISSING HEADERS. Token:", hasToken, "Key:", hasKey)
   }
+  // ------------------------------------------
 
   return sdk.store.order
     .list(
-      // Simplify fields slightly to ensure basic list works first
+      // Keep fields simple to avoid permission errors on complex relations
       { limit, offset, fields: "+payment_collections.payments" },
       { next: { tags: ["order"] }, ...headers } as any
     )

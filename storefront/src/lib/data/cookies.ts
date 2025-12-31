@@ -61,19 +61,24 @@ export const removeAuthToken = () => {
 export const getAuthHeaders = () => {
   try {
     const token = cookies().get("_medusa_jwt")?.value
-    
-    // FIX: Always include the Publishable API Key
-    const headers: Record<string, string> = {
-       "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || "",
-    }
+    // CRITICAL FIX: Get the Publishable Key from env
+    const pubKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+    const headers: Record<string, string> = {}
 
     if (token) {
       headers["authorization"] = `Bearer ${token}`
     }
+
+    // CRITICAL FIX: Explicitly set the header so Medusa knows the Sales Channel
+    if (pubKey) {
+       headers["x-publishable-api-key"] = pubKey
+    } else {
+       console.warn("⚠️ getAuthHeaders: NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is missing from env!")
+    }
     
     return headers
   } catch (error) {
-    // Return empty if called outside request scope (e.g. static build)
     return {}
   }
 }
