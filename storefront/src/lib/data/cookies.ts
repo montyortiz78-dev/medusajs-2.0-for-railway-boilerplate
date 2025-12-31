@@ -61,16 +61,21 @@ export const removeAuthToken = () => {
 export const getAuthHeaders = () => {
   try {
     const token = cookies().get("_medusa_jwt")?.value
+    
+    // FIX: Always include the Publishable API Key
+    const headers: Record<string, string> = {
+       "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || "",
+    }
 
     if (token) {
-      return { authorization: `Bearer ${token}` }
+      headers["authorization"] = `Bearer ${token}`
     }
+    
+    return headers
   } catch (error) {
     // Return empty if called outside request scope (e.g. static build)
     return {}
   }
-
-  return {}
 }
 
 export const getMedusaHeaders = (tags: string[] = []) => {

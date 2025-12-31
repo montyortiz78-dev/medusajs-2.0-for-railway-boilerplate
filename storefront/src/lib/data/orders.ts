@@ -8,9 +8,6 @@ import { getAuthHeaders } from "./cookies"
 export const retrieveOrder = cache(async function (id: string) {
   const headers = getAuthHeaders()
   
-  // Debug Log
-  if (!headers.authorization) console.warn(`⚠️ retrieveOrder: Missing Auth Token for ID ${id}`)
-
   return sdk.store.order
     .retrieve(
       id,
@@ -30,22 +27,21 @@ export const listOrders = cache(async function (
 ) {
   const headers = getAuthHeaders()
 
-  // Debug Log
   if (headers.authorization) {
-    console.log("✅ listOrders: Auth Token present. Fetching orders...")
+    console.log("✅ listOrders: Auth Token & PK present. Fetching orders...")
   } else {
-    console.warn("⚠️ listOrders: No Auth Token found. This will likely fail or return empty.")
+    console.warn("⚠️ listOrders: No Auth Token found.")
   }
 
   return sdk.store.order
     .list(
-      { limit, offset, fields: "*payment_collections.payments" },
+      // Simplify fields slightly to ensure basic list works first
+      { limit, offset, fields: "+payment_collections.payments" },
       { next: { tags: ["order"] }, ...headers } as any
     )
     .then(({ orders }) => orders)
     .catch((err) => {
       console.error("❌ listOrders Error:", err.message)
-      // Return null instead of throwing so the page doesn't crash
       return null 
     })
 })
