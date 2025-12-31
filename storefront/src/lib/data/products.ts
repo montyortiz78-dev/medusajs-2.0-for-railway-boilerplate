@@ -1,9 +1,12 @@
+"use server"
+
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { cache } from "react"
 import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
+import { getAuthHeaders } from "./cookies" // <--- Import this
 
 export const getProductsById = cache(async function ({
   ids,
@@ -12,6 +15,8 @@ export const getProductsById = cache(async function ({
   ids: string[]
   regionId: string
 }) {
+  const headers = getAuthHeaders() // <--- Get Token
+
   return sdk.store.product
     .list(
       {
@@ -19,11 +24,12 @@ export const getProductsById = cache(async function ({
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      // FIX: Disable cache
+      // FIX: Pass headers here
       { 
         next: { tags: ["products"] },
-        cache: "no-store"
-      }
+        cache: "no-store",
+        ...headers 
+      } as any
     )
     .then(({ products }) => products)
 })
@@ -32,6 +38,8 @@ export const getProductByHandle = cache(async function (
   handle: string,
   regionId: string
 ) {
+  const headers = getAuthHeaders() // <--- Get Token
+
   return sdk.store.product
     .list(
       {
@@ -39,11 +47,11 @@ export const getProductByHandle = cache(async function (
         region_id: regionId,
         fields: "*variants.calculated_price,+variants.inventory_quantity",
       },
-      // FIX: Disable cache
       { 
         next: { tags: ["products"] },
-        cache: "no-store"
-      }
+        cache: "no-store",
+        ...headers 
+      } as any
     )
     .then(({ products }) => products[0])
 })
@@ -65,6 +73,7 @@ export const getProductsList = cache(async function ({
   const validPageParam = Math.max(pageParam, 1);
   const offset = (validPageParam - 1) * limit
   const region = await getRegion(countryCode)
+  const headers = getAuthHeaders() // <--- Get Token
 
   if (!region) {
     return {
@@ -81,11 +90,11 @@ export const getProductsList = cache(async function ({
         fields: "*variants.calculated_price",
         ...queryParams,
       },
-      // FIX: Disable cache so changes appear immediately
       { 
         next: { tags: ["products"] },
-        cache: "no-store"
-      }
+        cache: "no-store",
+        ...headers 
+      } as any
     )
     .then(({ products, count }) => {
       const nextPage = count > offset + limit ? pageParam + 1 : null
