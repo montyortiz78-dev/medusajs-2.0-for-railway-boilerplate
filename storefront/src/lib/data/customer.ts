@@ -11,25 +11,15 @@ import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 export const getCustomer = cache(async function () {
   const headers = getAuthHeaders() as { authorization: string }
 
-  // --- DEBUG LOGS (Check Railway Logs) ---
-  if (!headers.authorization) {
-     console.warn("⚠️ getCustomer: No Auth Token found (User is Guest).")
-  } else {
-     // Log truncated token to confirm persistence
+  // Debug Log
+  if (headers.authorization) {
      console.log(`✅ getCustomer: Token found (starts with ${headers.authorization.substring(7, 15)}...)`)
   }
-  // ---------------------------------------
 
   return await sdk.store.customer
     .retrieve({}, { next: { tags: ["customer"] }, ...headers } as any)
     .then(({ customer }) => customer)
-    .catch((err) => {
-      // Suppress 401 errors as they are expected for guests
-      if (err.message !== "Unauthorized") {
-         console.error("❌ getCustomer: API Failed", err.message)
-      }
-      return null
-    })
+    .catch((err) => null)
 })
 
 export const updateCustomer = cache(async function (
@@ -46,53 +36,48 @@ export const updateCustomer = cache(async function (
 })
 
 export async function signup(_currentState: unknown, formData: FormData) {
-  // ... (keep your existing signup code here)
-  // Just ensure you add the country code logic if you want signup to redirect correctly too
-  // For brevity, I am not repeating the full signup function unless you need it.
+  const email = formData.get("email") as string
   const password = formData.get("password") as string
-  const customerForm = {
-    email: formData.get("email") as string,
-    first_name: formData.get("first_name") as string,
-    last_name: formData.get("last_name") as string,
-    phone: formData.get("phone") as string,
-  }
+  const countryCode = (formData.get("country_code") as string) || "us"
 
   try {
     const token = await sdk.auth.register("customer", "emailpass", {
-      email: customerForm.email,
-      password: password,
-    })
-
-    const customHeaders = { authorization: `Bearer ${token}` }
-    
-    await sdk.store.customer.create(customerForm, {}, customHeaders)
-
-    const loginRes = await sdk.auth.login("customer", "emailpass", {
-      email: customerForm.email,
+      email,
       password,
-    }) as any
+    })
+    
+    // Initial customer creation
+    await sdk.store.customer.create(
+      {
+        email,
+        first_name: formData.get("first_name") as string,
+        last_name: formData.get("last_name") as string,
+        phone: formData.get("phone") as string,
+      },
+      {},
+      { authorization: `Bearer ${token}` }
+    )
 
-    let authToken = ""
-    if (typeof loginRes === "string") authToken = loginRes
-    else authToken = loginRes.access_token || loginRes.token
+    // Log them in immediately
+    const loginRes = await sdk.auth.login("customer", "emailpass", { email, password }) as any
+    const authToken = loginRes.access_token || loginRes.token || loginRes
 
-    if (authToken) setAuthToken(authToken)
-
-    revalidateTag("customer")
-    return null // Return null to indicate success if your form handles it
+    if (authToken) {
+        setAuthToken(authToken)
+        revalidateTag("customer")
+        revalidateTag("order") // <--- ADD THIS
+    }
   } catch (error: any) {
     return error.toString()
   }
+  
+  redirect(`/${countryCode}/account`)
 }
 
 export async function login(_currentState: unknown, formData: FormData) {
   const email = (formData.get("email") as string).toLowerCase().trim()
   const password = formData.get("password") as string
-  // Retrieve the country code passed from the hidden input
   const countryCode = (formData.get("country_code") as string) || "us"
-
-  console.log(`LOGIN: Attempting login for ${email} in region ${countryCode}`)
-  let loggedIn = false
 
   try {
     const loginRes = await sdk.auth.login("customer", "emailpass", { 
@@ -100,37 +85,25 @@ export async function login(_currentState: unknown, formData: FormData) {
         password 
     }) as any
 
-    let token: string | undefined
-
-    if (typeof loginRes === "string") {
-        token = loginRes
-    } else if (typeof loginRes === "object") {
-        if (loginRes.message) throw new Error(loginRes.message)
-        token = loginRes.access_token || loginRes.token
-    }
+    const token = loginRes.access_token || loginRes.token || (typeof loginRes === "string" ? loginRes : undefined)
 
     if (token) {
         setAuthToken(token)
+        // CRITICAL FIX: Invalidate 'order' so we don't serve cached guest errors
         revalidateTag("customer")
-        loggedIn = true
-        console.log("LOGIN: Success. Token set.")
+        revalidateTag("order") 
+        revalidateTag("cart")
     } else {
-        throw new Error("Authentication failed: No token received")
+        throw new Error("No token received")
     }
   } catch (error: any) {
-    console.error("LOGIN ERROR:", error.toString())
-    // Important: Re-throw redirect errors so Next.js handles them
     if (error.message && (error.message.includes("NEXT_REDIRECT") || error.digest?.includes("NEXT_REDIRECT"))) {
         throw error
     }
     return error.message || "Login failed."
   }
 
-  if (loggedIn) {
-    // FIX: Redirect DIRECTLY to the country-specific account page
-    // This avoids the Middleware 307 redirect that drops cookies
-    redirect(`/${countryCode}/account`)
-  }
+  redirect(`/${countryCode}/account`)
 }
 
 export async function signout(countryCode: string) {
@@ -138,11 +111,13 @@ export async function signout(countryCode: string) {
   removeAuthToken()
   revalidateTag("auth")
   revalidateTag("customer")
+  revalidateTag("order") // <--- ADD THIS
+  revalidateTag("cart")
   redirect(`/${countryCode}/account`)
 }
 
-// ... (Rest of the file: resetPassword, updatePassword, addresses, etc. keep as is) ...
-// Ensure you keep the rest of your file exports!
+// ... Keep existing address/password functions below (resetPassword, updatePassword, addCustomerAddress, etc.)
+// (Ensure you do not delete the rest of the file contents provided in your previous upload)
 export async function resetPassword(_currentState: unknown, formData: FormData) {
   const email = formData.get("email") as string
   try {
