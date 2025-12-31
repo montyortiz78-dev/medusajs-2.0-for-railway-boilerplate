@@ -1,5 +1,7 @@
-import { useFormState } from "react-dom"
+"use client"
 
+import { useFormState } from "react-dom"
+import { useParams } from "next/navigation"
 import { LOGIN_VIEW } from "@modules/account/templates/login-template"
 import Input from "@modules/common/components/input"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -12,6 +14,7 @@ type Props = {
 
 const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useFormState(login, null)
+  const { countryCode } = useParams()
 
   return (
     <div
@@ -23,6 +26,10 @@ const Login = ({ setCurrentView }: Props) => {
         Sign in to access an enhanced shopping experience.
       </p>
       <form className="w-full" action={formAction}>
+        {/* --- ADD THIS HIDDEN INPUT --- */}
+        <input type="hidden" name="country_code" value={countryCode || "us"} />
+        {/* ----------------------------- */}
+        
         <div className="flex flex-col w-full gap-y-2">
           <Input
             label="Email"
@@ -42,7 +49,6 @@ const Login = ({ setCurrentView }: Props) => {
               required
               data-testid="password-input"
             />
-            {/* Added Forgot Password Button */}
             <button
               onClick={() => setCurrentView(LOGIN_VIEW.FORGOT_PASSWORD)}
               className="text-small-regular text-ui-fg-base underline absolute right-0 -bottom-6"

@@ -25,7 +25,7 @@ export const setAuthToken = (token: string) => {
   cookies().set("_medusa_jwt", token, {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
-    sameSite: "lax", // Critical fix: Changed from 'strict' to 'lax' for redirects
+    sameSite: "lax", // Ensure this is LAX
     secure: process.env.NODE_ENV === "production",
   })
 }

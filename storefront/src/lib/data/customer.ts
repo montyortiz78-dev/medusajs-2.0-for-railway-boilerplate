@@ -11,10 +11,14 @@ import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 export const getCustomer = cache(async function () {
   const headers = getAuthHeaders() as { authorization: string }
 
-  // Only log if headers are actually missing to reduce noise
+  // --- DEBUG LOGS (Check Railway Logs) ---
   if (!headers.authorization) {
-    // console.log("ℹ️ getCustomer: No Auth Token found (User likely guest).")
+     console.warn("⚠️ getCustomer: No Auth Token found (User is Guest).")
+  } else {
+     // Log truncated token to confirm persistence
+     console.log(`✅ getCustomer: Token found (starts with ${headers.authorization.substring(7, 15)}...)`)
   }
+  // ---------------------------------------
 
   return await sdk.store.customer
     .retrieve({}, { next: { tags: ["customer"] }, ...headers } as any)
@@ -42,6 +46,9 @@ export const updateCustomer = cache(async function (
 })
 
 export async function signup(_currentState: unknown, formData: FormData) {
+  // ... (keep your existing signup code here)
+  // Just ensure you add the country code logic if you want signup to redirect correctly too
+  // For brevity, I am not repeating the full signup function unless you need it.
   const password = formData.get("password") as string
   const customerForm = {
     email: formData.get("email") as string,
@@ -58,32 +65,21 @@ export async function signup(_currentState: unknown, formData: FormData) {
 
     const customHeaders = { authorization: `Bearer ${token}` }
     
-    const { customer: createdCustomer } = await sdk.store.customer.create(
-      customerForm,
-      {},
-      customHeaders
-    )
+    await sdk.store.customer.create(customerForm, {}, customHeaders)
 
-    // Log the user in immediately after signup
     const loginRes = await sdk.auth.login("customer", "emailpass", {
       email: customerForm.email,
       password,
     }) as any
 
-    // Handle string vs object token response
     let authToken = ""
-    if (typeof loginRes === "string") {
-        authToken = loginRes
-    } else {
-        authToken = loginRes.access_token || loginRes.token
-    }
+    if (typeof loginRes === "string") authToken = loginRes
+    else authToken = loginRes.access_token || loginRes.token
 
-    if (authToken) {
-        setAuthToken(authToken)
-    }
+    if (authToken) setAuthToken(authToken)
 
     revalidateTag("customer")
-    return createdCustomer
+    return null // Return null to indicate success if your form handles it
   } catch (error: any) {
     return error.toString()
   }
@@ -92,8 +88,10 @@ export async function signup(_currentState: unknown, formData: FormData) {
 export async function login(_currentState: unknown, formData: FormData) {
   const email = (formData.get("email") as string).toLowerCase().trim()
   const password = formData.get("password") as string
+  // Retrieve the country code passed from the hidden input
+  const countryCode = (formData.get("country_code") as string) || "us"
 
-  console.log("LOGIN DEBUG: Attempting login for:", email)
+  console.log(`LOGIN: Attempting login for ${email} in region ${countryCode}`)
   let loggedIn = false
 
   try {
@@ -104,17 +102,10 @@ export async function login(_currentState: unknown, formData: FormData) {
 
     let token: string | undefined
 
-    // 1. Handle if API returns raw token string (Your current case)
     if (typeof loginRes === "string") {
-        console.log("LOGIN DEBUG: Received raw string token.")
         token = loginRes
-    } 
-    // 2. Handle if API returns object (Standard case)
-    else if (typeof loginRes === "object") {
-        if (loginRes.message) {
-             console.error("LOGIN FAILED (API Message):", loginRes.message)
-             throw new Error(loginRes.message)
-        }
+    } else if (typeof loginRes === "object") {
+        if (loginRes.message) throw new Error(loginRes.message)
         token = loginRes.access_token || loginRes.token
     }
 
@@ -122,22 +113,23 @@ export async function login(_currentState: unknown, formData: FormData) {
         setAuthToken(token)
         revalidateTag("customer")
         loggedIn = true
-        console.log("LOGIN DEBUG: Success. Token set.")
+        console.log("LOGIN: Success. Token set.")
     } else {
-        console.error("LOGIN DEBUG: Full Response (Unknown Format):", JSON.stringify(loginRes))
-        throw new Error("Authentication failed: No token received in response")
+        throw new Error("Authentication failed: No token received")
     }
   } catch (error: any) {
-    console.error("LOGIN DEBUG ERROR:", error.toString())
-    // Allow redirect to throw
+    console.error("LOGIN ERROR:", error.toString())
+    // Important: Re-throw redirect errors so Next.js handles them
     if (error.message && (error.message.includes("NEXT_REDIRECT") || error.digest?.includes("NEXT_REDIRECT"))) {
         throw error
     }
-    return error.message || error.toString()
+    return error.message || "Login failed."
   }
 
   if (loggedIn) {
-    redirect("/account")
+    // FIX: Redirect DIRECTLY to the country-specific account page
+    // This avoids the Middleware 307 redirect that drops cookies
+    redirect(`/${countryCode}/account`)
   }
 }
 
@@ -149,6 +141,8 @@ export async function signout(countryCode: string) {
   redirect(`/${countryCode}/account`)
 }
 
+// ... (Rest of the file: resetPassword, updatePassword, addresses, etc. keep as is) ...
+// Ensure you keep the rest of your file exports!
 export async function resetPassword(_currentState: unknown, formData: FormData) {
   const email = formData.get("email") as string
   try {
