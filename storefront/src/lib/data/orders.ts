@@ -27,19 +27,10 @@ export const listOrders = cache(async function (
 ) {
   const headers = getAuthHeaders()
 
-  // --- REAL DEBUGGING ---
-  const pubKey = headers["x-publishable-api-key"]
-  const hasToken = !!headers.authorization
-
-  if (hasToken && pubKey && pubKey.startsWith("pk_")) {
-    console.log(`✅ listOrders: Valid Headers. Token: Yes, Key: ${pubKey.substring(0, 5)}...`)
-  } else {
-    console.error("⚠️ listOrders: BAD HEADERS", { 
-        hasToken, 
-        pubKey: pubKey || "MISSING/EMPTY" 
-    })
-  }
-  // ----------------------
+  if (headers.authorization) {
+    // We rely on sdk.config.publishableKey for the API Key now
+    console.log("✅ listOrders: Fetching orders...")
+  } 
 
   return sdk.store.order
     .list(
@@ -48,7 +39,8 @@ export const listOrders = cache(async function (
     )
     .then(({ orders }) => orders)
     .catch((err) => {
+      // 401 means "User not in this Sales Channel". Return empty list instead of crashing.
       console.error("❌ listOrders Error:", err.message)
-      return null 
+      return [] 
     })
 })
