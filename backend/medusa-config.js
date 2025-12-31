@@ -26,12 +26,18 @@ import {
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
+// Helper to remove trailing slash from URL
+const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
+
+const backendUrl = trimSlash(process.env.BACKEND_URL || "http://localhost:9000");
+
 // --- DEBUG: Confirm Env Vars are loaded in Railway ---
 console.log("Medusa Config Startup Check:", {
   NODE_ENV: process.env.NODE_ENV,
   Resend_Key_Exists: !!RESEND_API_KEY,
-  Google_Client_ID_Exists: !!process.env.GOOGLE_CLIENT_ID, // Added Debug
+  Google_Client_ID_Exists: !!process.env.GOOGLE_CLIENT_ID, 
   Redis_URL_Start: REDIS_URL?.substring(0, 8), 
+  Backend_URL: backendUrl, // Log the sanitized URL
 });
 
 // Smart Redis with Heartbeat
@@ -64,18 +70,15 @@ const medusaConfig = {
     },
   },
   modules: [
-    // --- AUTH MODULE (NEW) ---
+    // --- AUTH MODULE ---
     {
       resolve: "@medusajs/auth",
       options: {
         providers: [
-          // Standard Email/Password
           {
             resolve: "@medusajs/auth-emailpass",
             id: "emailpass",
-            options: {
-              // Options usually empty for emailpass unless customizing
-            }
+            options: {}
           },
           // Google SSO
           {
@@ -84,8 +87,8 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              // IMPORTANT: This URL must match the "Authorized redirect URI" in Google Console exactly
-              callbackUrl: `${process.env.BACKEND_URL || "http://localhost:9000"}/auth/customer/google/callback`,
+              // FIX: Use the sanitized 'backendUrl' variable
+              callbackUrl: `${backendUrl}/auth/customer/google/callback`,
             },
           },
         ],
@@ -123,7 +126,8 @@ const medusaConfig = {
             id: 'local',
             options: {
               upload_dir: 'static',
-              backend_url: `${process.env.BACKEND_URL || "http://localhost:9000"}/static`
+              // FIX: Use the sanitized 'backendUrl' variable
+              backend_url: `${backendUrl}/static`
             }
           }]))
         ]
@@ -164,7 +168,6 @@ const medusaConfig = {
       resolve: '@medusajs/notification',
       options: {
         providers: [
-          // Resend Provider
           ...(RESEND_API_KEY && RESEND_FROM_EMAIL ? [{
             resolve: './src/modules/email-notifications',
             id: 'resend',
@@ -175,7 +178,6 @@ const medusaConfig = {
             },
           }] : []),
           
-          // SendGrid Provider
           ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL ? [{
             resolve: '@medusajs/notification-sendgrid',
             id: 'sendgrid',
@@ -261,5 +263,4 @@ const medusaConfig = {
   ]
 };
 
-// console.log(JSON.stringify(medusaConfig, null, 2));
 export default defineConfig(medusaConfig);
