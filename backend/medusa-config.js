@@ -30,14 +30,14 @@ loadEnv(process.env.NODE_ENV, process.cwd());
 console.log("Medusa Config Startup Check:", {
   NODE_ENV: process.env.NODE_ENV,
   Resend_Key_Exists: !!RESEND_API_KEY,
-  Resend_From_Exists: !!RESEND_FROM_EMAIL,
-  Redis_URL_Start: REDIS_URL?.substring(0, 8), // Debug protocol
+  Google_Client_ID_Exists: !!process.env.GOOGLE_CLIENT_ID, // Added Debug
+  Redis_URL_Start: REDIS_URL?.substring(0, 8), 
 });
 
 // Smart Redis with Heartbeat
 const redisOptions = {
   family: 6,
-  keepAlive: 10000, // <--- Fixes ETIMEDOUT errors
+  keepAlive: 10000,
   ...(process.env.REDIS_URL?.startsWith("rediss://") ? {
     tls: { rejectUnauthorized: false }
   } : {})
@@ -48,22 +48,50 @@ const medusaConfig = {
     databaseUrl: DATABASE_URL,
     databaseLogging: false,
     redisUrl: process.env.REDIS_URL,
-    redisOptions: redisOptions, // Apply here
+    redisOptions: redisOptions,
     http: {
       adminCors: ADMIN_CORS,
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
-      trustProxy: true, // <--- Trust Railway Load Balancer
+      trustProxy: true,
       authCookieOptions: {
-        sameSite: "none", // <--- Allow cross-site cookie
+        sameSite: "none", 
         secure: true,
         httpOnly: true,
       },
     },
   },
   modules: [
+    // --- AUTH MODULE (NEW) ---
+    {
+      resolve: "@medusajs/auth",
+      options: {
+        providers: [
+          // Standard Email/Password
+          {
+            resolve: "@medusajs/auth-emailpass",
+            id: "emailpass",
+            options: {
+              // Options usually empty for emailpass unless customizing
+            }
+          },
+          // Google SSO
+          {
+            resolve: "@medusajs/auth-google",
+            id: "google",
+            options: {
+              clientId: process.env.GOOGLE_CLIENT_ID,
+              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+              // IMPORTANT: This URL must match the "Authorized redirect URI" in Google Console exactly
+              callbackUrl: `${process.env.BACKEND_URL || "http://localhost:9000"}/auth/customer/google/callback`,
+            },
+          },
+        ],
+      },
+    },
+
     // --- FILE MODULE ---
     {
       key: Modules.FILE,
@@ -95,7 +123,7 @@ const medusaConfig = {
             id: 'local',
             options: {
               upload_dir: 'static',
-              backend_url: "https://backend-production-622a.up.railway.app/static"
+              backend_url: `${process.env.BACKEND_URL || "http://localhost:9000"}/static`
             }
           }]))
         ]
@@ -233,5 +261,5 @@ const medusaConfig = {
   ]
 };
 
-console.log(JSON.stringify(medusaConfig, null, 2));
+// console.log(JSON.stringify(medusaConfig, null, 2));
 export default defineConfig(medusaConfig);
