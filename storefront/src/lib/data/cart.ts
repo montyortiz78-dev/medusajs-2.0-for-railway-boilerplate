@@ -10,9 +10,6 @@ import { listRegions } from "./regions"
 
 // --- HELPERS ---
 
-/**
- * Helper to get the cart ID or throw if missing (for actions that require it).
- */
 function getCartIdOrThrow() {
   const cartId = getCartId()
   if (!cartId) {
@@ -21,9 +18,6 @@ function getCartIdOrThrow() {
   return cartId
 }
 
-/**
- * Creates a new cart with the given items and saves the ID in cookies.
- */
 async function createCart(variantId: string, quantity: number, countryCode: string) {
   try {
     let regionId: string | undefined
@@ -34,7 +28,6 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
         r.countries?.some((c: HttpTypes.StoreRegionCountry) => c.iso_2 === countryCode)
       )
       
-      // Fallback: If no match, use the first region available
       if (region) {
         regionId = region.id
       } else if (regions && regions.length > 0) {
@@ -109,20 +102,17 @@ export async function addToCart({
 }) {
   const cartId = getCartId()
 
-  // 1. If no cart, create one
   if (!cartId) {
     try {
       const cart = await createCart(variantId, quantity, countryCode)
       
-      // If we have metadata, update the line item immediately.
-      // We must explicitly pass the quantity again to satisfy the SDK type definition.
       if (cart && metadata && cart.items?.[0]) {
         await sdk.store.cart.updateLineItem(
             cart.id, 
             cart.items[0].id, 
             {
               metadata,
-              quantity: cart.items[0].quantity, // <--- FIXED: Explicitly pass existing quantity
+              quantity: cart.items[0].quantity,
             }, 
             {}, 
             getMedusaHeaders(["cart"])
@@ -134,7 +124,6 @@ export async function addToCart({
     }
   }
 
-  // 2. If cart exists, try adding with metadata
   try {
     await sdk.store.cart.createLineItem(
       cartId,
@@ -150,7 +139,6 @@ export async function addToCart({
   } catch (e: any) {
     console.error("Error adding to cart:", e)
 
-    // 3. If cart not found, clear cookie and retry creation
    if (e.message?.includes("Not Found") || e.status === 404) {
       removeCartId()
       try {
@@ -161,7 +149,7 @@ export async function addToCart({
                 cart.items[0].id, 
                 {
                   metadata,
-                  quantity: cart.items[0].quantity, // <--- FIXED: Explicitly pass existing quantity
+                  quantity: cart.items[0].quantity,
                 }, 
                 {}, 
                 getMedusaHeaders(["cart"])
@@ -201,8 +189,6 @@ export async function updateLineItem({
 export async function deleteLineItem(lineId: string) {
   try {
     const cartId = getCartIdOrThrow()
-    // We pass an empty object {} as the 3rd argument (query params)
-    // so that getMedusaHeaders is correctly interpreted as the 4th argument (custom headers).
     await sdk.store.cart.deleteLineItem(
       cartId,
       lineId,
@@ -347,10 +333,8 @@ export async function enrichLineItems(
 export async function updateRegion(countryCode: string, currentPath: string) {
   const cartId = getCartId()
   
-  // Fetch regions to find the correct region_id for the new country
   const regions = await listRegions()
   
-  // FIX: Explicitly type 'r' and 'c'
   const region = regions?.find((r: HttpTypes.StoreRegion) =>
     r.countries?.some((c: HttpTypes.StoreRegionCountry) => c.iso_2 === countryCode)
   )
@@ -359,7 +343,6 @@ export async function updateRegion(countryCode: string, currentPath: string) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
-  // If a cart exists, update its region so the currency/tax adjusts
   if (cartId) {
     try {
       await sdk.store.cart.update(
@@ -374,6 +357,29 @@ export async function updateRegion(countryCode: string, currentPath: string) {
     }
   }
 
-  // Redirect user to the new country path
   redirect(`/${countryCode}${currentPath}`)
+}
+
+// --- NEWLY ADDED PROMOTION FUNCTIONS TO FIX BUILD ---
+
+export async function applyPromotions(codes: string[]) {
+  const cartId = getCartId()
+  if (!cartId) return medusaError("No cart found")
+
+  try {
+    await sdk.store.cart.update(cartId, { promo_codes: codes }, {}, getMedusaHeaders(["cart"]))
+    revalidateTag("cart")
+  } catch (e) {
+    return medusaError(e)
+  }
+}
+
+export async function submitPromotionForm(currentState: unknown, formData: FormData) {
+  const code = formData.get("code") as string
+  try {
+    await applyPromotions([code])
+    return null
+  } catch (e: any) {
+    return e.toString()
+  }
 }

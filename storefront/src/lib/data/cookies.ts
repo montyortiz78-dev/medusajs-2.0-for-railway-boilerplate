@@ -1,44 +1,73 @@
 import { cookies } from "next/headers"
 
 export const getAuthToken = () => {
-  return cookies().get("_medusa_jwt")?.value
+  try {
+    return cookies().get("_medusa_jwt")?.value
+  } catch (error) {
+    return null
+  }
 }
 
 export const getCartId = () => {
-  return cookies().get("_medusa_cart_id")?.value
+  try {
+    return cookies().get("_medusa_cart_id")?.value
+  } catch (error) {
+    return null
+  }
 }
 
 export const setCartId = (cartId: string) => {
-  cookies().set("_medusa_cart_id", cartId, {
-    maxAge: 60 * 60 * 24 * 7,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  })
+  try {
+    cookies().set("_medusa_cart_id", cartId, {
+      maxAge: 60 * 60 * 24 * 7,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    })
+  } catch (error) {
+    // Ignore during build
+  }
 }
 
 export const removeCartId = () => {
-  cookies().delete("_medusa_cart_id")
+  try {
+    cookies().delete("_medusa_cart_id")
+  } catch (error) {
+    // Ignore during build
+  }
 }
 
 export const setAuthToken = (token: string) => {
-  cookies().set("_medusa_jwt", token, {
-    maxAge: 60 * 60 * 24 * 7,
-    httpOnly: true,
-    sameSite: "lax", // Ensure this is LAX
-    secure: process.env.NODE_ENV === "production",
-  })
+  try {
+    cookies().set("_medusa_jwt", token, {
+      maxAge: 60 * 60 * 24 * 7,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    })
+  } catch (error) {
+    // Ignore during build
+  }
 }
 
 export const removeAuthToken = () => {
-  cookies().delete("_medusa_jwt")
+  try {
+    cookies().delete("_medusa_jwt")
+  } catch (error) {
+    // Ignore during build
+  }
 }
 
 export const getAuthHeaders = () => {
-  const token = cookies().get("_medusa_jwt")?.value
+  try {
+    const token = cookies().get("_medusa_jwt")?.value
 
-  if (token) {
-    return { authorization: `Bearer ${token}` }
+    if (token) {
+      return { authorization: `Bearer ${token}` }
+    }
+  } catch (error) {
+    // Return empty if called outside request scope (e.g. static build)
+    return {}
   }
 
   return {}
