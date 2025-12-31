@@ -109,6 +109,38 @@ export default async function Footer() {
                 </ul>
               </div>
             )}
+
+            {/* NEW: Company / Legal Section */}
+            <div className="flex flex-col gap-y-2">
+              <span className="txt-small-plus txt-ui-fg-base font-bold">Company</span>
+              <ul className="grid grid-cols-1 gap-2 text-ui-fg-subtle">
+                <li>
+                  <LocalizedClientLink
+                    href="/content/privacy-policy"
+                    className="hover:text-pink-400 transition-colors"
+                  >
+                    Privacy Policy
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/content/terms-of-use"
+                    className="hover:text-pink-400 transition-colors"
+                  >
+                    Terms of Use
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/customer-service"
+                    className="hover:text-pink-400 transition-colors"
+                  >
+                    Customer Service
+                  </LocalizedClientLink>
+                </li>
+              </ul>
+            </div>
+
           </div>
         </div>
 
