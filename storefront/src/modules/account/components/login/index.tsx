@@ -16,6 +16,11 @@ const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useFormState(login, null)
   const { countryCode } = useParams()
 
+  // Construct the Google Auth URL
+  // This directs the user to: Backend -> Google -> Backend (sets cookie) -> Storefront
+  // Make sure NEXT_PUBLIC_MEDUSA_BACKEND_URL is set in your env vars
+  const googleAuthUrl = `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"}/auth/customer/google?callback_url=${process.env.NEXT_PUBLIC_BASE_URL}/${countryCode}/account`
+
   return (
     <div
       className="max-w-sm w-full flex flex-col items-center"
@@ -26,9 +31,8 @@ const Login = ({ setCurrentView }: Props) => {
         Sign in to access an enhanced shopping experience.
       </p>
       <form className="w-full" action={formAction}>
-        {/* --- ADD THIS HIDDEN INPUT --- */}
+        {/* --- ADD THIS HIDDEN INPUT (Already present in your code) --- */}
         <input type="hidden" name="country_code" value={countryCode || "us"} />
-        {/* ----------------------------- */}
         
         <div className="flex flex-col w-full gap-y-2">
           <Input
@@ -66,6 +70,34 @@ const Login = ({ setCurrentView }: Props) => {
           Sign in
         </SubmitButton>
       </form>
+
+      {/* --- GOOGLE LOGIN BUTTON --- */}
+      <div className="w-full mt-6 flex flex-col gap-y-3">
+        <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+            </div>
+        </div>
+
+        <a
+          href={googleAuthUrl}
+          className="w-full inline-flex justify-center items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          data-testid="google-button"
+        >
+          <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+            <path
+              d="M12.0003 20.45C16.6503 20.45 20.5503 17.3 22.1503 13.2H12.0003V10.8H23.6503C23.8503 11.8 24.0003 12.9 24.0003 14.1C24.0003 20.75 18.6003 26.15 12.0003 26.15C5.3503 26.15 0.000299454 20.75 0.000299454 14.1C0.000299454 7.45 5.3503 2.05 12.0003 2.05C14.8003 2.05 17.3503 2.95 19.3503 4.8L17.5003 6.65C16.2003 5.4 14.2003 4.6 12.0003 4.6C7.3003 4.6 3.4003 7.95 2.0003 12.2H12.0003V20.45Z"
+              fill="currentColor"
+            />
+          </svg>
+          Google
+        </a>
+      </div>
+      {/* --------------------------- */}
+
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
         Not a member?{" "}
         <button

@@ -41,6 +41,7 @@ export async function signup(_currentState: unknown, formData: FormData) {
   const countryCode = (formData.get("country_code") as string) || "us"
 
   try {
+    // Attempt to register auth identity
     const token = await sdk.auth.register("customer", "emailpass", {
       email,
       password,
@@ -68,6 +69,9 @@ export async function signup(_currentState: unknown, formData: FormData) {
         revalidateTag("order") // <--- ADD THIS
     }
   } catch (error: any) {
+    if (error.message?.includes("exists")) {
+        return "This email is already registered. Please sign in."
+    }
     return error.toString()
   }
   
