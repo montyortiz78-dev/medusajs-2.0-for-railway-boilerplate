@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense, useMemo, Fragment } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, Button, clx } from "@medusajs/ui";
 import { Dialog, Transition } from "@headlessui/react";
-// FIX: Replaced 'Ruler' with 'Tag'
-import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle, Tag } from "@medusajs/icons";
+import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle, Tag, Trash, XMark } from "@medusajs/icons"; // <--- Import Trash & XMark
 import useToggleState from "@lib/hooks/use-toggle-state";
 
 import KandiVisualizer from '@components/kandi-visualizer';
@@ -77,7 +76,6 @@ const SizeGuideModal = ({ isOpen, close }: { isOpen: boolean, close: () => void 
                             <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-ui-bg-base p-6 text-left align-middle shadow-xl transition-all">
                                 <div className="flex justify-between items-center mb-6">
                                     <Dialog.Title as="h3" className="text-xl font-bold text-ui-fg-base flex items-center gap-2">
-                                        {/* FIX: Used Tag icon here */}
                                         <Tag className="text-pink-500"/> Size Guide
                                     </Dialog.Title>
                                     <button onClick={close} className="text-ui-fg-subtle hover:text-ui-fg-base">✕</button>
@@ -99,7 +97,8 @@ const MobileCreateBar = ({
     handleOptionChange,
     handleAddToStash,
     isAdding,
-    patternLength
+    patternLength,
+    onOpenVisualizer // <--- Pass handler
 }: {
     product: HttpTypes.StoreProduct | null,
     selectedVariant?: HttpTypes.StoreProductVariant,
@@ -107,7 +106,8 @@ const MobileCreateBar = ({
     handleOptionChange: (id: string, val: string) => void,
     handleAddToStash: () => void,
     isAdding: boolean,
-    patternLength: number
+    patternLength: number,
+    onOpenVisualizer: () => void
 }) => {
     const { state, open, close } = useToggleState();
 
@@ -138,23 +138,29 @@ const MobileCreateBar = ({
                      </div>
                      
                      <div className="grid grid-cols-2 gap-x-4">
+                        {/* --- Mobile: View 3D Button --- */}
+                        <Button variant="secondary" onClick={onOpenVisualizer} className="w-full">
+                            View 3D
+                        </Button>
+                        
                         <Button variant="secondary" onClick={open} className="w-full">
                             {selectedVariant ? "Edit Options" : "Select Options"}
                         </Button>
-
-                        <Button 
-                            onClick={handleAddToStash}
-                            disabled={!isValid || isAdding}
-                            isLoading={isAdding}
-                            variant="primary"
-                            className="w-full"
-                        >
-                            {!isDesignReady ? "Add Beads" : (!selectedVariant ? "Select Variant" : "Add to Stash")}
-                        </Button>
                      </div>
+                     
+                     <Button 
+                        onClick={handleAddToStash}
+                        disabled={!isValid || isAdding}
+                        isLoading={isAdding}
+                        variant="primary"
+                        className="w-full mt-2"
+                    >
+                        {!isDesignReady ? "Add Beads" : (!selectedVariant ? "Select Variant" : "Add to Stash")}
+                    </Button>
                 </div>
             </div>
 
+            {/* Option Selection Modal */}
             <Transition appear show={state} as={Fragment}>
                 <Dialog as="div" className="relative z-[75]" onClose={close}>
                     <Transition.Child
@@ -228,13 +234,15 @@ function KandiGeneratorContent() {
   const [isAdding, setIsAdding] = useState(false); 
   const [captureMode, setCaptureMode] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false); // <--- Modal State
 
   const sizeGuideState = useToggleState();
 
   const params = useParams();
   const router = useRouter();
-  const { pattern, setPattern, designConfig, setDesignConfig } = useKandiContext();
+  const { pattern, setPattern, designConfig, setDesignConfig, clearDesign } = useKandiContext(); // <--- Get clearDesign
 
+  // ... (Keep existing useEffects for product fetching and option parsing logic) ...
   useEffect(() => {
     const fetchProduct = async () => {
       const handle = process.env.NEXT_PUBLIC_CUSTOM_KANDI_HANDLE || 'custom-ai-kandi';
@@ -425,6 +433,16 @@ function KandiGeneratorContent() {
     }
   };
 
+  // --- NEW: Clear Design Handler ---
+  const handleClearDesign = () => {
+    clearDesign(); // Clears Context
+    setKandiName("My Custom Kandi"); // Resets Local State
+    setVibe("");
+    setHasGenerated(false);
+    setIsPreviewOpen(false); // Close modal if open
+  }
+  // -------------------------------
+
   const visualizerPattern = pattern
     .filter((p) => !p.isGhost)
     .map((p) => ({ color: p.color }));
@@ -461,7 +479,7 @@ function KandiGeneratorContent() {
       </section>
       
       {/* Tool Section */}
-      <section className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-[140px] lg:pb-24 flex flex-col items-center">
+      <section className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pb-[180px] lg:pb-24 flex flex-col items-center">
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full items-start">
             
@@ -509,21 +527,30 @@ function KandiGeneratorContent() {
                 )}
             </div>
 
-            {/* GROUP B: VISUALIZER */}
+            {/* GROUP B: VISUALIZER (Desktop & Modal for Mobile) */}
             <div className="flex flex-col gap-6 order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24">
-                <div className="text-center lg:text-left backdrop-blur-sm p-4 rounded-2xl border border-transparent hover:border-ui-border-base transition-colors">
+                <div className="text-center lg:text-left backdrop-blur-sm p-4 rounded-2xl border border-transparent hover:border-ui-border-base transition-colors hidden lg:block">
                     <h2 className="text-4xl font-bold text-ui-fg-base mb-2">{kandiName}</h2>
                     <p className="text-ui-fg-subtle italic">"{mode === 'ai' ? vibeStory : 'Custom Design'}"</p>
                 </div>
                 
-                <div className="bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] flex items-center justify-center relative shadow-inner">
+                {/* Desktop Visualizer Area */}
+                <div className="hidden lg:flex bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] items-center justify-center relative shadow-inner overflow-hidden">
                     {pattern.length > 0 ? (
+                       <>
                         <KandiVisualizer 
                             pattern={visualizerPattern}
                             captureMode={captureMode}
                             rows={designConfig.rows} 
                             stitch={designConfig.stitch}
                         />
+                        {/* --- Desktop Clear Button --- */}
+                        <div className="absolute top-4 right-4 z-10">
+                            <Button variant="danger" size="small" onClick={handleClearDesign}>
+                                <Trash /> Clear
+                            </Button>
+                        </div>
+                       </>
                     ) : (
                         <div className="text-ui-fg-muted text-center flex flex-col items-center">
                             <span className="text-4xl mb-2">📿</span>
@@ -564,7 +591,6 @@ function KandiGeneratorContent() {
                             onClick={sizeGuideState.open}
                             className="text-sm font-medium text-pink-500 hover:text-pink-600 flex items-center gap-1 transition-colors"
                         >
-                            {/* FIX: Used Tag icon here */}
                             <Tag /> Size Guide
                         </button>
                     </div>
@@ -620,6 +646,58 @@ function KandiGeneratorContent() {
             </p>
         </div>
         
+        {/* --- MOBILE MODAL: 3D Visualizer --- */}
+        <Transition appear show={isPreviewOpen} as={Fragment}>
+            <Dialog as="div" className="relative z-[100]" onClose={() => setIsPreviewOpen(false)}>
+                <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0"
+                    enterTo="opacity-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                >
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+                </Transition.Child>
+
+                <div className="fixed inset-0 overflow-y-auto">
+                    <div className="flex min-h-full items-center justify-center p-4">
+                        <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95"
+                        >
+                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all relative h-[60vh] flex flex-col">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold">Preview</h3>
+                                    <div className="flex gap-2">
+                                        <Button variant="danger" size="small" onClick={handleClearDesign}>
+                                            <Trash /> Clear
+                                        </Button>
+                                        <button onClick={() => setIsPreviewOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                                            <XMark />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 relative bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                                    <KandiVisualizer 
+                                        pattern={visualizerPattern}
+                                        rows={designConfig.rows} 
+                                        stitch={designConfig.stitch}
+                                    />
+                                </div>
+                            </Dialog.Panel>
+                        </Transition.Child>
+                    </div>
+                </div>
+            </Dialog>
+        </Transition>
+
         <MobileCreateBar 
             product={product}
             selectedVariant={selectedVariant}
@@ -628,6 +706,7 @@ function KandiGeneratorContent() {
             handleAddToStash={handleAddToStash}
             isAdding={isAdding}
             patternLength={pattern.length}
+            onOpenVisualizer={() => setIsPreviewOpen(true)} // <--- Connect Handler
         />
 
         <SizeGuideModal isOpen={sizeGuideState.state} close={sizeGuideState.close} />

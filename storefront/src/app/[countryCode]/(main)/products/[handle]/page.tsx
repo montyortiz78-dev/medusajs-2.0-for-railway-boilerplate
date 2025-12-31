@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import ProductTemplate from "@modules/products/templates"
 import { getRegion, listRegions } from "@lib/data/regions"
@@ -68,6 +68,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Props) {
+  // --- REDIRECT LOGIC ---
+  // If the user tries to visit the AI Kandi product page directly,
+  // bounce them to the custom creator tool immediately.
+  if (params.handle === "custom-ai-kandi") {
+    redirect(`/${params.countryCode}/create`)
+  }
+  // ----------------------
   const region = await getRegion(params.countryCode)
 
   if (!region) {

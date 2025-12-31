@@ -1,4 +1,5 @@
 import React, { Suspense } from "react"
+import { InformationCircle } from "@medusajs/icons" // <--- Added Import
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import PartComponent from "@modules/products/components/product-actions"
@@ -59,6 +60,21 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           </Suspense>
         </div>
       </div>
+
+      {/* --- DISCLAIMER ADDED HERE --- */}
+      <div className="content-container">
+        <div className="max-w-3xl mx-auto mt-20 p-6 border-t border-ui-border-base flex gap-4 text-ui-fg-muted opacity-80 hover:opacity-100 transition-opacity bg-white/50 dark:bg-black/20 rounded-2xl backdrop-blur-sm">
+            <InformationCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p className="text-xs leading-relaxed">
+                <strong>Disclaimer:</strong> The digital 3D preview is for visualization purposes only and is not an exact replica of the physical product. 
+                Our artists will replicate your pattern and colors as closely as possible, but due to the varying number of beads required for different 
+                styles (e.g., Cuffs vs. Singles) and sizes, we may need to creatively adapt the design to ensure structural integrity and fit. 
+                By purchasing, you agree to these minor artistic variations.
+            </p>
+        </div>
+      </div>
+      {/* --------------------------- */}
+
       <div
         className="content-container my-16 small:my-32"
         data-testid="related-products-container"

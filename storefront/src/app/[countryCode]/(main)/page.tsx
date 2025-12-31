@@ -89,7 +89,7 @@ export default async function Home({ params, searchParams }: Params) {
           </h2>
           <div className="h-1 w-24 bg-gradient-to-r from-pink-500 to-blue-500 mx-auto rounded-full" />
           <p className="text-lg md:text-xl text-ui-fg-muted leading-relaxed font-light">
-            Kandi culture is about connection—trading a piece of yourself with a new friend. We take that tradition to the next level. Every bracelet you design isn't just hand-strung with premium pony beads; it's minted on the blockchain as a digital collectible. Whether you're looking for elaborate <strong className="text-ui-fg-base font-bold">3D Cuffs</strong>, simple <strong className="text-ui-fg-base font-bold">Singles</strong>, or rare <strong className="text-ui-fg-base font-bold">Perler</strong> charms, we bridge the gap between the rave and the digital world.
+            Kandi culture is about connection—trading a piece of yourself with a new friend. We take that tradition to the next level. Every piece you design isn't just hand-strung with premium pony beads; it's minted on the blockchain as a digital collectible. Whether you're looking for elaborate <strong className="text-ui-fg-base font-bold">3D Cuffs</strong>, <strong className="text-ui-fg-base font-bold">classic single bracelets</strong>, or <strong className="text-ui-fg-base font-bold">statement necklaces</strong>, we bridge the gap between the rave and the digital world.
           </p>
         </div>
       </section>

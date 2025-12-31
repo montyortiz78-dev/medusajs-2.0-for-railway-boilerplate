@@ -14,9 +14,10 @@ interface KandiContextType {
   setDesignConfig: (config: DesignConfig) => void
   isCapturing: boolean
   setIsCapturing: (val: boolean) => void
-  // NEW: Add Custom Word to Context
   customWord: string
   setCustomWord: (word: string) => void
+  // NEW: Add clear function
+  clearDesign: () => void
 }
 
 const KandiContext = createContext<KandiContextType | null>(null)
@@ -32,12 +33,22 @@ export const useKandiContext = () => {
 export const KandiProvider = ({ children }: { children: React.ReactNode }) => {
   const [pattern, setPattern] = useState<any[]>([])
   const [isCapturing, setIsCapturing] = useState(false)
-  const [customWord, setCustomWord] = useState("") // <--- Initialize State
+  const [customWord, setCustomWord] = useState("") 
   
-  const [designConfig, setDesignConfig] = useState<DesignConfig>({
+  const initialConfig = {
     rows: 1,
     stitch: "ladder"
-  })
+  }
+
+  const [designConfig, setDesignConfig] = useState<DesignConfig>(initialConfig)
+
+  // --- NEW: Reset all state ---
+  const clearDesign = () => {
+    setPattern([])
+    setCustomWord("")
+    setDesignConfig(initialConfig)
+  }
+  // ---------------------------
 
   return (
     <KandiContext.Provider 
@@ -48,8 +59,9 @@ export const KandiProvider = ({ children }: { children: React.ReactNode }) => {
         setDesignConfig,
         isCapturing, 
         setIsCapturing,
-        customWord,      // <--- Expose value
-        setCustomWord    // <--- Expose setter
+        customWord,      
+        setCustomWord,
+        clearDesign // <--- Expose function
       }}
     >
       {children}
