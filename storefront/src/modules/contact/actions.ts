@@ -11,6 +11,7 @@ const ContactSchema = z.object({
   email: z.string().email("Invalid email address"),
   subject: z.string().min(1, "Subject is required"),
   message: z.string().min(10, "Message must be at least 10 characters"),
+  captchaToken: z.string().optional(), // Token from frontend
 })
 
 export async function sendMessage(prevState: any, formData: FormData) {
@@ -26,27 +27,48 @@ export async function sendMessage(prevState: any, formData: FormData) {
     }
   }
 
-  const { first_name, last_name, email, subject, message } = validatedFields.data
+  const { first_name, last_name, email, subject, message, captchaToken } = validatedFields.data
+
+  // --- RECAPTCHA VERIFICATION ---
+  if (process.env.RECAPTCHA_SECRET_KEY && captchaToken) {
+    try {
+      const verifyRes = await fetch(
+        `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
+        { method: "POST" }
+      )
+      const verifyData = await verifyRes.json()
+      
+      if (!verifyData.success) {
+        return {
+          success: false,
+          message: "reCAPTCHA verification failed. Please try again.",
+        }
+      }
+    } catch (e) {
+      console.error("ReCAPTCHA Error:", e)
+      return { success: false, message: "Security check failed." }
+    }
+  }
+  // ------------------------------
 
   try {
-    // Send email using Resend directly or via your notification module if extended
-    // For simplicity and direct integration with your Resend setup:
     if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
          throw new Error("Resend configuration missing")
     }
 
     await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL,
-      to: process.env.RESEND_FROM_EMAIL, // Send to support
+      to: process.env.RESEND_FROM_EMAIL, // Emails go to your support inbox
       replyTo: email,
-      subject: `New Contact Form Submission: ${subject}`,
+      subject: `[Contact Form] ${subject}`,
       html: `
-        <h2>New Message from ${first_name} ${last_name}</h2>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        <br/>
-        <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, "<br>")}</p>
+        <div style="font-family: sans-serif; color: #333;">
+            <h2>New Message from ${first_name} ${last_name}</h2>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Subject:</strong> ${subject}</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+            <p style="white-space: pre-wrap;">${message}</p>
+        </div>
       `,
     })
 

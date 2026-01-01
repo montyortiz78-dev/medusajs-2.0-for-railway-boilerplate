@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { Heading, Text } from "@medusajs/ui"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export const metadata: Metadata = {
   title: "Customer Service",
@@ -10,15 +11,12 @@ export default function CustomerServicePage() {
   return (
     <div className="py-12 min-h-[70vh] bg-ui-bg-subtle transition-colors duration-300">
       <div className="content-container flex justify-center">
-        {/* Changed: Removed 'glass' and hardcoded borders. Used ui-bg-base and ui-border-base */}
         <div className="max-w-2xl w-full bg-ui-bg-base p-8 small:p-10 rounded-2xl border border-ui-border-base shadow-sm">
           
-          {/* Changed: text-white -> text-ui-fg-base */}
           <Heading level="h1" className="text-3xl text-ui-fg-base mb-6">
             Customer Service 🤝
           </Heading>
           
-          {/* Changed: text-gray-300 -> text-ui-fg-subtle */}
           <div className="flex flex-col gap-y-6 text-ui-fg-subtle">
             <section>
               <Heading level="h2" className="text-xl text-ui-fg-base mb-2">
@@ -26,17 +24,17 @@ export default function CustomerServicePage() {
               </Heading>
               <Text>
                 Have a question about your Kandi? Need help with an order? 
-                Reach out to us at{" "}
-                <a 
-                  href="mailto:support@kandiland.xyz" 
-                  className="text-pink-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors font-medium"
+                Visit our{" "}
+                <LocalizedClientLink 
+                  href="/contact" 
+                  className="text-pink-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors font-medium underline"
                 >
-                  support@kandiland.xyz
-                </a>.
+                  Contact Page
+                </LocalizedClientLink>
+                {" "}to get in touch with the Kandi Creations team.
               </Text>
             </section>
 
-            {/* Changed: bg-white/10 -> bg-ui-border-base */}
             <div className="h-px w-full bg-ui-border-base my-2" />
 
             <section>
@@ -44,7 +42,7 @@ export default function CustomerServicePage() {
                 Shipping & Delivery
               </Heading>
               <Text>
-                All Phygital Kandi bracelets are custom-made to order. Please allow 
+                All Kandi Creations pieces are custom-made to order. Please allow 
                 <strong className="text-ui-fg-base"> 3-5 business days</strong> for assembly before shipping. You will receive a tracking number via email once your order ships.
               </Text>
             </section>

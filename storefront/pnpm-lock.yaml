@@ -119,6 +119,9 @@ importers:
       react-dom:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
+      react-google-recaptcha:
+        specifier: ^3.1.0
+        version: 3.1.0(react@18.3.1)
       react-instantsearch-hooks-web:
         specifier: ^6.29.0
         version: 6.47.3(algoliasearch@4.25.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -186,6 +189,9 @@ importers:
       '@types/react-dom':
         specifier: 18.3.1
         version: 18.3.1
+      '@types/react-google-recaptcha':
+        specifier: ^2.1.9
+        version: 2.1.9
       '@types/react-instantsearch-dom':
         specifier: ^6.12.3
         version: 6.12.9
@@ -2103,6 +2109,9 @@ packages:
   '@types/react-dom@18.3.1':
     resolution: {integrity: sha512-qW1Mfv8taImTthu4KoXgDfLuk4bydU6Q/TkADnDWWHwi4NX4BR+LWfTp2sVmTqRrsHvyDDTelgelxJ+SsejKKQ==}
 
+  '@types/react-google-recaptcha@2.1.9':
+    resolution: {integrity: sha512-nT31LrBDuoSZJN4QuwtQSF3O89FVHC4jLhM+NtKEmVF5R1e8OY0Jo4//x2Yapn2aNHguwgX5doAq8Zo+Ehd0ug==}
+
   '@types/react-instantsearch-core@6.26.10':
     resolution: {integrity: sha512-izn21BqXtO3GA5Tx3x7SP6kfk1GJppkVdowuenKIOUj1sCJ3VHwoggsqVWv1DYVcsS8wydjR8Ra91XtI2a12rw==}
 
@@ -3195,6 +3204,9 @@ packages:
     resolution: {integrity: sha512-RqGs4wavGYJWE07t35JQccByczmNUXQT0E12ZYV1VKYu5UiAU9lsos/yBAcf840+zrUQQxgVduCR5/B8nNtibg==}
     hasBin: true
 
+  hoist-non-react-statics@3.3.2:
+    resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
+
   htm@3.1.1:
     resolution: {integrity: sha512-983Vyg8NwUE7JkZ6NmOqpCZ+sh1bKv2iYTlUkzlWmA5JD2acKoxd4KVxbMmxX/85mtfdnDmTFoNKcg5DGAvxNQ==}
 
@@ -3925,6 +3937,11 @@ packages:
       react: 18.3.1
       react-dom: 18.3.1
 
+  react-async-script@1.2.0:
+    resolution: {integrity: sha512-bCpkbm9JiAuMGhkqoAiC0lLkb40DJ0HOEJIku+9JDjxX3Rcs+ztEOG13wbrOskt3n2DTrjshhaQ/iay+SnGg5Q==}
+    peerDependencies:
+      react: 18.3.1
+
   react-composer@5.0.3:
     resolution: {integrity: sha512-1uWd07EME6XZvMfapwZmc7NgCZqDemcvicRi3wMJzXsQLvZ3L7fTHVyPy1bZdnWXM4iPjYuNE+uJ41MLKeTtnA==}
     peerDependencies:
@@ -3943,6 +3960,11 @@ packages:
 
   react-dom@18.3.1:
     resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
+    peerDependencies:
+      react: 18.3.1
+
+  react-google-recaptcha@3.1.0:
+    resolution: {integrity: sha512-cYW2/DWas8nEKZGD7SCu9BSuVz8iOcOLHChHyi7upUuVhkpkhYG/6N3KDiTQ3XAiZ2UAZkfvYKMfAHOzBOcGEg==}
     peerDependencies:
       react: 18.3.1
 
@@ -7123,6 +7145,10 @@ snapshots:
     dependencies:
       '@types/react': 18.3.1
 
+  '@types/react-google-recaptcha@2.1.9':
+    dependencies:
+      '@types/react': 18.3.1
+
   '@types/react-instantsearch-core@6.26.10':
     dependencies:
       '@types/react': 18.3.1
@@ -8394,6 +8420,10 @@ snapshots:
       mkdirp: 0.3.0
       nopt: 1.0.10
 
+  hoist-non-react-statics@3.3.2:
+    dependencies:
+      react-is: 16.13.1
+
   htm@3.1.1: {}
 
   ieee754@1.2.1: {}
@@ -9178,6 +9208,12 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
+  react-async-script@1.2.0(react@18.3.1):
+    dependencies:
+      hoist-non-react-statics: 3.3.2
+      prop-types: 15.8.1
+      react: 18.3.1
+
   react-composer@5.0.3(react@18.3.1):
     dependencies:
       prop-types: 15.8.1
@@ -9196,6 +9232,12 @@ snapshots:
       loose-envify: 1.4.0
       react: 18.3.1
       scheduler: 0.23.2
+
+  react-google-recaptcha@3.1.0(react@18.3.1):
+    dependencies:
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-async-script: 1.2.0(react@18.3.1)
 
   react-hook-form@7.68.0(react@18.3.1):
     dependencies:
