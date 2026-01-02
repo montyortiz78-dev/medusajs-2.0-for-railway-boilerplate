@@ -88,7 +88,7 @@ const medusaConfig = {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
               // FIX: Use the sanitized 'backendUrl' variable
-              callbackUrl: `${backendUrl}/auth/customer/google/callback`,
+              callbackUrl: `${process.env.STORE_URL || "http://localhost:8000"}/api/auth/google/callback`,
             },
           },
         ],
