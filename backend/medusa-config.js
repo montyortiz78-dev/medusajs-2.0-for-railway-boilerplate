@@ -25,14 +25,13 @@ loadEnv(process.env.NODE_ENV, process.cwd());
 const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
 const backendUrl = trimSlash(process.env.BACKEND_URL || "http://localhost:9000");
 
-// --- DEBUG: Print this in Railway Logs during startup ---
+// --- DEBUG DIAGNOSTICS ---
 console.log("----------------------------------------");
 console.log("MEDUSA CONFIG DIAGNOSTICS:");
-console.log("JWT_SECRET Loaded:", process.env.JWT_SECRET ? "YES (starts with " + process.env.JWT_SECRET.substring(0, 5) + ")" : "NO (Using Random Default ❌)");
-console.log("COOKIE_SECRET Loaded:", process.env.COOKIE_SECRET ? "YES" : "NO (Using Random Default ❌)");
+console.log("JWT_SECRET Loaded:", process.env.JWT_SECRET ? "YES" : "NO");
+console.log("COOKIE_SECRET Loaded:", process.env.COOKIE_SECRET ? "YES" : "NO");
 console.log("STORE_URL:", process.env.STORE_URL);
 console.log("----------------------------------------");
-// -----------------------------------------------------
 
 const redisOptions = {
   family: 6,
@@ -49,16 +48,21 @@ const medusaConfig = {
     redisUrl: process.env.REDIS_URL,
     redisOptions: redisOptions,
     
+    // --- LOCATION 1: Root Level (Safe Fallback) ---
+    jwtSecret: process.env.JWT_SECRET,
+    cookieSecret: process.env.COOKIE_SECRET,
+    // ---------------------------------------------
+
     http: {
       adminCors: ADMIN_CORS,
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       trustProxy: true,
       
-      // --- CORRECT LOCATION FOR V2 ---
+      // --- LOCATION 2: HTTP Level (Standard v2) ---
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
-      // -------------------------------
+      // --------------------------------------------
       
       authCookieOptions: {
         sameSite: "none", 
@@ -89,7 +93,7 @@ const medusaConfig = {
         ],
       },
     },
-    // ... (Keep the rest of your modules exactly as they were)
+    // ... (Keep all other modules exactly as they are)
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
