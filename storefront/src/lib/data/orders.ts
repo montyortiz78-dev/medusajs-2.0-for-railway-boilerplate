@@ -28,7 +28,6 @@ export const listOrders = cache(async function (
   const headers = getAuthHeaders()
 
   if (headers.authorization) {
-    // We rely on sdk.config.publishableKey for the API Key now
     console.log("✅ listOrders: Fetching orders...")
   } 
 
@@ -39,7 +38,8 @@ export const listOrders = cache(async function (
     )
     .then(({ orders }) => orders)
     .catch((err) => {
-      // 401 means "User not in this Sales Channel". Return empty list instead of crashing.
+      // 401 means "User not in this Sales Channel" or "Token Rejected". 
+      // Return empty list instead of crashing.
       console.error("❌ listOrders Error:", err.message)
       return [] 
     })

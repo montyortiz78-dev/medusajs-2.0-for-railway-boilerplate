@@ -120,8 +120,6 @@ export async function signout(countryCode: string) {
   redirect(`/${countryCode}/account`)
 }
 
-// ... Keep existing address/password functions below (resetPassword, updatePassword, addCustomerAddress, etc.)
-// (Ensure you do not delete the rest of the file contents provided in your previous upload)
 export async function resetPassword(_currentState: unknown, formData: FormData) {
   const email = formData.get("email") as string
   try {
