@@ -7,7 +7,7 @@ import Input from "@modules/common/components/input"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import { login } from "@lib/data/customer"
-import { useState } from "react" // <--- Import useState
+import { useState } from "react"
 
 type Props = {
   setCurrentView: (view: LOGIN_VIEW) => void
@@ -16,15 +16,23 @@ type Props = {
 const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useFormState(login, null)
   const { countryCode } = useParams()
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false) // <--- Add loading state
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  // Construct the Google Auth URL
-  const googleAuthUrl = `${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"}/auth/customer/google?callback_url=${process.env.NEXT_PUBLIC_BASE_URL}/${countryCode}/account`
-
-  // --- NEW: HANDLER FOR GOOGLE LOGIN ---
-  const handleGoogleSignIn = async () => {
+  // --- UPDATED HANDLER FOR GOOGLE LOGIN ---
+  const handleGoogleSignIn = async (e: React.MouseEvent) => {
+    // 1. Prevent default to stop form submission/page refresh
+    e.preventDefault()
     setIsGoogleLoading(true)
+
     try {
+      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      
+      // Construct the URL dynamically
+      const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${baseUrl}/${countryCode}/account`
+      
+      console.log("Initiating Google Auth:", googleAuthUrl)
+
       const res = await fetch(googleAuthUrl, {
         method: "GET",
         headers: {
@@ -32,17 +40,23 @@ const Login = ({ setCurrentView }: Props) => {
         },
       })
       
+      if (!res.ok) {
+        throw new Error(`Server Error: ${res.status} ${res.statusText}`)
+      }
+
       const data = await res.json()
+      console.log("Google Auth Response:", data)
       
       if (data.location) {
-        // Redirect the browser to the Google OAuth page
         window.location.href = data.location
       } else {
         console.error("No location found in response", data)
+        alert("Configuration Error: No redirect URL returned from backend.")
         setIsGoogleLoading(false)
       }
-    } catch (e) {
-      console.error("Google Auth Error", e)
+    } catch (err: any) {
+      console.error("Google Auth Error:", err)
+      alert(`Google Login Failed: ${err.message}`)
       setIsGoogleLoading(false)
     }
   }
@@ -113,7 +127,7 @@ const Login = ({ setCurrentView }: Props) => {
           disabled={isGoogleLoading}
           className="w-full inline-flex justify-center items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           data-testid="google-button"
-          type="button" // Important: prevents form submission
+          type="button" 
         >
           {isGoogleLoading ? (
              <span className="h-5 w-5 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></span>
@@ -128,7 +142,6 @@ const Login = ({ setCurrentView }: Props) => {
           Google
         </button>
       </div>
-      {/* ----------------------------- */}
 
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
         Not a member?{" "}
