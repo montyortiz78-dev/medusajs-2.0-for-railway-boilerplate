@@ -37,14 +37,12 @@ export async function GET(request: NextRequest) {
           maxAge: 60 * 60 * 24 * 7, 
           httpOnly: true,
           sameSite: "lax",
-          secure: process.env.NODE_ENV === "production",
+          secure: true, 
        })
        
-       // --- CRITICAL FIX: Purge Cache ---
        revalidateTag("customer")
        revalidateTag("order")
        revalidateTag("cart")
-       // ---------------------------------
        
        return NextResponse.redirect(new URL(`/${countryCode}/account`, request.url))
     }

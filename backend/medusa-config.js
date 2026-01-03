@@ -2,19 +2,15 @@ import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
 import {
   ADMIN_CORS,
   AUTH_CORS,
-  COOKIE_SECRET,
   DATABASE_URL,
-  JWT_SECRET,
   REDIS_URL,
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
   SENDGRID_API_KEY,
   SENDGRID_FROM_EMAIL,
-  SHOULD_DISABLE_ADMIN,
   STORE_CORS,
   STRIPE_API_KEY,
   STRIPE_WEBHOOK_SECRET,
-  WORKER_MODE,
   MINIO_ENDPOINT,
   MINIO_ACCESS_KEY,
   MINIO_SECRET_KEY,
@@ -26,21 +22,18 @@ import {
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
-// Helper to remove trailing slash from URL
 const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
-
 const backendUrl = trimSlash(process.env.BACKEND_URL || "http://localhost:9000");
 
-// --- DEBUG: Confirm Env Vars are loaded in Railway ---
-console.log("Medusa Config Startup Check:", {
-  NODE_ENV: process.env.NODE_ENV,
-  Resend_Key_Exists: !!RESEND_API_KEY,
-  Google_Client_ID_Exists: !!process.env.GOOGLE_CLIENT_ID, 
-  Redis_URL_Start: REDIS_URL?.substring(0, 8), 
-  Backend_URL: backendUrl, // Log the sanitized URL
-});
+// --- DEBUG: Print this in Railway Logs during startup ---
+console.log("----------------------------------------");
+console.log("MEDUSA CONFIG DIAGNOSTICS:");
+console.log("JWT_SECRET Loaded:", process.env.JWT_SECRET ? "YES (starts with " + process.env.JWT_SECRET.substring(0, 5) + ")" : "NO (Using Random Default ❌)");
+console.log("COOKIE_SECRET Loaded:", process.env.COOKIE_SECRET ? "YES" : "NO (Using Random Default ❌)");
+console.log("STORE_URL:", process.env.STORE_URL);
+console.log("----------------------------------------");
+// -----------------------------------------------------
 
-// Smart Redis with Heartbeat
 const redisOptions = {
   family: 6,
   keepAlive: 10000,
@@ -55,13 +48,18 @@ const medusaConfig = {
     databaseLogging: false,
     redisUrl: process.env.REDIS_URL,
     redisOptions: redisOptions,
+    
     http: {
       adminCors: ADMIN_CORS,
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
+      trustProxy: true,
+      
+      // --- CORRECT LOCATION FOR V2 ---
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
-      trustProxy: true,
+      // -------------------------------
+      
       authCookieOptions: {
         sameSite: "none", 
         secure: true,
@@ -70,7 +68,6 @@ const medusaConfig = {
     },
   },
   modules: [
-    // --- AUTH MODULE ---
     {
       resolve: "@medusajs/auth",
       options: {
@@ -80,22 +77,19 @@ const medusaConfig = {
             id: "emailpass",
             options: {}
           },
-          // Google SSO
           {
             resolve: "@medusajs/auth-google",
             id: "google",
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              // FIX: Use the sanitized 'backendUrl' variable
               callbackUrl: `${process.env.STORE_URL || "http://localhost:8000"}/api/auth/google/callback`,
             },
           },
         ],
       },
     },
-
-    // --- FILE MODULE ---
+    // ... (Keep the rest of your modules exactly as they were)
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
@@ -126,15 +120,12 @@ const medusaConfig = {
             id: 'local',
             options: {
               upload_dir: 'static',
-              // FIX: Use the sanitized 'backendUrl' variable
               backend_url: `${backendUrl}/static`
             }
           }]))
         ]
       }
     },
-    
-    // --- REDIS / EVENT BUS ---
     ...(REDIS_URL ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
@@ -161,8 +152,6 @@ const medusaConfig = {
         redisOptions: redisOptions
       }
     }] : []),
-
-    // --- NOTIFICATION MODULE ---
     {
       key: Modules.NOTIFICATION,
       resolve: '@medusajs/notification',
@@ -177,7 +166,6 @@ const medusaConfig = {
               from: RESEND_FROM_EMAIL,
             },
           }] : []),
-          
           ...(SENDGRID_API_KEY && SENDGRID_FROM_EMAIL ? [{
             resolve: '@medusajs/notification-sendgrid',
             id: 'sendgrid',
@@ -190,8 +178,6 @@ const medusaConfig = {
         ]
       }
     },
-
-    // --- PAYMENT MODULE ---
     ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',
@@ -208,8 +194,6 @@ const medusaConfig = {
         ],
       },
     }] : []),
-
-    // --- FULFILLMENT MODULE ---
     {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',
