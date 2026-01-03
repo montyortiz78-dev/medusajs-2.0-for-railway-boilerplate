@@ -11,15 +11,15 @@ import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 export const getCustomer = cache(async function () {
   const headers = getAuthHeaders() as { authorization: string }
 
-  // Debug Log
-  if (headers.authorization) {
-     console.log(`✅ getCustomer: Token found (starts with ${headers.authorization.substring(7, 15)}...)`)
-  }
-
   return await sdk.store.customer
     .retrieve({}, { next: { tags: ["customer"] }, ...headers } as any)
     .then(({ customer }) => customer)
-    .catch((err) => null)
+    .catch((err) => {
+      // --- DEBUG LOGGING ---
+      console.error("❌ getCustomer Failed:", err.message)
+      // If unauthorized, token is bad. If not found, user doesn't exist.
+      return null
+    })
 })
 
 export const updateCustomer = cache(async function (

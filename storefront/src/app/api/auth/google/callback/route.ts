@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
+import { revalidateTag } from "next/cache" // <--- Import this
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -14,29 +15,24 @@ export async function GET(request: NextRequest) {
   const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
   
   try {
-    // --- FIX: Get cookies from the browser request ---
     const cookieStore = cookies()
     const allCookies = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join("; ")
-    // ------------------------------------------------
 
-    // 1. Pass the code AND cookies to Medusa Backend
     const res = await fetch(`${backendUrl}/auth/customer/google/callback?code=${code}&state=${state}`, {
       method: "GET", 
       headers: {
         "Content-Type": "application/json",
-        "Cookie": allCookies // <--- This allows the backend to verify the 'state'
+        "Cookie": allCookies
       },
     })
     
     if (!res.ok) {
-        console.error("Backend validation failed:", await res.text())
-        throw new Error("Failed to validate token with backend")
+        throw new Error(`Backend failed: ${res.statusText}`)
     }
 
     const data = await res.json()
     
     if (data.token) {
-       // 2. Set the Auth Cookie
        cookies().set("_medusa_jwt", data.token, {
           maxAge: 60 * 60 * 24 * 7, 
           httpOnly: true,
@@ -44,7 +40,12 @@ export async function GET(request: NextRequest) {
           secure: process.env.NODE_ENV === "production",
        })
        
-       // 3. Success! Redirect to account
+       // --- CRITICAL FIX: Purge Cache ---
+       revalidateTag("customer")
+       revalidateTag("order")
+       revalidateTag("cart")
+       // ---------------------------------
+       
        return NextResponse.redirect(new URL(`/${countryCode}/account`, request.url))
     }
     
