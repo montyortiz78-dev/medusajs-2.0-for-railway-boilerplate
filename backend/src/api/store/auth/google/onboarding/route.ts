@@ -7,6 +7,7 @@ type AuthenticatedRequest = MedusaRequest & {
   auth_context?: { auth_identity_id: string }
 }
 
+// We need this custom type to tell TypeScript that provider_metadata exists
 type GoogleAuthIdentity = {
   id: string
   provider: string
@@ -35,18 +36,22 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
   try {
+    // FIX: Cast the result to our custom type so TS knows about provider_metadata
     const identity = await authService.retrieveAuthIdentity(authIdentityId) as unknown as GoogleAuthIdentity
     
-    // DEBUG LOG: Print what we actually got from Google
-    console.log("🔍 Google Identity Data:", JSON.stringify(identity.provider_metadata, null, 2))
+    // --- IMPROVED DEBUGGING ---
+    console.log("🔍 FULL IDENTITY OBJECT:", JSON.stringify(identity, null, 2)) 
+    // --------------------------
 
-    const email = identity.provider_metadata?.email
+    // Try to find email in standard location, or fallback to top level if it exists there
+    // We cast to 'any' for the fallbacks just in case the structure is very different
+    const safeIdentity = identity as any
+    const email = identity.provider_metadata?.email || safeIdentity.email || safeIdentity.user_metadata?.email
     
     // 1. FATAL ERROR: No Email
     if (!email) {
         console.error(`❌ Identity ${authIdentityId} has NO EMAIL. Deleting identity.`)
         await authService.deleteAuthIdentities([authIdentityId])
-        // Return 200 with "deleted" status so frontend can restart
         return res.status(200).json({ status: "deleted", action: "reauth" })
     }
 
@@ -73,6 +78,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     // 4. Link Identity
+    // Use optional chaining for app_metadata just in case
     if (identity.app_metadata?.actor_id !== customerId) {
         console.log(`🔗 Linking Identity to Customer ${customerId}`)
         await authService.updateAuthIdentities([{
