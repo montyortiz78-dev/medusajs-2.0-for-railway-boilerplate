@@ -30,13 +30,44 @@ export async function GET(request: NextRequest) {
     if (token) {
        // --- FIX START: Decode token to check for missing actor_id ---
        let needsRepair = false
+
+       const decodeToken = (t: string) => {
+         try {
+           return JSON.parse(Buffer.from(t.split('.')[1], 'base64').toString())
+         } catch { return {} }
+       }
+
+       let payload = decodeToken(token)
+
        try {
          const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
          // If actor_id is empty string or undefined, we have a Ghost Token
          if (!payload.actor_id) {
-            console.log("⚠️ Ghost Token detected (Empty actor_id). Marking for repair...")
-            needsRepair = true
-         }
+            console.log("⚠️ Ghost Token detected. Waiting for Subscriber to create customer...")
+            for (let i = 0; i < 3; i++) {
+             await new Promise(resolve => setTimeout(resolve, 1500)) // Wait 1.5s
+             // Check if customer exists now via API (using the same token)
+             const checkRes = await fetch(`${backendUrl}/store/customers/me`, {
+                headers: { 
+                   Authorization: `Bearer ${token}`,
+                   "x-publishable-api-key": publishableKey
+                },
+                cache: "no-store"
+             })
+             if (checkRes.ok) {
+                console.log("✅ Customer found after wait! Redirecting to refresh token...")
+                // Customer created! We just need a new token with the ID in it.
+                const authUrlRes = await fetch(`${backendUrl}/auth/customer/google`, {
+                    headers: { "x-publishable-api-key": publishableKey }
+                })
+                const authData = await authUrlRes.json()
+                if (authData.location) return NextResponse.redirect(authData.location)
+             }
+          }
+            // If still no customer after waiting, THEN trigger repair
+          console.log("❌ Wait failed. Marking for repair...")
+          needsRepair = true
+       }
        } catch (e) {
          console.error("Token decode failed", e)
        }
