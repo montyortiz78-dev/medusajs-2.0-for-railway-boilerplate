@@ -35,25 +35,20 @@ export async function GET(request: NextRequest) {
          cache: "no-store"
        })
 
-       // 3. ZOMBIE CHECK: If 404 (Not Found), the ID in the token is dead. Repair it.
+       // 3. ZOMBIE CHECK: If 404, Repair it.
        if (customerCheck.status === 404) {
           console.log("⚠️ Zombie Customer detected. Attempting repair...")
           
-          const repairRes = await fetch(`${backendUrl}/store/auth/google/repair`, {
+          await fetch(`${backendUrl}/store/auth/google/repair`, {
              method: "POST",
              headers: { 
                 Authorization: `Bearer ${token}`,
                 "x-publishable-api-key": publishableKey
              }
           })
-
-          if (repairRes.ok) {
-             console.log("✅ Repair successful. Refreshing token...")
-             // Redirect back to Google to get a FRESH token with the new ID
-             return NextResponse.redirect(`${backendUrl}/auth/customer/google`)
-          } else {
-             console.error("❌ Repair failed:", await repairRes.text())
-          }
+          
+          // Redirect back to Google to get a FRESH token with the new ID
+          return NextResponse.redirect(`${backendUrl}/auth/customer/google`)
        }
 
        // 4. Success - Set Cookie
