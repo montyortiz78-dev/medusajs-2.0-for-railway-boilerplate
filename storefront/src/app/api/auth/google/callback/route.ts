@@ -19,14 +19,17 @@ export async function GET(request: NextRequest) {
     const allCookies = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join("; ")
 
     const res = await fetch(`${backendUrl}/auth/customer/google/callback?code=${code}&state=${state}`, {
-      method: "GET", 
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
         "Cookie": allCookies
       },
+      cache: "no-store" // Prevent Next.js from caching the auth response
     })
     
     if (!res.ok) {
+        const errorText = await res.text()
+        console.error("Medusa Backend Auth Failed:", res.status, errorText)
         throw new Error(`Backend failed: ${res.statusText}`)
     }
 

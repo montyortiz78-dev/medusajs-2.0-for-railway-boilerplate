@@ -18,18 +18,14 @@ const Login = ({ setCurrentView }: Props) => {
   const { countryCode } = useParams()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  // --- UPDATED HANDLER FOR GOOGLE LOGIN ---
   const handleGoogleSignIn = async (e: React.MouseEvent) => {
-    // 1. Prevent default to stop form submission/page refresh
     e.preventDefault()
     setIsGoogleLoading(true)
 
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:8000"
       
-      // Construct the URL dynamically
-      const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${baseUrl}/${countryCode}/account`
+      const googleAuthUrl = `${backendUrl}/auth/customer/google`
       
       console.log("Initiating Google Auth:", googleAuthUrl)
 
