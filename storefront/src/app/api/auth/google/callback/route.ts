@@ -28,18 +28,37 @@ export async function GET(request: NextRequest) {
     const token = data.token
 
     if (token) {
-       // 2. HEALTH CHECK: Verify the customer exists
-       const customerCheck = await fetch(`${backendUrl}/store/customers/me`, {
-         headers: { 
-            Authorization: `Bearer ${token}`,
-            "x-publishable-api-key": publishableKey
-         },
-         cache: "no-store"
-       })
+       // --- FIX START: Decode token to check for missing actor_id ---
+       let needsRepair = false
+       try {
+         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
+         // If actor_id is empty string or undefined, we have a Ghost Token
+         if (!payload.actor_id) {
+            console.log("⚠️ Ghost Token detected (Empty actor_id). Marking for repair...")
+            needsRepair = true
+         }
+       } catch (e) {
+         console.error("Token decode failed", e)
+       }
 
-       // 3. ZOMBIE CHECK: If 404 (Not Found), the ID in the token is dead. Repair it.
-       if (customerCheck.status === 404) {
-          console.log("⚠️ Zombie Customer detected. Attempting repair...")
+       // 2. Secondary Check: Call API if we aren't sure yet
+       if (!needsRepair) {
+           const customerCheck = await fetch(`${backendUrl}/store/customers/me`, {
+             headers: { 
+                Authorization: `Bearer ${token}`,
+                "x-publishable-api-key": publishableKey
+             },
+             cache: "no-store"
+           })
+           // 404 = Zombie (Deleted User), 401 = Ghost (Empty ID)
+           if (customerCheck.status === 404 || customerCheck.status === 401) {
+               needsRepair = true
+           }
+       }
+
+       // 3. EXECUTE REPAIR if needed
+       if (needsRepair) {
+          console.log("🛠️ Initiating Self-Healing Protocol...")
           
           const repairRes = await fetch(`${backendUrl}/store/auth/google/repair`, {
              method: "POST",
@@ -53,38 +72,34 @@ export async function GET(request: NextRequest) {
              const repairData = await repairRes.json()
              console.log("✅ Repair Result:", repairData)
 
-             // --- FIX: Handle "Identity Deleted" (Re-Auth Required) ---
+             // Handle "Identity Deleted" (Re-Auth Required)
              if (repairData.action === "reauth") {
                  console.log("🔄 Identity deleted. Redirecting to Google for fresh signup...")
-                 // We fetch the auth URL to send them back to the start
                  const authUrlRes = await fetch(`${backendUrl}/auth/customer/google`, {
                     headers: { "x-publishable-api-key": publishableKey }
                  })
                  const authData = await authUrlRes.json()
-                 if (authData.location) {
-                     return NextResponse.redirect(authData.location)
-                 }
+                 if (authData.location) return NextResponse.redirect(authData.location)
              }
-             // ---------------------------------------------------------
 
-             console.log("✅ Repair successful. Initiating re-login...")
+             console.log("✅ Repair successful. Refreshing token via re-login...")
              const googleAuthRes = await fetch(`${backendUrl}/auth/customer/google`, {
                  headers: { "x-publishable-api-key": publishableKey }
              })
              
              if (googleAuthRes.ok) {
                  const googleData = await googleAuthRes.json()
-                 if (googleData.location) {
-                     return NextResponse.redirect(googleData.location)
-                 }
+                 if (googleData.location) return NextResponse.redirect(googleData.location)
              }
              
-             console.error("❌ Failed to get Google Auth URL")
              return NextResponse.redirect(new URL("/?login_error=system_error", request.url))
           } else {
              console.error("❌ Repair failed:", await repairRes.text())
+             // Don't let them proceed with a bad token
+             return NextResponse.redirect(new URL("/?login_error=repair_failed", request.url))
           }
        }
+       // --- FIX END ---
 
        // 4. Success - Set Cookie
        const response = NextResponse.redirect(new URL(`/${countryCode}/account`, request.url))
