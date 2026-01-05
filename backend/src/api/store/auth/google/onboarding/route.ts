@@ -36,26 +36,33 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
   try {
-    // FIX: Cast the result to our custom type so TS knows about provider_metadata
-    const identity = await authService.retrieveAuthIdentity(authIdentityId) as unknown as GoogleAuthIdentity
+    // We must explicitly request the provider_metadata field
+    const identity = await authService.retrieveAuthIdentity(authIdentityId, {
+      select: ["id", "provider_metadata", "app_metadata", "provider"] 
+    }) as unknown as GoogleAuthIdentity
     
-    // --- IMPROVED DEBUGGING ---
     console.log("🔍 FULL IDENTITY OBJECT:", JSON.stringify(identity, null, 2)) 
-    // --------------------------
 
-    // Try to find email in standard location, or fallback to top level if it exists there
-    // We cast to 'any' for the fallbacks just in case the structure is very different
+    // Safety cast
     const safeIdentity = identity as any
-    const email = identity.provider_metadata?.email || safeIdentity.email || safeIdentity.user_metadata?.email
+    const metadata = identity.provider_metadata || {}
+
+    // Check multiple places for the email
+    const email = metadata.email || safeIdentity.email || safeIdentity.user_metadata?.email
     
-    // 1. FATAL ERROR: No Email
     if (!email) {
         console.error(`❌ Identity ${authIdentityId} has NO EMAIL. Deleting identity.`)
+        console.error("DUMPING METADATA FOR DEBUG:", JSON.stringify(metadata))
+
+        // Only delete if we are 100% sure we failed to get data.
+        // If the metadata object is empty {}, it means the scope config failed.
+        // If the metadata object is missing (undefined), the selection failed.
+        
         await authService.deleteAuthIdentities([authIdentityId])
         return res.status(200).json({ status: "deleted", action: "reauth" })
     }
 
-    // 2. Check if Customer Exists (by Email)
+    // 2. Check if Customer Exists
     const { data: existingCustomers } = await query.graph({
       entity: "customer",
       fields: ["id"],
@@ -69,16 +76,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         console.log(`✨ Creating new customer for ${email}`)
         const newCustomer = await customerService.createCustomers({
             email,
-            first_name: identity.provider_metadata?.given_name || "Google",
-            last_name: identity.provider_metadata?.family_name || "User",
+            first_name: metadata.given_name || "Google",
+            last_name: metadata.family_name || "User",
             has_account: true,
-            metadata: { avatar: identity.provider_metadata?.picture }
+            metadata: { avatar: metadata.picture }
         })
         customerId = newCustomer.id
     }
 
     // 4. Link Identity
-    // Use optional chaining for app_metadata just in case
     if (identity.app_metadata?.actor_id !== customerId) {
         console.log(`🔗 Linking Identity to Customer ${customerId}`)
         await authService.updateAuthIdentities([{
