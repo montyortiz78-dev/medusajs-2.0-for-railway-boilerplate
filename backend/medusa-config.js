@@ -87,7 +87,8 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              callbackUrl: `${process.env.STORE_URL || "http://localhost:8000"}/api/auth/google/callback`,
+              // TEMPORARY DEBUG: Hardcode the URL to eliminate variable issues
+              callbackUrl: "https://www.kandicreations.com/api/auth/google/callback",
               // --- THE FIX: Use params, NOT a hardcoded URL ---
               authorizationParams: {
                 scope: ['email', 'profile', 'openid'],
