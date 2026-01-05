@@ -50,22 +50,34 @@ export async function GET(request: NextRequest) {
           })
 
           if (repairRes.ok) {
+             const repairData = await repairRes.json()
+             console.log("✅ Repair Result:", repairData)
+
+             // --- FIX: Handle "Identity Deleted" (Re-Auth Required) ---
+             if (repairData.action === "reauth") {
+                 console.log("🔄 Identity deleted. Redirecting to Google for fresh signup...")
+                 // We fetch the auth URL to send them back to the start
+                 const authUrlRes = await fetch(`${backendUrl}/auth/customer/google`, {
+                    headers: { "x-publishable-api-key": publishableKey }
+                 })
+                 const authData = await authUrlRes.json()
+                 if (authData.location) {
+                     return NextResponse.redirect(authData.location)
+                 }
+             }
+             // ---------------------------------------------------------
+
              console.log("✅ Repair successful. Initiating re-login...")
-             
-             // --- FIX START: Fetch Google URL instead of Redirecting ---
-             // We ask the backend for the Google Login URL
              const googleAuthRes = await fetch(`${backendUrl}/auth/customer/google`, {
                  headers: { "x-publishable-api-key": publishableKey }
              })
              
              if (googleAuthRes.ok) {
                  const googleData = await googleAuthRes.json()
-                 // If backend returns { location: "https://..." }, redirect there
                  if (googleData.location) {
                      return NextResponse.redirect(googleData.location)
                  }
              }
-             // --- FIX END ---
              
              console.error("❌ Failed to get Google Auth URL")
              return NextResponse.redirect(new URL("/?login_error=system_error", request.url))
