@@ -11,6 +11,11 @@ import { getAuthHeaders, removeAuthToken, setAuthToken } from "./cookies"
 export const getCustomer = cache(async function () {
   const headers = getAuthHeaders() as { authorization: string }
 
+  // Check if token exists in headers (don't log the full token for security)
+  const hasToken = !!headers.authorization
+  const tokenPreview = headers.authorization ? headers.authorization.substring(0, 15) + "..." : "NONE"
+  console.log(`🔍 getCustomer: Sending Authorization? ${hasToken} [${tokenPreview}]`)
+
   return await sdk.store.customer
     .retrieve({}, { next: { tags: ["customer"] }, ...headers } as any)
     .then(({ customer }) => customer)
