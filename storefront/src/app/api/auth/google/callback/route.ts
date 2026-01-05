@@ -7,13 +7,15 @@ export async function GET(request: NextRequest) {
   const state = searchParams.get("state")
   const countryCode = "us" 
 
-  if (!code) return NextResponse.redirect(new URL("/", request.url))
+  if (!code) {
+    return NextResponse.redirect(new URL("/", request.url))
+  }
 
   const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
   const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
   try {
-    // 1. Exchange Code
+    // 1. Exchange Code for Token
     const res = await fetch(`${backendUrl}/auth/customer/google/callback?code=${code}&state=${state}`, {
       method: "GET", 
       headers: { "Content-Type": "application/json" },
@@ -35,24 +37,46 @@ export async function GET(request: NextRequest) {
          cache: "no-store"
        })
 
-       // 3. ZOMBIE CHECK: If 404, Repair it.
+       // 3. ZOMBIE CHECK: If 404 (Not Found), the ID in the token is dead. Repair it.
        if (customerCheck.status === 404) {
           console.log("⚠️ Zombie Customer detected. Attempting repair...")
           
-          await fetch(`${backendUrl}/store/auth/google/repair`, {
+          const repairRes = await fetch(`${backendUrl}/store/auth/google/repair`, {
              method: "POST",
              headers: { 
                 Authorization: `Bearer ${token}`,
                 "x-publishable-api-key": publishableKey
              }
           })
-          
-          // Redirect back to Google to get a FRESH token with the new ID
-          return NextResponse.redirect(`${backendUrl}/auth/customer/google`)
+
+          if (repairRes.ok) {
+             console.log("✅ Repair successful. Initiating re-login...")
+             
+             // --- FIX START: Fetch Google URL instead of Redirecting ---
+             // We ask the backend for the Google Login URL
+             const googleAuthRes = await fetch(`${backendUrl}/auth/customer/google`, {
+                 headers: { "x-publishable-api-key": publishableKey }
+             })
+             
+             if (googleAuthRes.ok) {
+                 const googleData = await googleAuthRes.json()
+                 // If backend returns { location: "https://..." }, redirect there
+                 if (googleData.location) {
+                     return NextResponse.redirect(googleData.location)
+                 }
+             }
+             // --- FIX END ---
+             
+             console.error("❌ Failed to get Google Auth URL")
+             return NextResponse.redirect(new URL("/?login_error=system_error", request.url))
+          } else {
+             console.error("❌ Repair failed:", await repairRes.text())
+          }
        }
 
        // 4. Success - Set Cookie
        const response = NextResponse.redirect(new URL(`/${countryCode}/account`, request.url))
+       
        response.cookies.set("_medusa_jwt", token, {
           maxAge: 60 * 60 * 24 * 7, 
           httpOnly: true,
@@ -62,6 +86,7 @@ export async function GET(request: NextRequest) {
        
        revalidateTag("customer")
        revalidateTag("order")
+       revalidateTag("cart")
        
        return response
     }
