@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
   }
 
   const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
-  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
   try {
     // 1. Exchange Code for Token
@@ -31,42 +30,13 @@ export async function GET(request: NextRequest) {
 
     if (token) {
       // 2. Decode Token to check for actor_id
-      // Simple base64 decode of the payload (2nd part of JWT)
       const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
       
-      // 3. If actor_id is missing, we MUST register the customer
+      // 3. If actor_id is missing, the Backend Subscriber is probably still running.
+      // We redirect back to Google to "refresh" the token.
       if (!payload.actor_id) {
-        console.log("⚠️ No actor_id found. Attempting to register customer...")
-        
-        // NOTE: Since we don't have the user's email here easily, we use a placeholder or 
-        // rely on a backend customization. For now, we attempt to register.
-        // In a perfect setup, your backend callback would return the email too.
-        const registerRes = await fetch(`${backendUrl}/store/customers`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-            "x-publishable-api-key": publishableKey
-          },
-          body: JSON.stringify({
-            // Fallback since we can't extract email easily without decoding ID token
-            // This is a "best effort" to link the identity. 
-            // Ideally, your backend should handle this or return the email.
-            email: `google_user_${payload.auth_identity_id}@kandicreations.com`, 
-            first_name: "Google",
-            last_name: "User"
-          }),
-        })
-
-        if (!registerRes.ok) {
-          console.error("Failed to auto-register:", await registerRes.text())
-          // If registration fails, we can't log them in fully.
-          return NextResponse.redirect(new URL("/?login_error=registration_failed", request.url))
-        }
-        
-        console.log("✅ Customer auto-registered successfully.")
-        // Proceeding will allow the NEXT login to work, or the current session might now work
-        // depending on if the backend resolves the customer dynamically.
+        console.log("⚠️ No actor_id yet (Subscriber working). Refreshing token...")
+        return NextResponse.redirect(`${backendUrl}/auth/customer/google`)
       }
 
       // 4. Success: Set Cookie and Redirect
