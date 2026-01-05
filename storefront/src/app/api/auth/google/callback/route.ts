@@ -13,14 +13,17 @@ export async function GET(request: NextRequest) {
   const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
   try {
-    // 1. Exchange Code for Token
+    // 1. Exchange Code
     const res = await fetch(`${backendUrl}/auth/customer/google/callback?code=${code}&state=${state}`, {
       method: "GET", 
       headers: { "Content-Type": "application/json" },
       cache: "no-store"
     })
 
-    if (!res.ok) throw new Error(`Backend failed: ${res.statusText}`)
+    if (!res.ok) {
+        console.error("Backend Auth Failed:", await res.text())
+        return NextResponse.redirect(new URL("/?login_error=backend_fail", request.url))
+    }
 
     const data = await res.json()
     const token = data.token
@@ -29,9 +32,9 @@ export async function GET(request: NextRequest) {
         // 2. Decode Token
         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
         
-        // 3. Handle Ghost Token (New User)
+        // 3. GHOST CHECK: If no actor_id, call Onboarding
         if (!payload.actor_id) {
-            console.log("⚠️ Ghost Token. Calling Onboarding...")
+            console.log("⚠️ Ghost Token. Calling Onboarding API...")
             
             const onboardRes = await fetch(`${backendUrl}/store/auth/google/onboarding`, {
                 method: "POST",
@@ -44,11 +47,10 @@ export async function GET(request: NextRequest) {
             if (onboardRes.ok) {
                 const onboardData = await onboardRes.json()
                 
-                // If identity was deleted (corrupt) OR successfully linked -> Re-Auth to get fresh token
+                // If Success or Deleted -> We must restart login to get a fresh token
                 if (onboardData.status === "success" || onboardData.status === "deleted") {
-                    console.log(`✅ Onboarding ${onboardData.status}. Refreshing token...`)
+                    console.log(`✅ Onboarding ${onboardData.status}. Restarting auth...`)
                     
-                    // Fetch Google URL for restart
                     const authUrlRes = await fetch(`${backendUrl}/auth/customer/google`, {
                         headers: { "x-publishable-api-key": publishableKey }
                     })
@@ -57,11 +59,11 @@ export async function GET(request: NextRequest) {
                 }
             }
             
-            console.error("❌ Onboarding failed or unknown status.")
+            console.error("❌ Onboarding failed:", await onboardRes.text())
             return NextResponse.redirect(new URL("/?login_error=onboarding_failed", request.url))
         }
 
-        // 4. Valid Token (Has actor_id) -> Login
+        // 4. VALID TOKEN -> Log In
         const response = NextResponse.redirect(new URL(`/${countryCode}/account`, request.url))
         response.cookies.set("_medusa_jwt", token, {
             maxAge: 60 * 60 * 24 * 7, 
@@ -71,11 +73,10 @@ export async function GET(request: NextRequest) {
         })
         
         revalidateTag("customer")
-        revalidateTag("order")
         return response
     }
     
-    return NextResponse.redirect(new URL("/?login_error=auth_failed", request.url))
+    return NextResponse.redirect(new URL("/?login_error=no_token", request.url))
 
   } catch (err) {
      console.error("Google Auth Error:", err)

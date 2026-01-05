@@ -6,7 +6,7 @@ export default defineMiddlewares({
       method: "POST",
       matcher: "/store/auth/google/onboarding",
       middlewares: [
-        // CRITICAL: allowUnregistered: true allows "Ghost Tokens" to access this route
+        // CRITICAL: Allow tokens without customers to pass
         authenticate("customer", ["bearer", "session"], { allowUnregistered: true }),
       ],
     },

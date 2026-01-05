@@ -2,7 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { IAuthModuleService, ICustomerModuleService } from "@medusajs/framework/types"
 
-// Types for strict TS
+// Helper types
 type AuthenticatedRequest = MedusaRequest & {
   auth_context?: { auth_identity_id: string }
 }
@@ -35,34 +35,22 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
   try {
-    // 1. Get Identity & Metadata
     const identity = await authService.retrieveAuthIdentity(authIdentityId) as unknown as GoogleAuthIdentity
     
-    // 2. Check if already linked (Idempotency)
-    if (identity.app_metadata?.actor_id) {
-        // Double check the customer actually exists
-        try {
-            await customerService.retrieveCustomer(identity.app_metadata.actor_id)
-            return res.status(200).json({ status: "linked", customer_id: identity.app_metadata.actor_id })
-        } catch {
-            // If linked but customer missing, fall through to re-create (Zombie case)
-            console.log("🧟 Zombie link detected, recreating customer...")
-        }
-    }
+    // DEBUG LOG: Print what we actually got from Google
+    console.log("🔍 Google Identity Data:", JSON.stringify(identity.provider_metadata, null, 2))
 
     const email = identity.provider_metadata?.email
-    const firstName = identity.provider_metadata?.given_name || "Google"
-    const lastName = identity.provider_metadata?.family_name || "User"
-    const picture = identity.provider_metadata?.picture
-
-    // 3. Handle Corrupted Identity (No Email from Google)
+    
+    // 1. FATAL ERROR: No Email
     if (!email) {
-        console.log(`⚠️ Identity ${authIdentityId} missing email. Deleting to force fresh auth.`)
+        console.error(`❌ Identity ${authIdentityId} has NO EMAIL. Deleting identity.`)
         await authService.deleteAuthIdentities([authIdentityId])
+        // Return 200 with "deleted" status so frontend can restart
         return res.status(200).json({ status: "deleted", action: "reauth" })
     }
 
-    // 4. Check for Existing Customer (by Email) to prevent duplicates
+    // 2. Check if Customer Exists (by Email)
     const { data: existingCustomers } = await query.graph({
       entity: "customer",
       fields: ["id"],
@@ -71,26 +59,30 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     let customerId = existingCustomers[0]?.id
 
-    // 5. Create Customer if needed
+    // 3. Create Customer if needed
     if (!customerId) {
+        console.log(`✨ Creating new customer for ${email}`)
         const newCustomer = await customerService.createCustomers({
             email,
-            first_name: firstName,
-            last_name: lastName,
+            first_name: identity.provider_metadata?.given_name || "Google",
+            last_name: identity.provider_metadata?.family_name || "User",
             has_account: true,
-            metadata: { avatar: picture }
+            metadata: { avatar: identity.provider_metadata?.picture }
         })
         customerId = newCustomer.id
     }
 
-    // 6. Link Identity to Customer
-    await authService.updateAuthIdentities([{
-        id: authIdentityId,
-        app_metadata: {
-            actor_id: customerId,
-            actor_type: "customer"
-        }
-    }])
+    // 4. Link Identity
+    if (identity.app_metadata?.actor_id !== customerId) {
+        console.log(`🔗 Linking Identity to Customer ${customerId}`)
+        await authService.updateAuthIdentities([{
+            id: authIdentityId,
+            app_metadata: {
+                actor_id: customerId,
+                actor_type: "customer"
+            }
+        }])
+    }
 
     return res.status(200).json({ status: "success", customer_id: customerId })
 

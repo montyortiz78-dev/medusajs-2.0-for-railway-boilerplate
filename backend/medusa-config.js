@@ -88,12 +88,13 @@ const medusaConfig = {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
               callbackUrl: `${process.env.STORE_URL || "http://localhost:8000"}/api/auth/google/callback`,
+              // --- FIX: Explicitly request Email and Profile ---
+              authorizationURL: "https://accounts.google.com/o/oauth2/v2/auth?scope=email+profile+openid",
             },
           },
         ],
       },
     },
-    // ... (Keep all other modules exactly as they are)
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
