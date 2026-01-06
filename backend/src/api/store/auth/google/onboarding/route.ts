@@ -2,12 +2,10 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules, ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { IAuthModuleService, ICustomerModuleService } from "@medusajs/framework/types"
 
-// Helper types
 type AuthenticatedRequest = MedusaRequest & {
   auth_context?: { auth_identity_id: string }
 }
 
-// We need this custom type to tell TypeScript that provider_metadata exists
 type GoogleAuthIdentity = {
   id: string
   provider: string
@@ -36,33 +34,34 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
   try {
-    // We must explicitly request the provider_metadata field
+    // 1. Retrieve the Identity
     const identity = await authService.retrieveAuthIdentity(authIdentityId, {
-      select: ["id", "provider_metadata", "app_metadata", "provider"] 
+      select: ["id", "provider_metadata", "app_metadata", "provider"]
     }) as unknown as GoogleAuthIdentity
     
-    console.log("🔍 FULL IDENTITY OBJECT:", JSON.stringify(identity, null, 2)) 
+    console.log("🔍 INSPECTING IDENTITY:", JSON.stringify(identity, null, 2))
 
-    // Safety cast
+    // 2. Extract Email (Try multiple locations)
     const safeIdentity = identity as any
     const metadata = identity.provider_metadata || {}
-
-    // Check multiple places for the email
     const email = metadata.email || safeIdentity.email || safeIdentity.user_metadata?.email
     
+    // 3. FATAL ERROR CHECK
     if (!email) {
-        console.error(`❌ Identity ${authIdentityId} has NO EMAIL. Deleting identity.`)
-        console.error("DUMPING METADATA FOR DEBUG:", JSON.stringify(metadata))
-
-        // Only delete if we are 100% sure we failed to get data.
-        // If the metadata object is empty {}, it means the scope config failed.
-        // If the metadata object is missing (undefined), the selection failed.
+        console.error(`❌ CRITICAL FAILURE: Identity ${authIdentityId} created but has NO EMAIL.`)
+        console.error(`❌ DUMPING METADATA:`, JSON.stringify(metadata))
         
-        await authService.deleteAuthIdentities([authIdentityId])
-        return res.status(200).json({ status: "deleted", action: "reauth" })
+        // --- CHANGE IS HERE ---
+        // DO NOT DELETE THE IDENTITY. 
+        // DO NOT RETURN 'reauth'.
+        // We want the process to STOP so we can inspect the database/logs.
+        return res.status(400).json({ 
+            message: "Google Login succeeded, but we could not read your email address. Please contact support.",
+            debug_id: authIdentityId
+        })
     }
 
-    // 2. Check if Customer Exists
+    // 4. Check if Customer Exists
     const { data: existingCustomers } = await query.graph({
       entity: "customer",
       fields: ["id"],
@@ -71,7 +70,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     let customerId = existingCustomers[0]?.id
 
-    // 3. Create Customer if needed
+    // 5. Create Customer if needed
     if (!customerId) {
         console.log(`✨ Creating new customer for ${email}`)
         const newCustomer = await customerService.createCustomers({
@@ -84,7 +83,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         customerId = newCustomer.id
     }
 
-    // 4. Link Identity
+    // 6. Link Identity
     if (identity.app_metadata?.actor_id !== customerId) {
         console.log(`🔗 Linking Identity to Customer ${customerId}`)
         await authService.updateAuthIdentities([{
