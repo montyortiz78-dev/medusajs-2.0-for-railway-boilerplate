@@ -82,25 +82,24 @@ const medusaConfig = {
             options: {}
           },
           {
-            resolve: "@medusajs/auth-google",
-            id: "google",
-            options: {
-              clientId: process.env.GOOGLE_CLIENT_ID,
-              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              
-              // Ensure this matches Google Console EXACTLY
-              callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
+  resolve: "@medusajs/auth-google",
+  id: "google",
+  options: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
 
-              // ✅ FIX: Use the standard array including 'openid'
-              scope: ['email', 'profile', 'openid'],
+    // ✅ 1. UPDATE THIS: Include 'openid'
+    scope: ['email', 'profile', 'openid'], 
 
-              authorizationParams: {
-                // ✅ FIX: Remove 'scope' from here to prevent conflicts
-                access_type: 'offline',
-                prompt: 'consent',
-              }
-            },
-          },
+    authorizationParams: {
+      access_type: 'offline',
+      // ✅ 2. CRITICAL: DELETE the 'scope' line from here entirely.
+      // It conflicts with the array above.
+      prompt: 'consent',
+    }
+  },
+},
         ],
       },
     },
