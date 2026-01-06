@@ -110,7 +110,7 @@ const Login = ({ setCurrentView }: Props) => {
       </form>
 
       {/* --- GOOGLE BUTTON --- */}
-      <div className="w-full mt-6 flex flex-col gap-y-3">
+      /*<div className="w-full mt-6 flex flex-col gap-y-3">
         <div className="relative">
             <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
@@ -139,7 +139,7 @@ const Login = ({ setCurrentView }: Props) => {
           )}
           Google
         </button>
-      </div>
+      </div>*/
 
       <span className="text-center text-ui-fg-base text-small-regular mt-6">
         Not a member?{" "}

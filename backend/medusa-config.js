@@ -66,19 +66,19 @@ const medusaConfig = {
             id: "emailpass",
             options: {}
           },
-          {
-            resolve: "@medusajs/auth-google",
-            id: "google",
-            options: {
-              clientId: process.env.GOOGLE_CLIENT_ID,
-              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              callbackUrl: `${storeUrl}/api/auth/google/callback`,
-            },
-          },
+          // --- GOOGLE DISABLED ---
+          // {
+          //   resolve: "@medusajs/auth-google",
+          //   id: "google",
+          //   options: {
+          //     clientId: process.env.GOOGLE_CLIENT_ID,
+          //     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          //     callbackUrl: `${storeUrl}/api/auth/google/callback`,
+          //   },
+          // },
         ],
       },
     },
-    // ... keep all other modules exactly as they are
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
