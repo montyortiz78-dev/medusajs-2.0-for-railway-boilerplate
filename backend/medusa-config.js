@@ -82,24 +82,23 @@ const medusaConfig = {
             options: {}
           },
           {
-  resolve: "@medusajs/auth-google",
-  id: "google",
-  options: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
+            resolve: "@medusajs/auth-google",
+            id: "google",
+            options: {
+              clientId: process.env.GOOGLE_CLIENT_ID,
+              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+              callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
 
-    // ✅ 1. UPDATE THIS: Include 'openid'
-    scope: ['email', 'profile', 'openid'], 
+              // ✅ 1. ADD 'openid' HERE
+              scope: ['email', 'profile', 'openid'], 
 
-    authorizationParams: {
-      access_type: 'offline',
-      // ✅ 2. CRITICAL: DELETE the 'scope' line from here entirely.
-      // It conflicts with the array above.
-      prompt: 'consent',
-    }
-  },
-},
+              authorizationParams: {
+                access_type: 'offline',
+                // ✅ 2. DELETE THE 'scope' LINE COMPLETELY
+                prompt: 'consent',
+              }
+            },
+          },
         ],
       },
     },
