@@ -3,6 +3,7 @@ import {
   ADMIN_CORS,
   AUTH_CORS,
   DATABASE_URL,
+  REDIS_URL, // <--- Added this missing import
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
   SENDGRID_API_KEY,
