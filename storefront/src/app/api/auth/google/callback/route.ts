@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
-    
+    const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
     // 2. Exchange the Code for a Token
     const response = await fetch(`${backendUrl}/auth/customer/google/callback?code=${code}&state=${state}`, {
       method: "GET",
@@ -46,11 +47,13 @@ export async function GET(request: NextRequest) {
     // -------------------------------------------------------------------
     console.log("Token received. Running Onboarding for:", token.substring(0, 10) + "...")
     
+    // ✅ FIX: Added x-publishable-api-key to headers
     const onboardingRes = await fetch(`${backendUrl}/store/auth/google/onboarding`, {
         method: "POST",
         headers: {
-            "Authorization": `Bearer ${token}`, // Pass the Ghost Token
-            "Content-Type": "application/json"
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+            "x-publishable-api-key": publishableKey, 
         }
     })
 
@@ -59,8 +62,9 @@ export async function GET(request: NextRequest) {
         const errJson = await onboardingRes.json()
         console.error("❌ Onboarding Failed:", JSON.stringify(errJson))
         
-        // Optional: Redirect to login with error, or proceed and hope for the best
-        // return NextResponse.redirect(`${request.nextUrl.origin}/login?error=onboarding_failed`)
+        // We do NOT stop here. The user is technically logged in (has a token), 
+        // even if the customer creation failed. We let them proceed to /account 
+        // where they might see a "profile incomplete" state, or we can debug further.
     } else {
         console.log("✅ Onboarding Successful. Customer Created/Linked.")
     }
