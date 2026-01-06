@@ -23,16 +23,14 @@ import {
 loadEnv(process.env.NODE_ENV, process.cwd());
 
 const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
-// ✅ FIX 1: Explicitly set your Railway URL as the default fallback
 const backendUrl = trimSlash(process.env.BACKEND_URL || "https://backend-production-622a.up.railway.app");
 const storeUrl = trimSlash(process.env.STORE_URL || "http://localhost:8000");
 
 // --- DEBUG DIAGNOSTICS ---
 console.log("----------------------------------------");
-console.log("MEDUSA CONFIG DIAGNOSTICS (DIRECT BACKEND STRATEGY):");
+console.log("MEDUSA CONFIG DIAGNOSTICS (FINAL):");
 console.log("Backend URL:", backendUrl);
-console.log("Store URL:", storeUrl);
-console.log("Callback URL:", `${backendUrl}/auth/customer/google/callback`);
+console.log("Store URL (Redirect Target):", storeUrl);
 console.log("----------------------------------------");
 
 const redisOptions = {
@@ -82,11 +80,11 @@ const medusaConfig = {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
               
-              // 🚨 STRATEGY CHANGE: Point directly to Backend
-              // This is the internal Medusa route for auth providers
+              // 1. Where Google sends the data (BACKEND)
               callbackUrl: `${backendUrl}/auth/customer/google/callback`,
 
-              // After login, send user back to the Storefront Account page
+              // 2. Where Medusa sends the USER after login (STOREFRONT)
+              // We append /account so they land on their profile
               successRedirectUrl: `${storeUrl}/account`,
 
               // Standard Scopes
@@ -105,6 +103,7 @@ const medusaConfig = {
         ],
       },
     },
+    // ... rest of your modules (File, Redis, etc.) - keep them exactly as they were
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
