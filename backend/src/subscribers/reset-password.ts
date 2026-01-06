@@ -10,8 +10,15 @@ export default async function resetPasswordSubscriber({
     Modules.NOTIFICATION
   )
 
-  // Use STORE_CORS to get the frontend URL dynamically
-  const frontendUrl = process.env.STORE_CORS?.split(",")[0] || "http://localhost:8000"
+  // Determine the frontend URL:
+  // 1. Try STORE_URL (Best for production)
+  // 2. Try the first entry of STORE_CORS
+  // 3. Fallback to localhost
+  const frontendUrl = 
+    process.env.STORE_URL || 
+    process.env.STORE_CORS?.split(",")[0] || 
+    "http://localhost:8000"
+
   const resetLink = `${frontendUrl}/reset-password?token=${data.token}&email=${data.email}`
 
   await notificationModuleService.createNotifications({
