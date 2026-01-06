@@ -87,14 +87,14 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              callbackUrl: `${process.env.STORE_URL || "http://localhost:8000"}/api/auth/google/callback`,
-              // --- FIX STARTS HERE ---
-              // Add scope HERE so the provider knows to fetch/parse this data
-              scope: ['email', 'profile', 'openid'], 
-              // -----------------------
+              // Ensure this ENV var is set in Railway!
+              callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
+              
+              // Simplified Scope - Removed 'openid' to force standard profile parsing
+              scope: ['email', 'profile'], 
 
               authorizationParams: {
-                scope: ['email', 'profile', 'openid'],
+                scope: ['email', 'profile'],
                 access_type: 'offline',
                 prompt: 'consent',
               }
