@@ -24,13 +24,13 @@ loadEnv(process.env.NODE_ENV, process.cwd());
 
 const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
 const backendUrl = trimSlash(process.env.BACKEND_URL || "http://localhost:9000");
+const storeUrl = trimSlash(process.env.STORE_URL || "http://localhost:8000");
 
 // --- DEBUG DIAGNOSTICS ---
 console.log("----------------------------------------");
 console.log("MEDUSA CONFIG DIAGNOSTICS:");
-console.log("JWT_SECRET Loaded:", process.env.JWT_SECRET ? "YES" : "NO");
-console.log("COOKIE_SECRET Loaded:", process.env.COOKIE_SECRET ? "YES" : "NO");
-console.log("STORE_URL:", process.env.STORE_URL);
+console.log("Store URL (Trimmed):", storeUrl);
+console.log("Callback URL:", `${storeUrl}/api/auth/google/callback`);
 console.log("----------------------------------------");
 
 const redisOptions = {
@@ -47,23 +47,15 @@ const medusaConfig = {
     databaseLogging: false,
     redisUrl: process.env.REDIS_URL,
     redisOptions: redisOptions,
-    
-    // --- LOCATION 1: Root Level (Safe Fallback) ---
     jwtSecret: process.env.JWT_SECRET,
     cookieSecret: process.env.COOKIE_SECRET,
-    // ---------------------------------------------
-
     http: {
       adminCors: ADMIN_CORS,
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       trustProxy: true,
-      
-      // --- LOCATION 2: HTTP Level (Standard v2) ---
       jwtSecret: process.env.JWT_SECRET,
       cookieSecret: process.env.COOKIE_SECRET,
-      // --------------------------------------------
-      
       authCookieOptions: {
         sameSite: "none", 
         secure: true,
@@ -87,15 +79,18 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
+              // ✅ FIX 1: Use the sanitized storeUrl
+              callbackUrl: `${storeUrl}/api/auth/google/callback`,
               
-              // 🚨 CRITICAL FIX: Move scopes here as a space-separated string.
-              // This forces the underlying library to request these permissions.
+              // ✅ FIX 2: Standard Root-level Scopes (Short names are safer)
+              scope: ['email', 'profile', 'openid'],
+
+              // ✅ FIX 3: Force Consent to reset permissions
               authorizationParams: {
-                scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+                prompt: 'select_account', 
                 access_type: 'offline',
-                prompt: 'consent',
                 response_type: 'code',
+                scope: 'email profile openid', // Redundant backup
               },
             },
           },
