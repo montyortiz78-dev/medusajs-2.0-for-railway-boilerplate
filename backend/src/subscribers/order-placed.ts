@@ -11,7 +11,7 @@ export default async function orderPlacedHandler({
   const orderModuleService: IOrderModuleService = container.resolve(Modules.ORDER)
   
   const order = await orderModuleService.retrieveOrder(data.id, { relations: ['items', 'summary', 'shipping_address'] })
-  const shippingAddress = await (orderModuleService as any).orderAddressService_.retrieve(order.shipping_address.id)
+  const shippingAddress = order.shipping_address
 
   try {
     await notificationModuleService.createNotifications({

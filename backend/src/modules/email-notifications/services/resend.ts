@@ -18,19 +18,26 @@ export interface ResendNotificationServiceOptions {
   from: string
 }
 
-type NotificationEmailOptions = Omit<
-  CreateEmailOptions,
-  'to' | 'from' | 'react' | 'html' | 'attachments'
->
+// Allow flexibility in the input data while ensuring we match Resend's expected output types
+type NotificationEmailOptions = {
+  subject?: string
+  headers?: Record<string, string>
+  replyTo?: string | string[]
+  cc?: string | string[]
+  bcc?: string | string[]
+  tags?: any[]
+  text?: string
+  scheduledAt?: string
+}
 
 /**
  * Service to handle email notifications using the Resend API.
  */
 export class ResendNotificationService extends AbstractNotificationProviderService {
-  static identifier = "RESEND_NOTIFICATION_SERVICE"
-  protected config_: ResendServiceConfig // Configuration for Resend API
-  protected logger_: Logger // Logger for error and event logging
-  protected resend: Resend // Instance of the Resend API client
+  static identifier = "resend" // Matches medusa-config.js
+  protected config_: ResendServiceConfig 
+  protected logger_: Logger 
+  protected resend: Resend 
 
   constructor({ logger }: InjectedDependencies, options: ResendNotificationServiceOptions) {
     super()
@@ -59,7 +66,7 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       emailContent = generateEmailTemplate(notification.template, notification.data)
     } catch (error) {
       if (error instanceof MedusaError) {
-        throw error // Re-throw MedusaError for invalid template data
+        throw error 
       }
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
@@ -67,7 +74,8 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       )
     }
 
-    const emailOptions = notification.data.emailOptions as NotificationEmailOptions
+    // Cast carefully: fallback to empty object, then cast the RESULT to the type
+    const emailOptions = (notification.data.emailOptions || {}) as NotificationEmailOptions
 
     // Compose the message body to send via API to Resend
     const message: CreateEmailOptions = {
@@ -76,11 +84,12 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       react: emailContent,
       subject: emailOptions.subject ?? 'You have a new notification',
       headers: emailOptions.headers,
-      replyTo: emailOptions.replyTo,
+      replyTo: emailOptions.replyTo, // FIXED: Changed back to replyTo (camelCase)
       cc: emailOptions.cc,
       bcc: emailOptions.bcc,
       tags: emailOptions.tags,
       text: emailOptions.text,
+      scheduledAt: emailOptions.scheduledAt,
       attachments: Array.isArray(notification.attachments)
         ? notification.attachments.map((attachment) => ({
             content: attachment.content,
@@ -90,7 +99,6 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
             id: attachment.id ?? undefined
           }))
         : undefined,
-      scheduledAt: emailOptions.scheduledAt
     }
 
     // Send the email via Resend
@@ -99,13 +107,13 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       this.logger_.log(
         `Successfully sent "${notification.template}" email to ${notification.to} via Resend`
       )
-      return {} // Return an empty object on success
+      return {} 
     } catch (error) {
-      const errorCode = error.code
+      const errorCode = error.code || 'UNKNOWN_ERROR'
       const responseError = error.response?.body?.errors?.[0]
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Failed to send "${notification.template}" email to ${notification.to} via Resend: ${errorCode} - ${responseError?.message ?? 'unknown error'}`
+        `Failed to send "${notification.template}" email to ${notification.to} via Resend: ${errorCode} - ${responseError?.message ?? error.message}`
       )
     }
   }
