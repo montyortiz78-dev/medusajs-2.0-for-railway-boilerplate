@@ -3,7 +3,6 @@ import {
   ADMIN_CORS,
   AUTH_CORS,
   DATABASE_URL,
-  REDIS_URL,
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
   SENDGRID_API_KEY,
@@ -29,7 +28,7 @@ const storeUrl = trimSlash(process.env.STORE_URL || "http://localhost:8000");
 // --- DEBUG DIAGNOSTICS ---
 console.log("----------------------------------------");
 console.log("MEDUSA CONFIG DIAGNOSTICS:");
-console.log("Store URL (Trimmed):", storeUrl);
+console.log("Store URL:", storeUrl);
 console.log("Callback URL:", `${storeUrl}/api/auth/google/callback`);
 console.log("----------------------------------------");
 
@@ -79,19 +78,13 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              // ✅ FIX 1: Use the sanitized storeUrl
               callbackUrl: `${storeUrl}/api/auth/google/callback`,
-              
-              // ✅ FIX 2: Standard Root-level Scopes (Short names are safer)
-              scope: ['email', 'profile', 'openid'],
-
-              // ✅ FIX 3: Force Consent to reset permissions
-              authorizationParams: {
-                prompt: 'select_account', 
-                access_type: 'offline',
-                response_type: 'code',
-                scope: 'email profile openid', // Redundant backup
-              },
+              // FIX: Use standard full URL scopes. This is the most robust way.
+              scope: [
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "openid",
+              ],
             },
           },
         ],
