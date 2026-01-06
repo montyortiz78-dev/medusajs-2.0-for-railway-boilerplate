@@ -82,27 +82,28 @@ const medusaConfig = {
             options: {}
           },
           {
-            resolve: "@medusajs/auth-google",
-            id: "google",
-            options: {
-              clientId: process.env.GOOGLE_CLIENT_ID,
-              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              
-              // Ensure this matches Google Console EXACTLY
-              callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
+  resolve: "@medusajs/auth-google",
+  id: "google",
+  options: {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
 
-              // ✅ 1. ADD 'openid' to this array
-              scope: ['email', 'profile', 'openid'],
+    // ✅ CHANGE 1: Use Full URL Scopes + OpenID
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'openid',
+    ],
 
-              authorizationParams: {
-                // Strategy 2: Ensure we force offline access to get refresh tokens
-                access_type: 'offline',
-                // ✅ 2. DELETE the 'scope' line below entirely. 
-                // It overrides the array above and breaks the data mapping.
-                prompt: 'consent',
-              }
-            },
-          },
+    authorizationParams: {
+      access_type: 'offline',
+      // ✅ CHANGE 2: Ensure 'scope' is NOT present here. 
+      // It MUST be deleted.
+      prompt: 'consent',
+    },
+  },
+},
         ],
       },
     },
