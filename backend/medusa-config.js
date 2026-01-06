@@ -80,14 +80,13 @@ const medusaConfig = {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
               
-              // 1. Where Google sends the data (BACKEND)
+              // 1. The Callback URL (Must match Google Console EXACTLY)
               callbackUrl: `${backendUrl}/auth/customer/google/callback`,
 
-              // 2. Where Medusa sends the USER after login (STOREFRONT)
-              // We append /account so they land on their profile
+              // 2. The Success Redirect (Where to send the user after login)
+              // We force this by setting the 'successRedirectUrl' option
               successRedirectUrl: `${storeUrl}/account`,
 
-              // Standard Scopes
               scope: [
                 "email",
                 "profile",
