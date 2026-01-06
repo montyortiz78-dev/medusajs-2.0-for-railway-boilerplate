@@ -18,7 +18,7 @@ const Login = ({ setCurrentView }: Props) => {
   const { countryCode } = useParams()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  // ✅ FIX: Use direct navigation instead of fetch
+  // ✅ FIX: Fetch the Google URL from the backend, THEN redirect
   const handleGoogleSignIn = async (e: React.MouseEvent) => {
     e.preventDefault()
     setIsGoogleLoading(true)
@@ -26,19 +26,36 @@ const Login = ({ setCurrentView }: Props) => {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:8000"
       const storeUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      
-      // Point to the BACKEND initial auth endpoint
-      // BUT pass the STOREFRONT as the callback_url
-      // This ensures Google redirects back to our "Traffic Controller" in Step 3
       const callbackUrl = `${storeUrl}/api/auth/google/callback`
       
       const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${encodeURIComponent(callbackUrl)}`
       
-      console.log("Redirecting to:", googleAuthUrl)
-      window.location.href = googleAuthUrl
+      console.log("Fetching Google Auth URL:", googleAuthUrl)
+
+      // 1. Call the backend API
+      const res = await fetch(googleAuthUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error(`Server Error: ${res.status}`)
+      }
+
+      const data = await res.json()
+
+      // 2. Redirect to the location provided by the backend
+      if (data.location) {
+        window.location.href = data.location
+      } else {
+        throw new Error("No location returned from backend")
+      }
       
     } catch (err: any) {
       console.error("Google Auth Error:", err)
+      alert("Something went wrong initializing Google Login.")
       setIsGoogleLoading(false)
     }
   }
