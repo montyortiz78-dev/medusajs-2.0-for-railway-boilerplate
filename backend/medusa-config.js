@@ -3,7 +3,7 @@ import {
   ADMIN_CORS,
   AUTH_CORS,
   DATABASE_URL,
-  REDIS_URL, // <--- Added this missing import
+  REDIS_URL,
   RESEND_API_KEY,
   RESEND_FROM_EMAIL,
   SENDGRID_API_KEY,
@@ -23,14 +23,16 @@ import {
 loadEnv(process.env.NODE_ENV, process.cwd());
 
 const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
-const backendUrl = trimSlash(process.env.BACKEND_URL || "http://localhost:9000");
+// ✅ FIX 1: Explicitly set your Railway URL as the default fallback
+const backendUrl = trimSlash(process.env.BACKEND_URL || "https://backend-production-622a.up.railway.app");
 const storeUrl = trimSlash(process.env.STORE_URL || "http://localhost:8000");
 
 // --- DEBUG DIAGNOSTICS ---
 console.log("----------------------------------------");
-console.log("MEDUSA CONFIG DIAGNOSTICS:");
+console.log("MEDUSA CONFIG DIAGNOSTICS (DIRECT BACKEND STRATEGY):");
+console.log("Backend URL:", backendUrl);
 console.log("Store URL:", storeUrl);
-console.log("Callback URL:", `${storeUrl}/api/auth/google/callback`);
+console.log("Callback URL:", `${backendUrl}/auth/customer/google/callback`);
 console.log("----------------------------------------");
 
 const redisOptions = {
@@ -79,13 +81,25 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              callbackUrl: `${storeUrl}/api/auth/google/callback`,
-              // FIX: Use standard full URL scopes. This is the most robust way.
+              
+              // 🚨 STRATEGY CHANGE: Point directly to Backend
+              // This is the internal Medusa route for auth providers
+              callbackUrl: `${backendUrl}/auth/customer/google/callback`,
+
+              // After login, send user back to the Storefront Account page
+              successRedirectUrl: `${storeUrl}/account`,
+
+              // Standard Scopes
               scope: [
-                "https://www.googleapis.com/auth/userinfo.email",
-                "https://www.googleapis.com/auth/userinfo.profile",
+                "email",
+                "profile",
                 "openid",
               ],
+              authorizationParams: {
+                prompt: 'select_account', 
+                access_type: 'offline',
+                response_type: 'code',
+              },
             },
           },
         ],
