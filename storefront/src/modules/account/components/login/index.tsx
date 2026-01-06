@@ -25,19 +25,16 @@ const Login = ({ setCurrentView }: Props) => {
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:8000"
-      // Use the current window origin as fallback for store URL
       const storeUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
       
-      // Construct the success URL (Where to go after login)
-      // e.g. https://kandicreations.com/us/account
-      const successUrl = `${storeUrl}/${countryCode || "us"}/account`
+      // Point to the BACKEND initial auth endpoint
+      // BUT pass the STOREFRONT as the callback_url
+      // This ensures Google redirects back to our "Traffic Controller" in Step 3
+      const callbackUrl = `${storeUrl}/api/auth/google/callback`
       
-      // Construct the Auth URL with the callback
-      const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${encodeURIComponent(successUrl)}`
+      const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${encodeURIComponent(callbackUrl)}`
       
-      console.log("Redirecting to Google Auth:", googleAuthUrl)
-
-      // 🚀 THE KEY CHANGE: Force the browser to navigate
+      console.log("Redirecting to:", googleAuthUrl)
       window.location.href = googleAuthUrl
       
     } catch (err: any) {

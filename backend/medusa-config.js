@@ -80,12 +80,12 @@ const medusaConfig = {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
               
-              // 1. The Callback URL (Must match Google Console EXACTLY)
-              callbackUrl: `${backendUrl}/auth/customer/google/callback`,
+              // 🚨 STRATEGY CHANGE: Point back to Storefront Proxy
+              // This MUST match the URL in Google Console exactly.
+              callbackUrl: `${storeUrl}/api/auth/google/callback`,
 
-              // 2. The Success Redirect (Where to send the user after login)
-              // We force this by setting the 'successRedirectUrl' option
-              successRedirectUrl: `${storeUrl}/account`,
+              // We don't need successRedirectUrl here anymore because 
+              // the Storefront will handle the redirect manually.
 
               scope: [
                 "email",
@@ -102,7 +102,6 @@ const medusaConfig = {
         ],
       },
     },
-    // ... rest of your modules (File, Redis, etc.) - keep them exactly as they were
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
