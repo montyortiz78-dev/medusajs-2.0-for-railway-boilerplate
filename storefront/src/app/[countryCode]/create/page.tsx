@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo, Fragment } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { Input, Label, Button, clx } from "@medusajs/ui";
 import { Dialog, Transition } from "@headlessui/react";
-import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle, Tag, Trash, XMark } from "@medusajs/icons"; // <--- Import Trash & XMark
+import { Sparkles, Adjustments, CheckCircle, ExclamationCircle, InformationCircle, ArrowDownCircle, Tag, Trash, XMark } from "@medusajs/icons";
 import useToggleState from "@lib/hooks/use-toggle-state";
 
 import KandiVisualizer from '@components/kandi-visualizer';
@@ -97,8 +97,7 @@ const MobileCreateBar = ({
     handleOptionChange,
     handleAddToStash,
     isAdding,
-    patternLength,
-    onOpenVisualizer // <--- Pass handler
+    patternLength
 }: {
     product: HttpTypes.StoreProduct | null,
     selectedVariant?: HttpTypes.StoreProductVariant,
@@ -106,8 +105,7 @@ const MobileCreateBar = ({
     handleOptionChange: (id: string, val: string) => void,
     handleAddToStash: () => void,
     isAdding: boolean,
-    patternLength: number,
-    onOpenVisualizer: () => void
+    patternLength: number
 }) => {
     const { state, open, close } = useToggleState();
 
@@ -137,12 +135,8 @@ const MobileCreateBar = ({
                         </span>
                      </div>
                      
-                     <div className="grid grid-cols-2 gap-x-4">
-                        {/* --- Mobile: View 3D Button --- */}
-                        <Button variant="secondary" onClick={onOpenVisualizer} className="w-full">
-                            View 3D
-                        </Button>
-                        
+                     <div className="grid grid-cols-1 gap-x-4">
+                        {/* CHANGED: Removed "View 3D" Button. Edit Options is now full width */}
                         <Button variant="secondary" onClick={open} className="w-full">
                             {selectedVariant ? "Edit Options" : "Select Options"}
                         </Button>
@@ -234,13 +228,13 @@ function KandiGeneratorContent() {
   const [isAdding, setIsAdding] = useState(false); 
   const [captureMode, setCaptureMode] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false); // <--- Modal State
+  // REMOVED: isPreviewOpen state
 
   const sizeGuideState = useToggleState();
 
   const params = useParams();
   const router = useRouter();
-  const { pattern, setPattern, designConfig, setDesignConfig, clearDesign } = useKandiContext(); // <--- Get clearDesign
+  const { pattern, setPattern, designConfig, setDesignConfig, clearDesign } = useKandiContext(); 
 
   // ... (Keep existing useEffects for product fetching and option parsing logic) ...
   useEffect(() => {
@@ -433,15 +427,12 @@ function KandiGeneratorContent() {
     }
   };
 
-  // --- NEW: Clear Design Handler ---
   const handleClearDesign = () => {
-    clearDesign(); // Clears Context
-    setKandiName("My Custom Kandi"); // Resets Local State
+    clearDesign(); 
+    setKandiName("My Custom Kandi"); 
     setVibe("");
     setHasGenerated(false);
-    setIsPreviewOpen(false); // Close modal if open
   }
-  // -------------------------------
 
   const visualizerPattern = pattern
     .filter((p) => !p.isGhost)
@@ -483,7 +474,7 @@ function KandiGeneratorContent() {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full items-start">
             
-            {/* GROUP A: GENERATOR CONTROLS */}
+            {/* GROUP A: GENERATOR CONTROLS (Order 1) */}
             <div className="flex flex-col gap-6 order-1 lg:col-start-1">
                 <div className="flex bg-ui-bg-subtle p-1 rounded-full border border-ui-border-base self-center lg:self-start shadow-md backdrop-blur-md">
                     <button onClick={() => setMode('ai')} className={clx("px-6 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all", mode === 'ai' ? "bg-ui-bg-base shadow-sm text-ui-fg-base" : "text-ui-fg-subtle hover:text-ui-fg-base")}>
@@ -527,15 +518,15 @@ function KandiGeneratorContent() {
                 )}
             </div>
 
-            {/* GROUP B: VISUALIZER (Desktop & Modal for Mobile) */}
+            {/* GROUP B: VISUALIZER (Order 2 - Always Visible) */}
             <div className="flex flex-col gap-6 order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-24">
                 <div className="text-center lg:text-left backdrop-blur-sm p-4 rounded-2xl border border-transparent hover:border-ui-border-base transition-colors hidden lg:block">
                     <h2 className="text-4xl font-bold text-ui-fg-base mb-2">{kandiName}</h2>
                     <p className="text-ui-fg-subtle italic">"{mode === 'ai' ? vibeStory : 'Custom Design'}"</p>
                 </div>
                 
-                {/* Desktop Visualizer Area */}
-                <div className="hidden lg:flex bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base min-h-[400px] items-center justify-center relative shadow-inner overflow-hidden">
+                {/* CHANGED: Removed hidden lg:flex, set fixed height for mobile */}
+                <div className="flex w-full bg-gradient-to-b from-gray-100 to-white dark:from-zinc-900 dark:to-black rounded-3xl p-8 border border-ui-border-base h-[350px] lg:min-h-[400px] items-center justify-center relative shadow-inner overflow-hidden">
                     {pattern.length > 0 ? (
                        <>
                         <KandiVisualizer 
@@ -544,7 +535,7 @@ function KandiGeneratorContent() {
                             rows={designConfig.rows} 
                             stitch={designConfig.stitch}
                         />
-                        {/* --- Desktop Clear Button --- */}
+                        {/* Clear Button - Always Visible */}
                         <div className="absolute top-4 right-4 z-10">
                             <Button variant="danger" size="small" onClick={handleClearDesign}>
                                 <Trash /> Clear
@@ -559,6 +550,7 @@ function KandiGeneratorContent() {
                     )}
                 </div>
 
+                {/* Desktop Buttons */}
                 <div className="hidden lg:flex justify-end gap-4">
                     {mode === 'ai' && hasGenerated && (
                         <button onClick={handleAiGenerate} className="py-3 px-6 rounded-full bg-ui-bg-component border border-ui-border-base hover:bg-ui-bg-component-hover font-bold text-sm transition-colors text-ui-fg-base shadow-sm">
@@ -579,7 +571,7 @@ function KandiGeneratorContent() {
                 </div>
             </div>
 
-            {/* GROUP C: VARIANT SELECTION (Options) */}
+            {/* GROUP C: VARIANT SELECTION (Order 3) */}
             <div className="flex flex-col gap-6 order-3 lg:col-start-1">
                 {product && product.options && product.options.length > 0 && (
                 <div className="bg-white/60 dark:bg-zinc-900/60 p-6 rounded-3xl border border-ui-border-base shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -646,57 +638,7 @@ function KandiGeneratorContent() {
             </p>
         </div>
         
-        {/* --- MOBILE MODAL: 3D Visualizer --- */}
-        <Transition appear show={isPreviewOpen} as={Fragment}>
-            <Dialog as="div" className="relative z-[100]" onClose={() => setIsPreviewOpen(false)}>
-                <Transition.Child
-                    as={Fragment}
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                >
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
-                </Transition.Child>
-
-                <div className="fixed inset-0 overflow-y-auto">
-                    <div className="flex min-h-full items-center justify-center p-4">
-                        <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                        >
-                            <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all relative h-[60vh] flex flex-col">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="text-lg font-bold">Preview</h3>
-                                    <div className="flex gap-2">
-                                        <Button variant="danger" size="small" onClick={handleClearDesign}>
-                                            <Trash /> Clear
-                                        </Button>
-                                        <button onClick={() => setIsPreviewOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
-                                            <XMark />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="flex-1 relative bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-                                    <KandiVisualizer 
-                                        pattern={visualizerPattern}
-                                        rows={designConfig.rows} 
-                                        stitch={designConfig.stitch}
-                                    />
-                                </div>
-                            </Dialog.Panel>
-                        </Transition.Child>
-                    </div>
-                </div>
-            </Dialog>
-        </Transition>
+        {/* CHANGED: Removed the entire Transition modal block here */}
 
         <MobileCreateBar 
             product={product}
@@ -706,7 +648,7 @@ function KandiGeneratorContent() {
             handleAddToStash={handleAddToStash}
             isAdding={isAdding}
             patternLength={pattern.length}
-            onOpenVisualizer={() => setIsPreviewOpen(true)} // <--- Connect Handler
+            // Removed onOpenVisualizer prop
         />
 
         <SizeGuideModal isOpen={sizeGuideState.state} close={sizeGuideState.close} />

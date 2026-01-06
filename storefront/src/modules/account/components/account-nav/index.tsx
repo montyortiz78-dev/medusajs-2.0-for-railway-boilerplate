@@ -18,10 +18,14 @@ const AccountNav = ({
     await signout(countryCode)
   }
 
+  // Check if we are on the main account overview page
+  const isAccountOverview = route === `/${countryCode}/account`
+
   return (
     <div>
+      {/* Mobile Breadcrumb: Only shows when on a sub-page (e.g. Orders) */}
       <div className="small:hidden">
-        {route !== `/${countryCode}/account` ? (
+        {!isAccountOverview ? (
           <LocalizedClientLink
             href="/account"
             className="flex items-center gap-x-2 text-small-regular py-2 text-ui-fg-base"
@@ -34,7 +38,13 @@ const AccountNav = ({
           </LocalizedClientLink>
         ) : null}
       </div>
-      <div className="hidden small:block">
+
+      {/* Navigation Menu: Visible on Desktop, OR on Mobile if on the Overview page */}
+      <div
+        className={clx("small:block", {
+          "hidden": !isAccountOverview, // Hide on mobile if on a sub-page
+        })}
+      >
         <div className="pb-4">
           <h3 className="text-base-semi text-ui-fg-base">Account</h3>
         </div>
