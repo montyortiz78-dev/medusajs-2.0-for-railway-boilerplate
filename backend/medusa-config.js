@@ -88,19 +88,18 @@ const medusaConfig = {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
               
-              // FORCE the callback URL to be exactly what you expect.
-              // If your STORE_URL is set correctly in Railway, this will work.
-              // Ensure STORE_URL does NOT have a trailing slash.
+              // Ensure this matches Google Console EXACTLY
               callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
 
-              // We keep the scope here to ensure data capture
-              scope: ['email', 'profile', 'openid'],
+              // Strategy 1: Put widely accepted scopes here
+              scope: ['email', 'profile'],
 
               authorizationParams: {
-                scope: ['email', 'profile', 'openid'],
+                // Strategy 2: Ensure we force offline access to get refresh tokens
                 access_type: 'offline',
-                // remove prompt: 'consent' to avoid forcing re-login loops for testing
-                // prompt: 'consent', 
+                // Remove 'openid' to force the standard profile parser to take over
+                scope: 'email profile', 
+                prompt: 'consent',
               }
             },
           },
