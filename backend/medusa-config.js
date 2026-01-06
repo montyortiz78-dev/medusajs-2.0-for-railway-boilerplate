@@ -82,28 +82,23 @@ const medusaConfig = {
             options: {}
           },
           {
-  resolve: "@medusajs/auth-google",
-  id: "google",
-  options: {
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
-
-    // ✅ CHANGE 1: Use Full URL Scopes + OpenID
-    scope: [
-      'https://www.googleapis.com/auth/userinfo.email',
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'openid',
-    ],
-
-    authorizationParams: {
-      access_type: 'offline',
-      // ✅ CHANGE 2: Ensure 'scope' is NOT present here. 
-      // It MUST be deleted.
-      prompt: 'consent',
-    },
-  },
-},
+            resolve: "@medusajs/auth-google",
+            id: "google",
+            options: {
+              clientId: process.env.GOOGLE_CLIENT_ID,
+              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+              callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
+              
+              // 🚨 CRITICAL FIX: Move scopes here as a space-separated string.
+              // This forces the underlying library to request these permissions.
+              authorizationParams: {
+                scope: 'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+                access_type: 'offline',
+                prompt: 'consent',
+                response_type: 'code',
+              },
+            },
+          },
         ],
       },
     },
