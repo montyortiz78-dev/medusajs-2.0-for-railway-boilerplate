@@ -18,45 +18,33 @@ const Login = ({ setCurrentView }: Props) => {
   const { countryCode } = useParams()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
+  // ✅ FIX: Use direct navigation instead of fetch
   const handleGoogleSignIn = async (e: React.MouseEvent) => {
     e.preventDefault()
     setIsGoogleLoading(true)
 
     try {
       const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:8000"
+      // Use the current window origin as fallback for store URL
+      const storeUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
       
-      const googleAuthUrl = `${backendUrl}/auth/customer/google`
+      // Construct the success URL (Where to go after login)
+      // e.g. https://kandicreations.com/us/account
+      const successUrl = `${storeUrl}/${countryCode || "us"}/account`
       
-      console.log("Initiating Google Auth:", googleAuthUrl)
+      // Construct the Auth URL with the callback
+      const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${encodeURIComponent(successUrl)}`
+      
+      console.log("Redirecting to Google Auth:", googleAuthUrl)
 
-      const res = await fetch(googleAuthUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      // 🚀 THE KEY CHANGE: Force the browser to navigate
+      window.location.href = googleAuthUrl
       
-      if (!res.ok) {
-        throw new Error(`Server Error: ${res.status} ${res.statusText}`)
-      }
-
-      const data = await res.json()
-      console.log("Google Auth Response:", data)
-      
-      if (data.location) {
-        window.location.href = data.location
-      } else {
-        console.error("No location found in response", data)
-        alert("Configuration Error: No redirect URL returned from backend.")
-        setIsGoogleLoading(false)
-      }
     } catch (err: any) {
       console.error("Google Auth Error:", err)
-      alert(`Google Login Failed: ${err.message}`)
       setIsGoogleLoading(false)
     }
   }
-  // -------------------------------------
 
   return (
     <div
@@ -107,7 +95,7 @@ const Login = ({ setCurrentView }: Props) => {
         </SubmitButton>
       </form>
 
-      {/* --- UPDATED GOOGLE BUTTON --- */}
+      {/* --- GOOGLE BUTTON --- */}
       <div className="w-full mt-6 flex flex-col gap-y-3">
         <div className="relative">
             <div className="absolute inset-0 flex items-center">
