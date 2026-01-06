@@ -87,14 +87,18 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+              
+              // Ensure this matches Google Console EXACTLY
               callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
 
-              // ✅ 1. ADD 'openid' HERE
-              scope: ['email', 'profile', 'openid'], 
+              // ✅ 1. ADD 'openid' to this array
+              scope: ['email', 'profile', 'openid'],
 
               authorizationParams: {
+                // Strategy 2: Ensure we force offline access to get refresh tokens
                 access_type: 'offline',
-                // ✅ 2. DELETE THE 'scope' LINE COMPLETELY
+                // ✅ 2. DELETE the 'scope' line below entirely. 
+                // It overrides the array above and breaks the data mapping.
                 prompt: 'consent',
               }
             },
