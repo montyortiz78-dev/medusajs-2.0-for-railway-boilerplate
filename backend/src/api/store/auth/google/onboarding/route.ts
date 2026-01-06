@@ -6,22 +6,6 @@ type AuthenticatedRequest = MedusaRequest & {
   auth_context?: { auth_identity_id: string }
 }
 
-type GoogleAuthIdentity = {
-  id: string
-  provider: string
-  provider_metadata?: {
-    email?: string
-    given_name?: string
-    family_name?: string
-    picture?: string
-    [key: string]: any
-  }
-  app_metadata?: {
-    actor_id?: string
-    [key: string]: any
-  }
-}
-
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const authIdentityId = (req as AuthenticatedRequest).auth_context?.auth_identity_id
 
@@ -35,26 +19,26 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   try {
     // 1. Retrieve the Identity
-    const identity = await authService.retrieveAuthIdentity(authIdentityId, {
-      select: ["id", "provider_metadata", "app_metadata", "provider"]
-    }) as unknown as GoogleAuthIdentity
+    const identity = await authService.retrieveAuthIdentity(authIdentityId) as any
     
-    console.log("🔍 INSPECTING IDENTITY:", JSON.stringify(identity, null, 2))
+    console.log("🔍 INSPECTING IDENTITY KEYS:", Object.keys(identity))
+    // console.log("🔍 INSPECTING IDENTITY:", JSON.stringify(identity, null, 2))
 
-    // 2. Extract Email (Try multiple locations)
-    const safeIdentity = identity as any
-    const metadata = identity.provider_metadata || {}
-    const email = metadata.email || safeIdentity.email || safeIdentity.user_metadata?.email
+    // 2. Extract Email (Try multiple locations and casings)
+    const metadata = identity.provider_metadata || identity.providerMetadata || {}
     
+    const email = 
+        metadata.email || 
+        identity.email || 
+        identity.user_metadata?.email || 
+        identity.userMetadata?.email
+
     // 3. FATAL ERROR CHECK
     if (!email) {
         console.error(`❌ CRITICAL FAILURE: Identity ${authIdentityId} created but has NO EMAIL.`)
+        console.error(`❌ DUMPING IDENTITY KEYS:`, Object.keys(identity))
         console.error(`❌ DUMPING METADATA:`, JSON.stringify(metadata))
         
-        // --- CHANGE IS HERE ---
-        // DO NOT DELETE THE IDENTITY. 
-        // DO NOT RETURN 'reauth'.
-        // We want the process to STOP so we can inspect the database/logs.
         return res.status(400).json({ 
             message: "Google Login succeeded, but we could not read your email address. Please contact support.",
             debug_id: authIdentityId
@@ -84,7 +68,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     // 6. Link Identity
-    if (identity.app_metadata?.actor_id !== customerId) {
+    const appMetadata = identity.app_metadata || identity.appMetadata || {}
+    
+    if (appMetadata.actor_id !== customerId) {
         console.log(`🔗 Linking Identity to Customer ${customerId}`)
         await authService.updateAuthIdentities([{
             id: authIdentityId,
