@@ -21,8 +21,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // 1. Retrieve the Identity
     const identity = await authService.retrieveAuthIdentity(authIdentityId) as any
     
+    // Debug logging to see exactly what keys are available
     console.log("🔍 INSPECTING IDENTITY KEYS:", Object.keys(identity))
-    // console.log("🔍 INSPECTING IDENTITY:", JSON.stringify(identity, null, 2))
 
     // 2. Extract Email (Try multiple locations and casings)
     const metadata = identity.provider_metadata || identity.providerMetadata || {}
@@ -36,8 +36,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // 3. FATAL ERROR CHECK
     if (!email) {
         console.error(`❌ CRITICAL FAILURE: Identity ${authIdentityId} created but has NO EMAIL.`)
-        console.error(`❌ DUMPING IDENTITY KEYS:`, Object.keys(identity))
-        console.error(`❌ DUMPING METADATA:`, JSON.stringify(metadata))
+        // Log the full object so we can debug if it happens again
+        console.error(`❌ FULL IDENTITY DUMP:`, JSON.stringify(identity, null, 2))
         
         return res.status(400).json({ 
             message: "Google Login succeeded, but we could not read your email address. Please contact support.",
