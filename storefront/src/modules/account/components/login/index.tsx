@@ -18,7 +18,7 @@ const Login = ({ setCurrentView }: Props) => {
   const { countryCode } = useParams()
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  // ✅ FIX: Fetch the Google URL from the backend, THEN redirect
+  // ✅ FIX: Manually force scopes in the Google Request
   const handleGoogleSignIn = async (e: React.MouseEvent) => {
     e.preventDefault()
     setIsGoogleLoading(true)
@@ -28,27 +28,27 @@ const Login = ({ setCurrentView }: Props) => {
       const storeUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
       const callbackUrl = `${storeUrl}/api/auth/google/callback`
       
+      // 1. Get the Initial URL from Backend
       const googleAuthUrl = `${backendUrl}/auth/customer/google?callback_url=${encodeURIComponent(callbackUrl)}`
       
-      console.log("Fetching Google Auth URL:", googleAuthUrl)
-
-      // 1. Call the backend API
       const res = await fetch(googleAuthUrl, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       })
 
-      if (!res.ok) {
-        throw new Error(`Server Error: ${res.status}`)
-      }
+      if (!res.ok) throw new Error(`Server Error: ${res.status}`)
 
       const data = await res.json()
 
-      // 2. Redirect to the location provided by the backend
       if (data.location) {
-        window.location.href = data.location
+        // 2. 🚨 INTERCEPT & INJECT SCOPES
+        // The backend gives us a Google URL. We append the scopes manually to be 100% sure.
+        const url = new URL(data.location)
+        url.searchParams.set("scope", "email profile openid")
+        url.searchParams.set("prompt", "select_account")
+        
+        console.log("Redirecting to Forced Scope URL:", url.toString())
+        window.location.href = url.toString()
       } else {
         throw new Error("No location returned from backend")
       }

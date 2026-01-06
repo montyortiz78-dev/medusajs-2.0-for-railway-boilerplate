@@ -26,13 +26,6 @@ const trimSlash = (url) => url ? url.replace(/\/$/, "") : "";
 const backendUrl = trimSlash(process.env.BACKEND_URL || "https://backend-production-622a.up.railway.app");
 const storeUrl = trimSlash(process.env.STORE_URL || "http://localhost:8000");
 
-// --- DEBUG DIAGNOSTICS ---
-console.log("----------------------------------------");
-console.log("MEDUSA CONFIG DIAGNOSTICS (FINAL):");
-console.log("Backend URL:", backendUrl);
-console.log("Store URL (Redirect Target):", storeUrl);
-console.log("----------------------------------------");
-
 const redisOptions = {
   family: 6,
   keepAlive: 10000,
@@ -79,29 +72,13 @@ const medusaConfig = {
             options: {
               clientId: process.env.GOOGLE_CLIENT_ID,
               clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-              
-              // 🚨 STRATEGY CHANGE: Point back to Storefront Proxy
-              // This MUST match the URL in Google Console exactly.
               callbackUrl: `${storeUrl}/api/auth/google/callback`,
-
-              // We don't need successRedirectUrl here anymore because 
-              // the Storefront will handle the redirect manually.
-
-              scope: [
-                "email",
-                "profile",
-                "openid",
-              ],
-              authorizationParams: {
-                prompt: 'select_account', 
-                access_type: 'offline',
-                response_type: 'code',
-              },
             },
           },
         ],
       },
     },
+    // ... keep all other modules exactly as they are
     {
       key: Modules.FILE,
       resolve: '@medusajs/file',
