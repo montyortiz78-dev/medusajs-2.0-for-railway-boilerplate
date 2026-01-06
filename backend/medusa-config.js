@@ -91,14 +91,12 @@ const medusaConfig = {
               // Ensure this matches Google Console EXACTLY
               callbackUrl: `${process.env.STORE_URL}/api/auth/google/callback`,
 
-              // Strategy 1: Put widely accepted scopes here
-              scope: ['email', 'profile'],
+              // ✅ FIX: Use the standard array including 'openid'
+              scope: ['email', 'profile', 'openid'],
 
               authorizationParams: {
-                // Strategy 2: Ensure we force offline access to get refresh tokens
+                // ✅ FIX: Remove 'scope' from here to prevent conflicts
                 access_type: 'offline',
-                // Remove 'openid' to force the standard profile parser to take over
-                scope: 'email profile', 
                 prompt: 'consent',
               }
             },
