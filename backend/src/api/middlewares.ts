@@ -3,12 +3,11 @@ import { defineMiddlewares, authenticate } from "@medusajs/medusa"
 export default defineMiddlewares({
   routes: [
     {
-      method: "POST",
+      // 1. Protect the Onboarding route
       matcher: "/store/auth/google/onboarding",
-      middlewares: [
-        // CRITICAL: Allow tokens without customers to pass
-        authenticate("customer", ["bearer", "session"], { allowUnregistered: true }),
-      ],
+      method: "POST",
+      // 2. IMPORTANT: allowUnregistered: true lets the "Ghost Token" in
+      middlewares: [authenticate("customer", ["bearer", "session"], { allowUnregistered: true })],
     },
     {
       method: "POST",
