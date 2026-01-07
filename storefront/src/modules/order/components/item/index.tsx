@@ -10,17 +10,17 @@ type ItemProps = {
 }
 
 const Item = ({ item }: ItemProps) => {
-  const kandiName = item.metadata?.kandi_name as string | undefined;
-  const kandiVibe = item.metadata?.kandi_vibe as string | undefined;
-  const customImage = item.metadata?.image_url as string | undefined;
+  // Logic: Use metadata if available, otherwise fall back to product data
+  const customImage = (item.metadata?.image_url as string) || item.thumbnail
+  const customName = (item.metadata?.kandi_name as string) || item.title
+  const kandiVibe = item.metadata?.kandi_vibe as string
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
-      {/* FIX: Tighter cell for thumbnail */}
       <Table.Cell className="!pl-0 p-2 w-16 small:p-4 small:w-24 align-top">
         <div className="flex w-full aspect-square rounded-lg overflow-hidden">
           <Thumbnail 
-            thumbnail={customImage || item.thumbnail} 
+            thumbnail={customImage} 
             size="square" 
           />
         </div>
@@ -31,7 +31,7 @@ const Item = ({ item }: ItemProps) => {
           className="txt-medium-plus text-ui-fg-base line-clamp-2"
           data-testid="product-name"
         >
-          {kandiName || item.title}
+          {customName}
         </Text>
         
         {kandiVibe && (
@@ -40,8 +40,8 @@ const Item = ({ item }: ItemProps) => {
             </Text>
         )}
 
-        {/* HIDE VARIANT TEXT IF KANDI */}
-        {item.variant && !kandiName && (
+        {/* Only show variant options if it's NOT a custom Kandi */}
+        {item.variant && !item.metadata?.kandi_name && (
           <LineItemOptions variant={item.variant} data-testid="product-variant" />
         )}
       </Table.Cell>

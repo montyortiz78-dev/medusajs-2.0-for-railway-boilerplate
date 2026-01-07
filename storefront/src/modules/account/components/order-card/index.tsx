@@ -30,7 +30,6 @@ const OrderCard = ({ order }: OrderCardProps) => {
       <div className="uppercase text-large-semi mb-2 text-ui-fg-base">
         #<span data-testid="order-display-id">{order.display_id}</span>
       </div>
-      {/* FIX: Added flex-wrap and gap-y-1 to handle mobile wrapping */}
       <div className="flex flex-wrap items-center divide-x divide-ui-border-base text-small-regular text-ui-fg-subtle gap-y-1">
         <span className="pr-2" data-testid="order-created-at">
           {new Date(order.created_at).toDateString()}
@@ -47,19 +46,23 @@ const OrderCard = ({ order }: OrderCardProps) => {
       </div>
       <div className="grid grid-cols-2 small:grid-cols-4 gap-4 my-4">
         {order.items?.slice(0, 3).map((i) => {
+          // CHANGED: Use custom image and name if available
+          const customImage = (i.metadata?.image_url as string) || i.thumbnail
+          const customName = (i.metadata?.kandi_name as string) || i.title
+
           return (
             <div
               key={i.id}
               className="flex flex-col gap-y-2"
               data-testid="order-item"
             >
-              <Thumbnail thumbnail={i.thumbnail} images={[]} size="full" />
+              <Thumbnail thumbnail={customImage} images={[]} size="full" />
               <div className="flex items-center text-small-regular text-ui-fg-subtle">
                 <span
                   className="text-ui-fg-base font-semibold line-clamp-1"
                   data-testid="item-title"
                 >
-                  {i.title}
+                  {customName}
                 </span>
                 <span className="ml-2">x</span>
                 <span data-testid="item-quantity">{i.quantity}</span>
