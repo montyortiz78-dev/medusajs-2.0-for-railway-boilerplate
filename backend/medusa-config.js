@@ -167,6 +167,19 @@ const medusaConfig = {
         ]
       }
     },
+    {
+      key: Modules.TAX,
+      resolve: "@medusajs/tax",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/tax-system",
+            id: "system",
+            options: {},
+          },
+        ],
+      },
+    },
     ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
       key: Modules.PAYMENT,
       resolve: '@medusajs/payment',

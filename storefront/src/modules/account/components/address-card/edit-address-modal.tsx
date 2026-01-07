@@ -13,6 +13,7 @@ import { useFormState } from "react-dom"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import { HttpTypes } from "@medusajs/types"
 import { deleteCustomerAddress, updateCustomerAddress } from "@lib/data/customer"
+import { usStates } from "@lib/constants" // Import States
 
 type EditAddressProps = {
   region: HttpTypes.StoreRegion
@@ -28,11 +29,14 @@ const EditAddress: React.FC<EditAddressProps> = ({
   const [removing, setRemoving] = useState(false)
   const [successState, setSuccessState] = useState(false)
   const { state, open, close: closeModal } = useToggleState(false)
+  // Initialize with the address country
+  const [selectedCountry, setSelectedCountry] = useState<string>(address.country_code || "us")
+  
+  const updateAddressWithId = updateCustomerAddress.bind(null, address.id)
 
-  const [formState, formAction] = useFormState(updateCustomerAddress, {
+  const [formState, formAction] = useFormState(updateAddressWithId, {
     success: false,
     error: null,
-    addressId: address.id,
   })
 
   const close = () => {
@@ -56,6 +60,10 @@ const EditAddress: React.FC<EditAddressProps> = ({
     setRemoving(true)
     await deleteCustomerAddress(address.id)
     setRemoving(false)
+  }
+
+  const handleCountryChange = (e: any) => {
+    setSelectedCountry(e.target.value)
   }
 
   return (
@@ -183,21 +191,53 @@ const EditAddress: React.FC<EditAddressProps> = ({
                   data-testid="city-input"
                 />
               </div>
-              <Input
-                label="Province / State"
-                name="province"
-                autoComplete="address-level1"
-                defaultValue={address.province || undefined}
-                data-testid="state-input"
-              />
-              <CountrySelect
-                name="country_code"
-                region={region}
-                required
-                autoComplete="country"
-                defaultValue={address.country_code || undefined}
-                data-testid="country-select"
-              />
+
+              {/* State / Province Dropdown Logic */}
+              <div className="grid grid-cols-2 gap-x-2">
+                {selectedCountry === "us" ? (
+                  <div className="flex flex-col gap-y-2">
+                    <label className="txt-compact-small text-ui-fg-base">
+                      State
+                    </label>
+                    <select
+                      name="province"
+                      required
+                      autoComplete="address-level1"
+                      defaultValue={address.province || ""}
+                      className="h-10 w-full rounded-md border border-ui-border-base bg-ui-bg-field px-3 py-2 text-small-regular placeholder:text-ui-fg-muted focus:border-ui-border-interactive focus:outline-none focus:ring-1 focus:ring-ui-border-interactive"
+                    >
+                      <option value="" disabled>
+                        Select a State
+                      </option>
+                      {usStates.map((state) => (
+                        <option key={state.value} value={state.value}>
+                          {state.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <Input
+                    label="Province / State"
+                    name="province"
+                    autoComplete="address-level1"
+                    defaultValue={address.province || undefined}
+                    data-testid="state-input"
+                  />
+                )}
+                
+                <CountrySelect
+                  name="country_code"
+                  region={region}
+                  required
+                  autoComplete="country"
+                  defaultValue={address.country_code || undefined}
+                  data-testid="country-select"
+                  // @ts-ignore
+                  onChange={handleCountryChange}
+                />
+              </div>
+
               <Input
                 label="Phone"
                 name="phone"

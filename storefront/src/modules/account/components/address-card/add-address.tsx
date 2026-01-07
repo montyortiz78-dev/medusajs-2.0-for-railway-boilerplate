@@ -12,10 +12,13 @@ import Modal from "@modules/common/components/modal"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import { HttpTypes } from "@medusajs/types"
 import { addCustomerAddress } from "@lib/data/customer"
+import { usStates } from "@lib/constants" // Import States
 
 const AddAddress = ({ region }: { region: HttpTypes.StoreRegion }) => {
   const [successState, setSuccessState] = useState(false)
   const { state, open, close: closeModal } = useToggleState(false)
+  // Track country to toggle state dropdown. Default to first country or US.
+  const [selectedCountry, setSelectedCountry] = useState<string>(region?.countries?.[0]?.iso_2 || "us")
 
   const [formState, formAction] = useFormState(addCustomerAddress, {
     success: false,
@@ -38,6 +41,10 @@ const AddAddress = ({ region }: { region: HttpTypes.StoreRegion }) => {
       setSuccessState(true)
     }
   }, [formState])
+
+  const handleCountryChange = (e: any) => {
+    setSelectedCountry(e.target.value)
+  }
 
   return (
     <>
@@ -108,19 +115,51 @@ const AddAddress = ({ region }: { region: HttpTypes.StoreRegion }) => {
                   data-testid="city-input"
                 />
               </div>
-              <Input
-                label="Province / State"
-                name="province"
-                autoComplete="address-level1"
-                data-testid="state-input"
-              />
-              <CountrySelect
-                region={region}
-                name="country_code"
-                required
-                autoComplete="country"
-                data-testid="country-select"
-              />
+
+              {/* State / Province Dropdown Logic */}
+              <div className="grid grid-cols-2 gap-x-2">
+                {selectedCountry === "us" ? (
+                  <div className="flex flex-col gap-y-2">
+                    <label className="txt-compact-small text-ui-fg-base">
+                      State
+                    </label>
+                    <select
+                      name="province"
+                      required
+                      autoComplete="address-level1"
+                      className="h-10 w-full rounded-md border border-ui-border-base bg-ui-bg-field px-3 py-2 text-small-regular placeholder:text-ui-fg-muted focus:border-ui-border-interactive focus:outline-none focus:ring-1 focus:ring-ui-border-interactive"
+                    >
+                      <option value="" disabled selected>
+                        Select a State
+                      </option>
+                      {usStates.map((state) => (
+                        <option key={state.value} value={state.value}>
+                          {state.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <Input
+                    label="Province / State"
+                    name="province"
+                    autoComplete="address-level1"
+                    data-testid="state-input"
+                  />
+                )}
+                
+                <CountrySelect
+                  region={region}
+                  name="country_code"
+                  required
+                  autoComplete="country"
+                  data-testid="country-select"
+                  // @ts-ignore
+                  onChange={handleCountryChange}
+                  defaultValue={selectedCountry}
+                />
+              </div>
+
               <Input
                 label="Phone"
                 name="phone"

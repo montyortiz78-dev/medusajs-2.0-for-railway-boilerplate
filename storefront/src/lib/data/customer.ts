@@ -185,9 +185,9 @@ export const deleteCustomerAddress = async (addressId: string) => {
   return { success: true, error: null }
 }
 
-export const updateCustomerAddress = async (currentState: any, formData: FormData) => {
+export const updateCustomerAddress = async (addressId: string, currentState: any, formData: FormData) => {
   const headers = getAuthHeaders() as { authorization: string }
-  const addressId = currentState.addressId as string
+  
   return sdk.store.customer.updateAddress(addressId, {
       first_name: formData.get("first_name") as string,
       last_name: formData.get("last_name") as string,
