@@ -171,13 +171,8 @@ const medusaConfig = {
       key: Modules.TAX,
       resolve: "@medusajs/tax",
       options: {
-        providers: [
-          {
-            resolve: "@medusajs/tax-system",
-            id: "system",
-            options: {},
-          },
-        ],
+        // Do NOT list providers here; the default "System" provider 
+        // will be loaded automatically if this array is empty or omitted.
       },
     },
     ...(STRIPE_API_KEY && STRIPE_WEBHOOK_SECRET ? [{
