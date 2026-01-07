@@ -18,6 +18,7 @@ function getCartIdOrThrow() {
   return cartId
 }
 
+// FIXED: Now accepts metadata
 async function createCart(
   variantId: string, 
   quantity: number, 
@@ -46,12 +47,13 @@ async function createCart(
        throw new Error("Could not determine a valid region for cart creation.")
     }
 
+    // FIXED: Passes metadata to the item immediately
     const { cart } = await sdk.store.cart.create(
       {
         items: [{ 
           variant_id: variantId, 
           quantity,
-          metadata: metadata
+          metadata: metadata 
         }],
         region_id: regionId, 
       },
@@ -111,9 +113,9 @@ export async function addToCart({
 }) {
   const cartId = getCartId()
 
+  // Case 1: No Cart - Create one with metadata
   if (!cartId) {
     try {
-      // Pass metadata here
       await createCart(variantId, quantity, countryCode, metadata)
       return
     } catch (e) {
@@ -121,6 +123,7 @@ export async function addToCart({
     }
   }
 
+  // Case 2: Existing Cart - Add item with metadata
   try {
     await sdk.store.cart.createLineItem(
       cartId,
@@ -139,7 +142,6 @@ export async function addToCart({
    if (e.message?.includes("Not Found") || e.status === 404) {
       removeCartId()
       try {
-        // Pass metadata here as well
         await createCart(variantId, quantity, countryCode, metadata)
       } catch (createErr) {
         return medusaError(createErr)
@@ -345,8 +347,6 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
   redirect(`/${countryCode}${currentPath}`)
 }
-
-// --- NEWLY ADDED PROMOTION FUNCTIONS TO FIX BUILD ---
 
 export async function applyPromotions(codes: string[]) {
   const cartId = getCartId()
