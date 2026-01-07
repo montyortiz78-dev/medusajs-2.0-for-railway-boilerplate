@@ -32,7 +32,7 @@
     "@medusajs/medusa": "2.10.2",
     "@medusajs/notification-sendgrid": "2.10.2",
     "@medusajs/payment-stripe": "2.10.2",
-    "@medusajs/tax": "^2.12.4",
+    "@medusajs/tax": "^2.0.0",
     "@medusajs/types": "^2.11.3",
     "@medusajs/ui": "^4.0.27",
     "@medusajs/utils": "^2.11.3",
