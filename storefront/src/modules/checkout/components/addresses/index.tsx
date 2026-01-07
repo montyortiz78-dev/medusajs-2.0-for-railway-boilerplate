@@ -114,8 +114,8 @@ const Addresses = ({
                       {cart.shipping_address.address_2}
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.postal_code},{" "}
-                      {cart.shipping_address.city}
+                      {cart.shipping_address.city},{" "}
+                      {cart.shipping_address.province} {cart.shipping_address.postal_code}
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
                       {cart.shipping_address.country_code?.toUpperCase()}
@@ -160,8 +160,8 @@ const Addresses = ({
                           {cart.billing_address?.address_2}
                         </Text>
                         <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address?.postal_code},{" "}
-                          {cart.billing_address?.city}
+                          {cart.shipping_address.city},{" "}
+                          {cart.shipping_address.province} {cart.shipping_address.postal_code}
                         </Text>
                         <Text className="txt-medium text-ui-fg-subtle">
                           {cart.billing_address?.country_code?.toUpperCase()}

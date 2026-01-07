@@ -205,6 +205,7 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
       postal_code: data["shipping_address.postal_code"],
       city: data["shipping_address.city"],
       country_code: data["shipping_address.country_code"],
+      province: data["shipping_address.province"],
       phone: data["shipping_address.phone"],
     }
 
@@ -225,6 +226,7 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
         postal_code: data["billing_address.postal_code"],
         city: data["billing_address.city"],
         country_code: data["billing_address.country_code"],
+        province: data["billing_address.province"],
         phone: data["billing_address.phone"],
       }
     }
