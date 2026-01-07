@@ -18,7 +18,12 @@ function getCartIdOrThrow() {
   return cartId
 }
 
-async function createCart(variantId: string, quantity: number, countryCode: string) {
+async function createCart(
+  variantId: string, 
+  quantity: number, 
+  countryCode: string,
+  metadata?: Record<string, any>
+) {
   try {
     let regionId: string | undefined
 
@@ -43,7 +48,11 @@ async function createCart(variantId: string, quantity: number, countryCode: stri
 
     const { cart } = await sdk.store.cart.create(
       {
-        items: [{ variant_id: variantId, quantity }],
+        items: [{ 
+          variant_id: variantId, 
+          quantity,
+          metadata: metadata
+        }],
         region_id: regionId, 
       },
       {},
@@ -104,20 +113,8 @@ export async function addToCart({
 
   if (!cartId) {
     try {
-      const cart = await createCart(variantId, quantity, countryCode)
-      
-      if (cart && metadata && cart.items?.[0]) {
-        await sdk.store.cart.updateLineItem(
-            cart.id, 
-            cart.items[0].id, 
-            {
-              metadata,
-              quantity: cart.items[0].quantity,
-            }, 
-            {}, 
-            getMedusaHeaders(["cart"])
-        )
-      }
+      // Pass metadata here
+      await createCart(variantId, quantity, countryCode, metadata)
       return
     } catch (e) {
       return medusaError(e)
@@ -142,19 +139,8 @@ export async function addToCart({
    if (e.message?.includes("Not Found") || e.status === 404) {
       removeCartId()
       try {
-        const cart = await createCart(variantId, quantity, countryCode)
-         if (cart && metadata && cart.items?.[0]) {
-            await sdk.store.cart.updateLineItem(
-                cart.id, 
-                cart.items[0].id, 
-                {
-                  metadata,
-                  quantity: cart.items[0].quantity,
-                }, 
-                {}, 
-                getMedusaHeaders(["cart"])
-            )
-        }
+        // Pass metadata here as well
+        await createCart(variantId, quantity, countryCode, metadata)
       } catch (createErr) {
         return medusaError(createErr)
       }

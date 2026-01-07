@@ -1,6 +1,6 @@
-import { SubscriberArgs, type SubscriberConfig } from "@medusajs/medusa"
-import { IOrderModuleService } from "@medusajs/types"
-import { Modules } from "@medusajs/utils"
+import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
+import { IOrderModuleService } from "@medusajs/framework/types"
+import { Modules } from "@medusajs/framework/utils"
 import { v2 as cloudinary } from 'cloudinary'
 
 // Configure Cloudinary
@@ -28,7 +28,7 @@ export default async function handleNftMinting({
       // Check for required metadata (snapshot URL and Name)
       if (metadata.image_url && metadata.kandi_name) {
           console.log(`[NFT Minting] Processing item: ${item.id} - ${item.title}`)
-          
+
           try {
               // 1. Upload Snapshot to Cloudinary
               const uploadRes = await cloudinary.uploader.upload(metadata.image_url, {
@@ -42,8 +42,7 @@ export default async function handleNftMinting({
               // 2. Mint with Crossmint
               const apiKey = process.env.CROSSMINT_API_KEY
               const collectionId = process.env.CROSSMINT_COLLECTION_ID
-              
-              // CHANGED: Default to 'base' (Mainnet). Use 'base-sepolia' for Testnet.
+              // Default to 'base' (Mainnet). Use 'base-sepolia' for Testnet.
               const chain = process.env.CROSSMINT_CHAIN || "base" 
 
               if (!apiKey || !collectionId) {
@@ -59,7 +58,6 @@ export default async function handleNftMinting({
                       "Content-Type": "application/json"
                   },
                   body: JSON.stringify({
-                      // Mint to email using the simplified format: "email:address:chain"
                       recipient: `email:${order.email}:${chain}`, 
                       metadata: {
                           name: metadata.kandi_name,
