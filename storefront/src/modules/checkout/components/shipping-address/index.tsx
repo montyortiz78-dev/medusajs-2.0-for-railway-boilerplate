@@ -1,11 +1,12 @@
 import { HttpTypes } from "@medusajs/types"
-import { Container } from "@medusajs/ui"
+import { Container } from "@medusajs/ui" 
 import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
 import { mapKeys } from "lodash"
 import React, { useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
+import { usStates } from "@lib/constants" 
 
 const ShippingAddress = ({
   customer,
@@ -162,15 +163,44 @@ const ShippingAddress = ({
           required
           data-testid="shipping-country-select"
         />
-        <Input
-          label="State / Province"
-          name="shipping_address.province"
-          autoComplete="address-level1"
-          value={formData["shipping_address.province"]}
-          onChange={handleChange}
-          required
-          data-testid="shipping-province-input"
-        />
+        
+        {/* MODIFIED: State/Province Logic with standard HTML Select */}
+        {formData["shipping_address.country_code"] === "us" ? (
+          <div className="flex flex-col gap-y-2">
+            <label className="txt-compact-small text-ui-fg-base">
+              State / Province
+            </label>
+            <select
+              name="shipping_address.province"
+              value={formData["shipping_address.province"] || ""}
+              onChange={handleChange}
+              autoComplete="address-level1"
+              required
+              data-testid="shipping-province-select"
+              className="h-10 w-full rounded-md border border-ui-border-base bg-ui-bg-field px-3 py-2 text-small-regular placeholder:text-ui-fg-muted focus:border-ui-border-interactive focus:outline-none focus:ring-1 focus:ring-ui-border-interactive"
+            >
+              <option value="" disabled>
+                Select a State
+              </option>
+              {usStates.map((state) => (
+                <option key={state.value} value={state.value}>
+                  {state.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <Input
+            label="State / Province"
+            name="shipping_address.province"
+            autoComplete="address-level1"
+            value={formData["shipping_address.province"]}
+            onChange={handleChange}
+            required
+            data-testid="shipping-province-input"
+          />
+        )}
+
       </div>
       <div className="my-8">
         <Checkbox
