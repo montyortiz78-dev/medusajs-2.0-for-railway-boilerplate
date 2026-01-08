@@ -31,7 +31,7 @@ export default async function StorePage({ searchParams, params }: Params) {
   
   // 2. Resolve the Category ID from the Handle
   // The URL gives us a handle (e.g., "bracelets"), but the API needs the ID.
-  const activeCategoryData = categories.find(c => c.handle === category)
+  const activeCategoryData = categories.find((c: { handle: string | undefined }) => c.handle === category)
   const categoryId = activeCategoryData?.id
 
   return (

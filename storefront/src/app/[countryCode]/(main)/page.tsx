@@ -40,7 +40,7 @@ export default async function Home({ params, searchParams }: Params) {
 
   // 2. Resolve Category ID if a filter is active
   // The URL uses the handle (e.g. ?category=bracelets), but the API needs the ID.
-  const activeCategoryData = categories.find(c => c.handle === category)
+  const activeCategoryData = categories.find((c: { handle: string | undefined }) => c.handle === category)
   const categoryId = activeCategoryData?.id
 
   return (
