@@ -14,3 +14,14 @@ export type VariantPrice = {
   price_type: string
   percentage_diff: string
 }
+
+declare global {
+  interface Window {
+    gtag: (
+      command: "consent" | "config" | "event" | "js" | "set",
+      targetId: string | Date,
+      config?: Record<string, any>
+    ) => void
+    dataLayer: any[]
+  }
+}
