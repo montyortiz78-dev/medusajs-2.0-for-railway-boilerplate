@@ -21,7 +21,6 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
-          // Default all to denied. This makes it GDPR compliant.
           gtag('consent', 'default', {
             'ad_storage': 'denied',
             'ad_user_data': 'denied',
@@ -61,6 +60,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
             <main className="relative">
               {props.children}
               <KandiChatWidget />
+              <CookieBanner />
             </main>
           </KandiProvider>
         </ThemeProvider>
