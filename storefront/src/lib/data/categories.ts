@@ -4,8 +4,11 @@ import { cache } from "react"
 export const listCategories = cache(async function () {
   return sdk.store.category
     .list(
-      { fields: "+category_children" }, 
-      // FIX: Add no-store to disable caching so changes appear immediately
+      // Cast to 'any' to allow the custom '_t' timestamp param
+      { 
+        fields: "+category_children",
+        _t: Date.now() 
+      } as any,
       { 
         next: { tags: ["categories"] },
         cache: "no-store"
@@ -19,9 +22,12 @@ export const getCategoriesList = cache(async function (
   limit: number = 100
 ) {
   return sdk.store.category.list(
-    // @ts-ignore
-    { limit, offset },
-    // FIX: Add no-store
+    // Cast to 'any'
+    { 
+      limit, 
+      offset,
+      _t: Date.now()
+    } as any,
     { 
       next: { tags: ["categories"] },
       cache: "no-store"
@@ -33,9 +39,11 @@ export const getCategoryByHandle = cache(async function (
   categoryHandle: string[]
 ) {
   return sdk.store.category.list(
-    // @ts-ignore
-    { handle: categoryHandle },
-    // FIX: Add no-store
+    // Cast to 'any'
+    { 
+      handle: categoryHandle,
+      _t: Date.now()
+    } as any,
     { 
       next: { tags: ["categories"] },
       cache: "no-store"
