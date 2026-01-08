@@ -3,6 +3,10 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import StoreTemplate from "@modules/store/templates"
 import { listCategories } from "@lib/data/categories"
 
+// 1. FORCE DYNAMIC RENDERING
+// This ensures deleted categories disappear immediately on refresh.
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Store",
   description: "Explore all of our products.",

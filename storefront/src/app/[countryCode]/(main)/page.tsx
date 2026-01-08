@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic"
-
 import { Metadata } from "next"
 import Link from "next/link"
 
@@ -11,6 +9,10 @@ import StoreTemplate from "@modules/store/templates"
 // Data
 import { listCategories } from "@lib/data/categories"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+
+// 1. FORCE DYNAMIC RENDERING
+// This ensures deleted categories disappear immediately on refresh.
+export const dynamic = "force-dynamic"
 
 export const metadata: Metadata = {
   title: "Kandi Creations | Custom Kandi Bracelets, Cuffs & Accessories",
